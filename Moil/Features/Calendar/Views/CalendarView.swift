@@ -128,12 +128,14 @@ struct CalendarView: View {
                         .background(.white)
                         .clipShape(Circle())
                     }
+                    .foregroundStyle(MoilColor.textPrimary)
                     Button { moveMonth(by: 1) } label: {
                         Image(systemName: "chevron.right")
                         .frame(width: 30, height: 30)
                         .background(.white)
                         .clipShape(Circle())
                     }
+                    .foregroundStyle(MoilColor.textPrimary)
                     .padding(.leading, 6)
                 }
                 .padding(16)
