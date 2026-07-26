@@ -103,20 +103,20 @@ struct MemberView: View {
                 .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
 
-            MoilTabBar(selected: .members) { tab in
-                switch tab {
-                case .calendar:
-                    dismiss()
-                case .members:
-                    break
-                case .create:
-                    isJoinGroupPresented = true
-                case .profile:
-                    isMyPagePresented = true
+                MoilTabBar(selected: .members) { tab in
+                    switch tab {
+                    case .calendar:
+                        dismiss()
+                    case .members:
+                        break
+                    case .create:
+                        isJoinGroupPresented = true
+                    case .profile:
+                        isMyPagePresented = true
+                    }
                 }
-            }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
