@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct CalendarView: View {
+    @EnvironmentObject private var groupStore: MoilGroupStore
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
     private let calendar = Calendar.current
     @State private var isGroupMenuPresented = false
-    @State private var groupName = "우리 가족"
     @State private var isScheduleComposerPresented = false
     @State private var isScheduleSearchPresented = false
     @State private var scheduleDraftDay = 22
@@ -54,7 +54,7 @@ struct CalendarView: View {
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
                                 }
-                                Text(groupName)
+                                Text(groupStore.selectedGroupName)
                                     .font(MoilTypography.semibold(15))
                                     .foregroundStyle(MoilColor.textPrimary)
                             }
@@ -72,21 +72,21 @@ struct CalendarView: View {
 
                     if isGroupMenuPresented {
                         VStack(spacing: 0) {
-                            ForEach([("우리 가족", MoilAvatarColor.blue), ("대학 동기", MoilAvatarColor.green), ("회사 팀", MoilAvatarColor.orange)], id: \.0) { group in
+                            ForEach(groupStore.groups) { group in
                                 Button {
-                                    groupName = group.0
+                                    groupStore.selectGroup(group.name)
                                     isGroupMenuPresented = false
                                 } label: {
                                     HStack(spacing: 10) {
-                                        Circle().fill(group.1).frame(width: 8, height: 8)
-                                        Text(group.0).font(MoilTypography.semibold(14))
+                                        Circle().fill(group.color).frame(width: 8, height: 8)
+                                        Text(group.name).font(MoilTypography.semibold(14))
                                         Spacer()
                                     }
                                     .padding(.horizontal, 14)
                                     .frame(height: 46)
                                 }
                                 .foregroundStyle(MoilColor.textPrimary)
-                                if group.0 != "회사 팀" { Divider() }
+                                if group.id != groupStore.groups.last?.id { Divider() }
                             }
                             Divider()
                             Button {

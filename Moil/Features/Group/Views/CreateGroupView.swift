@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CreateGroupView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
     @State private var name = ""
     @State private var selectedColor = MoilAvatarColor.green
     @State private var didCreateGroup = false
@@ -47,7 +48,10 @@ struct CreateGroupView: View {
                 .foregroundStyle(MoilColor.textSecondary)
                 .padding(.top, 22)
             Spacer()
-            Button("그룹 만들기") { didCreateGroup = true }
+            Button("그룹 만들기") {
+                groupStore.createGroup(name: name, color: selectedColor)
+                didCreateGroup = true
+            }
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
                 .background(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
