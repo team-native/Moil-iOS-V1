@@ -12,6 +12,9 @@ struct MemberView: View {
     @State private var isTransferringAdmin = false
     @State private var isLeavingGroup = false
     @State private var feedbackMessage: String?
+    @State private var isJoinGroupPresented = false
+    @State private var isJoinProfilePresented = false
+    @State private var isMyPagePresented = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", MoilAvatarColor.blue), ("엄마", "멤버", MoilAvatarColor.red), ("나", "멤버", MoilAvatarColor.green), ("동생", "멤버", MoilAvatarColor.orange)
@@ -99,6 +102,20 @@ struct MemberView: View {
                 .padding(.bottom, 32)
             }
             .background(MoilColor.background)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                MoilTabBar(selected: .members) { tab in
+                    switch tab {
+                    case .calendar:
+                        dismiss()
+                    case .members:
+                        break
+                    case .create:
+                        isJoinGroupPresented = true
+                    case .profile:
+                        isMyPagePresented = true
+                    }
+                }
+            }
             .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
                 TextField("그룹 이름", text: $selectedGroup)
                 Button("취소", role: .cancel) { }
@@ -133,6 +150,18 @@ struct MemberView: View {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
             } message: {
                 Text(feedbackMessage ?? "")
+            }
+            .fullScreenCover(isPresented: $isJoinGroupPresented) {
+                GroupJoinCodeView {
+                    isJoinGroupPresented = false
+                    isJoinProfilePresented = true
+                }
+            }
+            .fullScreenCover(isPresented: $isJoinProfilePresented) {
+                GroupJoinProfileView { isJoinProfilePresented = false }
+            }
+            .fullScreenCover(isPresented: $isMyPagePresented) {
+                MyPageView()
             }
     }
 }
