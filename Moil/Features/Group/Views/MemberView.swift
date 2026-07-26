@@ -115,7 +115,7 @@ struct MemberView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .safeAreaPadding(.top, 18)
                 .padding(.bottom, 32)
             }
             .background(MoilColor.background)
@@ -250,7 +250,7 @@ private struct MemberRow: View {
     let member: (String, String, Color)
     var body: some View {
         HStack(spacing: 12) {
-            Circle().fill(member.2).frame(width: 38, height: 38).overlay { Image(systemName: "person.fill").foregroundStyle(.white) }
+            MoilAvatar(color: member.2, size: 38)
             VStack(alignment: .leading, spacing: 3) {
                 Text(member.0).font(MoilTypography.semibold(15))
                 Text(member.1).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary)
