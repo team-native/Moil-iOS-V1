@@ -4,6 +4,7 @@ struct MemberView: View {
     @State private var selectedGroup = "우리 가족"
     @State private var notificationsEnabled = true
     @State private var copied = false
+    @State private var isAdministratorMode = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -26,6 +27,10 @@ struct MemberView: View {
                         }
                     }
                     .padding(.vertical, 6)
+
+                    Toggle("관리자 권한으로 보기", isOn: $isAdministratorMode)
+                        .font(MoilTypography.regular(13))
+                        .tint(MoilColor.primary)
 
                     SectionTitle("구성원")
                     VStack(spacing: 0) {
@@ -58,10 +63,35 @@ struct MemberView: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                     }
                     .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+
+                    if isAdministratorMode {
+                        VStack(spacing: 0) {
+                            AdminSettingRow(title: "그룹 이름 변경")
+                            Divider()
+                            AdminSettingRow(title: "멤버 권한 설정")
+                            Divider()
+                            AdminSettingRow(title: "소셜미디어로 초대 링크 공유")
+                        }
+                        .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                    }
                 }
                 .padding(16).padding(.top, 8)
             }
             .background(MoilColor.background)
+        }
+    }
+}
+
+private struct AdminSettingRow: View {
+    let title: String
+    var body: some View {
+        Button { } label: {
+            HStack {
+                Text(title).font(MoilTypography.regular(15)).foregroundStyle(MoilColor.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(MoilColor.textTertiary)
+            }
+            .padding(14)
         }
     }
 }
