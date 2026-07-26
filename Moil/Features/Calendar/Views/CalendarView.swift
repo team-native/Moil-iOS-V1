@@ -153,18 +153,16 @@ struct CalendarView: View {
                 }
                 .padding(.horizontal, 16)
                 Spacer()
-                HStack {
-                    Image(systemName: "calendar").frame(maxWidth: .infinity)
-                    Image(systemName: "checklist").frame(maxWidth: .infinity)
-                    Button { isMemberViewPresented = true } label: {
-                        Image(systemName: "person.2").frame(maxWidth: .infinity)
-                    }
-                    Button { isMyPagePresented = true } label: {
-                        Image(systemName: "person").frame(maxWidth: .infinity)
-                    }
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MoilTabBar(selected: .calendar) { tab in
+                switch tab {
+                case .calendar: break
+                case .members: isMemberViewPresented = true
+                case .create: isScheduleComposerPresented = true
+                case .profile: isMyPagePresented = true
                 }
-                .padding(.vertical, 18)
-                .foregroundStyle(MoilColor.textSecondary)
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {

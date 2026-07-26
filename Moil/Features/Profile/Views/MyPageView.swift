@@ -17,13 +17,6 @@ struct MyPageView: View {
                     Text("마이페이지")
                         .font(MoilTypography.bold(26))
                     Spacer()
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                            .frame(width: 36, height: 36)
-                            .background(.white, in: Circle())
-                    }
                 }
                 .padding(.bottom, 28)
 
@@ -61,6 +54,11 @@ struct MyPageView: View {
             .padding(.horizontal, 16).safeAreaPadding(.top, 18).padding(.bottom, 32)
         }
         .background(MoilColor.background)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MoilTabBar(selected: .profile) { tab in
+                if tab == .calendar { dismiss() }
+            }
+        }
         .sheet(isPresented: $isGroupDetailPresented) { GroupDetailView() }
         .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
             Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
