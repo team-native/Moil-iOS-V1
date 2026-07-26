@@ -13,25 +13,18 @@ struct MyPageView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("마이페이지")
-                        .font(MoilTypography.bold(26))
-                    Spacer()
-                }
-                .padding(.bottom, 28)
-
                 HStack(spacing: 14) {
-                    MoilAvatar(color: Color("AvatarGreen"), size: 56)
+                    MoilAvatar(color: MoilAvatarColor.green, size: 56)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("나").font(MoilTypography.bold(21))
                     }
                 }
-                .padding(.bottom, 28)
+                .padding(.bottom, 20)
 
                 GroupSection(title: "내 그룹") {
-                    Button { isGroupDetailPresented = true } label: { GroupRow("우리 가족", .blue) }
-                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("대학 동기", .green) }
-                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("회사 팀", .green) }
+                    Button { isGroupDetailPresented = true } label: { GroupRow("우리 가족", MoilAvatarColor.blue) }
+                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("대학 동기", MoilAvatarColor.green) }
+                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("회사 팀", MoilAvatarColor.green) }
                     Divider()
                     Button(action: onCreateGroup) {
                         Label("새 그룹 만들기", systemImage: "plus")
@@ -51,7 +44,7 @@ struct MyPageView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
                     .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
             }
-            .padding(.horizontal, 16).safeAreaPadding(.top, 18).padding(.bottom, 32)
+            .padding(.horizontal, 16).safeAreaPadding(.top, 8).padding(.bottom, 32)
         }
         .background(MoilColor.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -59,7 +52,7 @@ struct MyPageView: View {
                 if tab == .calendar { dismiss() }
             }
         }
-        .sheet(isPresented: $isGroupDetailPresented) { GroupDetailView() }
+        .fullScreenCover(isPresented: $isGroupDetailPresented) { GroupDetailView() }
         .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
             Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
             Button("취소", role: .cancel) { }

@@ -19,7 +19,7 @@ struct MoilTabBar: View {
             item(.profile, icon: "person")
         }
         .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.bottom, 22)
         .background(MoilColor.background)
         .overlay(alignment: .top) { Divider().padding(.horizontal, 18) }
     }
@@ -38,7 +38,7 @@ struct MoilTabBar: View {
         switch tab {
         case .calendar: "캘린더"
         case .members: "멤버"
-        case .create: "일정 추가"
+        case .create: "그룹 참여"
         case .profile: "마이페이지"
         }
     }
