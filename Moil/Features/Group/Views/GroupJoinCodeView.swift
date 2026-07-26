@@ -3,11 +3,15 @@ import SwiftUI
 struct GroupJoinCodeView: View {
     @Environment(\.dismiss) private var dismiss
     let onNext: () -> Void
+    let onTabSelect: ((MoilTab) -> Void)?
     @State private var code = ""
     @State private var error: String?
     @State private var isVerified = false
 
-    init(onNext: @escaping () -> Void = {}) { self.onNext = onNext }
+    init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil) {
+        self.onNext = onNext
+        self.onTabSelect = onTabSelect
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -52,6 +56,15 @@ struct GroupJoinCodeView: View {
             .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MoilTabBar(selected: .create) { tab in
+                if let onTabSelect {
+                    onTabSelect(tab)
+                } else if tab != .create {
+                    dismiss()
+                }
+            }
+        }
     }
 }
 

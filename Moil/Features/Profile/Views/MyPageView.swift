@@ -11,10 +11,12 @@ struct MyPageView: View {
     @State private var isJoinProfilePresented = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
+    let onTabSelect: ((MoilTab) -> Void)?
 
-    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}) {
+    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil) {
         self.onCreateGroup = onCreateGroup
         self.onLeaveGroup = onLeaveGroup
+        self.onTabSelect = onTabSelect
     }
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -61,15 +63,19 @@ struct MyPageView: View {
         .background(MoilColor.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             MoilTabBar(selected: .profile) { tab in
-                switch tab {
-                case .calendar:
-                    dismiss()
-                case .members:
-                    isMemberPresented = true
-                case .create:
-                    isJoinGroupPresented = true
-                case .profile:
-                    break
+                if let onTabSelect {
+                    onTabSelect(tab)
+                } else {
+                    switch tab {
+                    case .calendar:
+                        dismiss()
+                    case .members:
+                        isMemberPresented = true
+                    case .create:
+                        isJoinGroupPresented = true
+                    case .profile:
+                        break
+                    }
                 }
             }
         }
