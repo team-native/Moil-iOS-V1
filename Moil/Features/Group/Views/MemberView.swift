@@ -10,6 +10,8 @@ struct MemberView: View {
     @State private var isEditingPermissions = false
     @State private var isSharingInvite = false
     @State private var isTransferringAdmin = false
+    @State private var isLeavingGroup = false
+    @State private var feedbackMessage: String?
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -90,7 +92,7 @@ struct MemberView: View {
                     VStack(spacing: 0) {
                         Toggle("알림 받기", isOn: $notificationsEnabled).padding(14).tint(MoilColor.primary)
                         Divider()
-                        Button("그룹 나가기") { }
+                        Button("그룹 나가기") { isLeavingGroup = true }
                             .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                     }
@@ -120,7 +122,7 @@ struct MemberView: View {
             .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
                 TextField("그룹 이름", text: $selectedGroup)
                 Button("취소", role: .cancel) { }
-                Button("저장") { }
+                Button("저장") { feedbackMessage = "그룹 이름을 변경했어요." }
             } message: {
                 Text("새로운 그룹 이름을 입력해주세요")
             }
@@ -135,11 +137,22 @@ struct MemberView: View {
                     .presentationDragIndicator(.visible)
             }
             .confirmationDialog("관리자 권한 이전", isPresented: $isTransferringAdmin, titleVisibility: .visible) {
-                Button("지민에게 이전") { }
-                Button("서연에게 이전") { }
+                Button("지민에게 이전") { feedbackMessage = "지민에게 관리자 권한을 이전했어요." }
+                Button("서연에게 이전") { feedbackMessage = "서연에게 관리자 권한을 이전했어요." }
                 Button("취소", role: .cancel) { }
             } message: {
                 Text("새 관리자를 선택하면 현재 관리자 권한이 변경됩니다.")
+            }
+            .confirmationDialog("그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
+                Button("그룹 나가기", role: .destructive) { feedbackMessage = "\(selectedGroup) 그룹에서 나왔어요." }
+                Button("취소", role: .cancel) { }
+            } message: {
+                Text("나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
+            }
+            .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
+                Button("확인", role: .cancel) { feedbackMessage = nil }
+            } message: {
+                Text(feedbackMessage ?? "")
             }
         }
     }

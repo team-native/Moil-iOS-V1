@@ -35,6 +35,7 @@ private struct LoginView: View {
     let onLogin: () -> Void
     @State private var email = ""
     @State private var password = ""
+    @State private var isPasswordHelpPresented = false
 
     private var canSubmit: Bool {
         email.contains("@") && password.count >= 8
@@ -66,7 +67,7 @@ private struct LoginView: View {
                         AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
                         HStack {
                             Spacer()
-                            Button("비밀번호를 잊으셨나요?") { }
+                            Button("비밀번호를 잊으셨나요?") { isPasswordHelpPresented = true }
                                 .font(MoilTypography.regular(13))
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
@@ -100,6 +101,11 @@ private struct LoginView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 34)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .alert("비밀번호 재설정", isPresented: $isPasswordHelpPresented) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("가입한 이메일 주소로 비밀번호 재설정 안내를 보내드릴게요.")
         }
     }
 }
