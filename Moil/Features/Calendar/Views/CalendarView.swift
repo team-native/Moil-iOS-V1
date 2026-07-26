@@ -37,7 +37,7 @@ struct CalendarView: View {
     }
 
     private var dayCellHeight: CGFloat {
-        calendarRowCount == 6 ? 78 : 94
+        calendarRowCount == 6 ? 88 : 104
     }
 
     private var monthTitle: String {
@@ -101,16 +101,6 @@ struct CalendarView: View {
                                 if group.id != groupStore.groups.last?.id { Divider() }
                             }
                             Divider()
-                            Button {
-                                isGroupMenuPresented = false
-                                isJoinGroupPresented = true
-                            } label: {
-                                Label("그룹 참여", systemImage: "person.badge.plus")
-                                    .font(MoilTypography.semibold(14))
-                                    .padding(.horizontal, 14)
-                                    .frame(height: 46)
-                            }
-                            .foregroundStyle(MoilColor.primary)
                             Button {
                                 isGroupMenuPresented = false
                                 isCreateGroupPresented = true
