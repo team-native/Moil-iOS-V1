@@ -9,13 +9,15 @@ struct AuthFlowView: View {
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
                 set: { route = $0 ? .signUpInfo : .login }
-            ))
+            ), onLogin: { route = .calendar })
         case .signUpInfo:
             SignUpInfoView(onBack: { route = .login }, onNext: { route = .emailVerification })
         case .emailVerification:
             EmailVerificationView(onBack: { route = .signUpInfo }, onNext: { route = .passwordSetup })
         case .passwordSetup:
             PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .login })
+        case .calendar:
+            CalendarView()
         }
     }
 }
@@ -25,10 +27,12 @@ private enum AuthRoute {
     case signUpInfo
     case emailVerification
     case passwordSetup
+    case calendar
 }
 
 private struct LoginView: View {
     @Binding var showingSignUp: Bool
+    let onLogin: () -> Void
     @State private var email = ""
     @State private var password = ""
 
@@ -72,7 +76,7 @@ private struct LoginView: View {
                     Spacer(minLength: 40)
 
                     VStack(spacing: 14) {
-                        Button("로그인") { }
+                        Button("로그인", action: onLogin)
                             .font(MoilTypography.bold(16))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
