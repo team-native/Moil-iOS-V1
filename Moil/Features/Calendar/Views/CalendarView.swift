@@ -236,6 +236,7 @@ struct CalendarView: View {
         switch day {
         case 5: baseEvents = [CalendarEvent(owner: "엄마", title: "생일", color: MoilAvatarColor.red)]
         case 9: baseEvents = [CalendarEvent(owner: "아빠", title: "가족 저녁", color: MoilAvatarColor.blue)]
+        case 28: baseEvents = [CalendarEvent(owner: "동생", title: "시험", color: MoilAvatarColor.yellow)]
         default: baseEvents = []
         }
         return baseEvents + (savedEvents[day].map { [$0] } ?? [])
