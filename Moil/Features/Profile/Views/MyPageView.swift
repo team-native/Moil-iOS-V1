@@ -6,9 +6,11 @@ struct MyPageView: View {
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
     let onCreateGroup: () -> Void
+    let onLeaveGroup: () -> Void
 
-    init(onCreateGroup: @escaping () -> Void = {}) {
+    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}) {
         self.onCreateGroup = onCreateGroup
+        self.onLeaveGroup = onLeaveGroup
     }
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -52,7 +54,12 @@ struct MyPageView: View {
                 if tab == .calendar { dismiss() }
             }
         }
-        .fullScreenCover(isPresented: $isGroupDetailPresented) { GroupDetailView() }
+        .fullScreenCover(isPresented: $isGroupDetailPresented) {
+            GroupDetailView {
+                isGroupDetailPresented = false
+                onLeaveGroup()
+            }
+        }
         .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
             Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
             Button("취소", role: .cancel) { }
