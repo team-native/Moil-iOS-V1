@@ -4,6 +4,7 @@ struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isDarkMode = false
     @State private var isGroupDetailPresented = false
+    @State private var isLogoutConfirmationPresented = false
     let onCreateGroup: () -> Void
 
     init(onCreateGroup: @escaping () -> Void = {}) {
@@ -64,7 +65,7 @@ struct MyPageView: View {
                     Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
                 }
                 .padding(.bottom, 16)
-                Button("로그아웃") { }
+                Button("로그아웃") { isLogoutConfirmationPresented = true }
                     .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
                     .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
@@ -73,6 +74,10 @@ struct MyPageView: View {
         }
         .background(MoilColor.background)
         .sheet(isPresented: $isGroupDetailPresented) { GroupDetailView() }
+        .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
+            Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
+            Button("취소", role: .cancel) { }
+        }
     }
 }
 
