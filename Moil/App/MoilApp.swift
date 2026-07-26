@@ -11,7 +11,7 @@ import SwiftUI
 struct MoilApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AuthFlowView()
         }
     }
 }
