@@ -7,8 +7,35 @@ enum MoilTab: Hashable {
     case profile
 }
 
+enum MoilTabBarStyle {
+    case standard
+    case dark
+
+    var background: Color {
+        switch self {
+        case .standard: MoilColor.background
+        case .dark: MoilColor.groupDetailBackground
+        }
+    }
+
+    var unselectedColor: Color {
+        switch self {
+        case .standard: MoilColor.textTertiary
+        case .dark: MoilColor.groupDetailTextSecondary
+        }
+    }
+
+    var dividerColor: Color {
+        switch self {
+        case .standard: Color(.separator)
+        case .dark: MoilColor.groupDetailSeparator
+        }
+    }
+}
+
 struct MoilTabBar: View {
     let selected: MoilTab?
+    var style: MoilTabBarStyle = .standard
     var onSelect: (MoilTab) -> Void
 
     var body: some View {
@@ -20,8 +47,8 @@ struct MoilTabBar: View {
         }
         .padding(.top, 14)
         .padding(.bottom, 22)
-        .background(MoilColor.background)
-        .overlay(alignment: .top) { Divider().padding(.horizontal, 18) }
+        .background(style.background)
+        .overlay(alignment: .top) { Rectangle().fill(style.dividerColor).frame(height: 1).padding(.horizontal, 18) }
     }
 
     private func item(_ tab: MoilTab, icon: String) -> some View {
@@ -29,7 +56,7 @@ struct MoilTabBar: View {
             Image(systemName: icon)
                 .font(.system(size: 21, weight: .regular))
                 .frame(maxWidth: .infinity)
-                .foregroundStyle(selected == tab ? MoilColor.primary : MoilColor.textTertiary)
+                .foregroundStyle(selected == tab ? MoilColor.primary : style.unselectedColor)
         }
         .accessibilityLabel(accessibilityLabel(for: tab))
     }
