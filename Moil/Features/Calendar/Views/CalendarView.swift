@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
+    var onTabSelect: ((MoilTab) -> Void)? = nil
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
     private let calendar = Calendar.current
     @State private var isGroupMenuPresented = false
@@ -181,11 +182,15 @@ struct CalendarView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             MoilTabBar(selected: .calendar) { tab in
-                switch tab {
-                case .calendar: break
-                case .members: isMemberViewPresented = true
-                case .create: isJoinGroupPresented = true
-                case .profile: isMyPagePresented = true
+                if let onTabSelect {
+                    onTabSelect(tab)
+                } else {
+                    switch tab {
+                    case .calendar: break
+                    case .members: isMemberViewPresented = true
+                    case .create: isJoinGroupPresented = true
+                    case .profile: isMyPagePresented = true
+                    }
                 }
             }
         }

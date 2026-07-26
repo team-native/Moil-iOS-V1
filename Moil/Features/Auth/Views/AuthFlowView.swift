@@ -10,7 +10,7 @@ struct AuthFlowView: View {
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
                 set: { route = $0 ? .signUpInfo : .login }
-            ), onLogin: { route = .calendar })
+            ), onLogin: { route = .main })
         case .signUpInfo:
             SignUpInfoView(
                 onBack: { route = .login },
@@ -26,9 +26,9 @@ struct AuthFlowView: View {
                 onNext: { route = .passwordSetup }
             )
         case .passwordSetup:
-            PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .calendar })
-        case .calendar:
-            CalendarView()
+            PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .main })
+        case .main:
+            MoilTabNavigationView()
         }
     }
 }
@@ -38,7 +38,7 @@ private enum AuthRoute {
     case signUpInfo
     case emailVerification
     case passwordSetup
-    case calendar
+    case main
 }
 
 private struct LoginView: View {
