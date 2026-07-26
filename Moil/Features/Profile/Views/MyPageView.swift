@@ -5,6 +5,9 @@ struct MyPageView: View {
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
+    @State private var isMemberPresented = false
+    @State private var isJoinGroupPresented = false
+    @State private var isJoinProfilePresented = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
 
@@ -51,7 +54,16 @@ struct MyPageView: View {
         .background(MoilColor.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             MoilTabBar(selected: .profile) { tab in
-                if tab == .calendar { dismiss() }
+                switch tab {
+                case .calendar:
+                    dismiss()
+                case .members:
+                    isMemberPresented = true
+                case .create:
+                    isJoinGroupPresented = true
+                case .profile:
+                    break
+                }
             }
         }
         .fullScreenCover(isPresented: $isGroupDetailPresented) {
@@ -59,6 +71,18 @@ struct MyPageView: View {
                 isGroupDetailPresented = false
                 onLeaveGroup()
             }
+        }
+        .fullScreenCover(isPresented: $isMemberPresented) {
+            MemberView()
+        }
+        .fullScreenCover(isPresented: $isJoinGroupPresented) {
+            GroupJoinCodeView {
+                isJoinGroupPresented = false
+                isJoinProfilePresented = true
+            }
+        }
+        .fullScreenCover(isPresented: $isJoinProfilePresented) {
+            GroupJoinProfileView { isJoinProfilePresented = false }
         }
         .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
             Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
