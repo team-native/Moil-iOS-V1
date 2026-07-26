@@ -6,6 +6,8 @@ struct CalendarView: View {
     @State private var isGroupMenuPresented = false
     @State private var groupName = "우리 가족"
     @State private var isScheduleComposerPresented = false
+    @State private var isScheduleSearchPresented = false
+    @State private var scheduleDraftDay = 22
     @State private var isMemberViewPresented = false
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
@@ -59,8 +61,8 @@ struct CalendarView: View {
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
                     Spacer()
-                        Button { isScheduleComposerPresented = true } label: {
-                            Image(systemName: "plus.circle")
+                        Button { isScheduleSearchPresented = true } label: {
+                            Image(systemName: "magnifyingglass")
                                 .font(.system(size: 21, weight: .medium))
                                 .foregroundStyle(MoilColor.textPrimary)
                         }
@@ -145,7 +147,11 @@ struct CalendarView: View {
                         Color.clear.frame(height: 108)
                     }
                     ForEach(1...daysInMonth, id: \.self) { day in
-                        VStack(alignment: .leading, spacing: 4) {
+                        Button {
+                            scheduleDraftDay = day
+                            isScheduleComposerPresented = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
                             Text("\(day)")
                                 .font(MoilTypography.regular(15))
                                 .frame(width: 32, height: 32, alignment: .center)
@@ -160,9 +166,11 @@ struct CalendarView: View {
                             if scheduledDays.contains(day) && events(for: day).isEmpty {
                                 Circle().fill(MoilAvatarColor.green).frame(width: 6, height: 6)
                             }
-                            Spacer(minLength: 0)
+                                Spacer(minLength: 0)
+                            }
+                            .frame(height: 108, alignment: .topLeading)
                         }
-                        .frame(height: 108, alignment: .topLeading)
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -180,7 +188,7 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView { day in
+            ScheduleComposerView(day: scheduleDraftDay) { day in
                 scheduledDays.insert(day)
             }
                 .presentationDetents([.height(463)])
@@ -206,6 +214,11 @@ struct CalendarView: View {
         }
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
+        }
+        .alert("일정 검색", isPresented: $isScheduleSearchPresented) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("일정 검색 기능을 준비 중이에요.")
         }
     }
 
@@ -237,6 +250,7 @@ private struct CalendarEvent: Identifiable {
 
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
+    let day: Int
     let onSave: (Int) -> Void
     @State private var title = ""
     @State private var allDay = false
@@ -251,7 +265,7 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(22)
+                    onSave(day)
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
@@ -266,7 +280,7 @@ private struct ScheduleComposerView: View {
                 .frame(height: 58)
                 .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
 
-            ScheduleRow(title: "날짜", value: "7월 22일 (수)")
+            ScheduleRow(title: "날짜", value: "7월 \(day)일")
             HStack {
                 Text("하루 종일").font(MoilTypography.regular(15))
                 Spacer()
