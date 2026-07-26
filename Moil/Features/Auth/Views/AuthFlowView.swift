@@ -41,13 +41,12 @@ private struct LoginView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                MoilColor.background
-                    .ignoresSafeArea()
+        ZStack {
+            MoilColor.background
+                .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: min(86, max(44, proxy.size.height * 0.075)))
+            VStack(spacing: 0) {
+                Spacer(minLength: 120)
                     VStack(spacing: 6) {
                         Image("MoilMascot")
                             .resizable()
@@ -97,10 +96,9 @@ private struct LoginView: View {
                         .font(MoilTypography.regular(14))
                     }
                     .padding(.bottom, 34)
-                }
-                .padding(.horizontal, 24)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
