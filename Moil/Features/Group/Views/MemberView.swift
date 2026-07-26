@@ -7,6 +7,7 @@ struct MemberView: View {
     @State private var isAdministratorMode = false
     @State private var isEditingGroupName = false
     @State private var isEditingPermissions = false
+    @State private var isSharingInvite = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -72,7 +73,7 @@ struct MemberView: View {
                             Divider()
                             AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                             Divider()
-                            AdminSettingRow(title: "소셜미디어로 초대 링크 공유")
+                            AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
                         }
                         .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
                     }
@@ -92,7 +93,39 @@ struct MemberView: View {
                     .presentationDetents([.height(327)])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $isSharingInvite) {
+                InviteShareView()
+                    .presentationDetents([.height(250)])
+                    .presentationDragIndicator(.visible)
+            }
         }
+    }
+}
+
+private struct InviteShareView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("초대 링크 공유").font(MoilTypography.bold(18)).padding(.top, 12)
+            Text("친구에게 링크를 보내 그룹에 초대하세요")
+                .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
+            HStack(spacing: 24) {
+                ForEach([("메시지", "message.fill"), ("카카오톡", "bubble.left.and.bubble.right.fill"), ("링크 복사", "doc.on.doc")], id: \.0) { item in
+                    Button { copied = item.0 == "링크 복사" } label: {
+                        VStack(spacing: 8) {
+                            Circle().fill(MoilColor.primary.opacity(0.12)).frame(width: 52, height: 52)
+                                .overlay { Image(systemName: item.1).foregroundStyle(MoilColor.primary) }
+                            Text(item.0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textPrimary)
+                        }
+                    }
+                }
+            }
+            Text(copied ? "초대 링크를 복사했습니다" : "")
+                .font(MoilTypography.regular(12)).foregroundStyle(MoilColor.primary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity).background(.white)
     }
 }
 
