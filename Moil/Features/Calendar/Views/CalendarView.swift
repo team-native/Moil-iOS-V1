@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct CalendarView: View {
-    private let days = Array(1...31)
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+    private let calendar = Calendar.current
     @State private var isGroupMenuPresented = false
     @State private var groupName = "우리 가족"
     @State private var isScheduleComposerPresented = false
@@ -11,6 +11,25 @@ struct CalendarView: View {
     @State private var isCreateGroupPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
+    @State private var displayedMonth = Date()
+    @State private var scheduledDays: Set<Int> = [5, 9]
+
+    private var daysInMonth: Int {
+        calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
+    }
+
+    private var leadingBlankDays: Int {
+        let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
+        return calendar.component(.weekday, from: firstDay) - 1
+    }
+
+    private var monthTitle: String {
+        displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
+    }
+
+    private var yearTitle: String {
+        displayedMonth.formatted(.dateTime.year().locale(Locale(identifier: "ko_KR")))
+    }
 
     var body: some View {
         ZStack {
@@ -101,27 +120,36 @@ struct CalendarView: View {
                 .padding(.top, 18)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("7월").font(MoilTypography.bold(32))
-                        Text("2026").font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
+                        Text(monthTitle).font(MoilTypography.bold(32))
+                        Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.left")
+                    Button { moveMonth(by: -1) } label: {
+                        Image(systemName: "chevron.left")
                         .frame(width: 30, height: 30)
                         .background(.white)
                         .clipShape(Circle())
-                    Image(systemName: "chevron.right")
+                    }
+                    Button { moveMonth(by: 1) } label: {
+                        Image(systemName: "chevron.right")
                         .frame(width: 30, height: 30)
                         .background(.white)
                         .clipShape(Circle())
-                        .padding(.leading, 6)
+                    }
+                    .padding(.leading, 6)
                 }
                 .padding(16)
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
-                    ForEach(days, id: \.self) { day in
+                    ForEach(0..<leadingBlankDays, id: \.self) { _ in
+                        Color.clear.frame(height: 48)
+                    }
+                    ForEach(1...daysInMonth, id: \.self) { day in
                         VStack(spacing: 4) {
                             Text("\(day)").font(MoilTypography.regular(15))
-                            if day == 5 || day == 9 { Capsule().fill(day == 5 ? Color("BrandPrimary") : Color.green).frame(width: 34, height: 5) }
+                            if scheduledDays.contains(day) {
+                                Capsule().fill(day == 5 ? Color("BrandPrimary") : Color.green).frame(width: 34, height: 5)
+                            }
                         }.frame(height: 48)
                     }
                 }
@@ -142,7 +170,9 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView()
+            ScheduleComposerView { day in
+                scheduledDays.insert(day)
+            }
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
         }
@@ -161,6 +191,11 @@ struct CalendarView: View {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
     }
+
+    private func moveMonth(by value: Int) {
+        displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
+        scheduledDays = []
+    }
 }
 
 #Preview("캘린더") {
@@ -169,6 +204,7 @@ struct CalendarView: View {
 
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
+    let onSave: (Int) -> Void
     @State private var title = ""
     @State private var allDay = false
     @State private var selectedMembers: Set<String> = ["아빠", "나"]
@@ -181,7 +217,10 @@ private struct ScheduleComposerView: View {
                 Spacer()
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
-                Button("저장", action: dismiss.callAsFunction)
+                Button("저장") {
+                    onSave(22)
+                    dismiss()
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(MoilColor.primary)
             }
