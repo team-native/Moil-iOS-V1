@@ -40,7 +40,7 @@ private struct LoginView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    Spacer(minLength: max(36, proxy.size.height * 0.10))
+                    Spacer(minLength: min(86, max(44, proxy.size.height * 0.075)))
                     VStack(spacing: 6) {
                         Image("MoilMascot")
                             .resizable()
@@ -53,7 +53,7 @@ private struct LoginView: View {
                             .font(MoilTypography.regular(13))
                             .foregroundStyle(MoilColor.textSecondary)
                     }
-                    Spacer(minLength: max(30, proxy.size.height * 0.05))
+                    .padding(.bottom, 36)
 
                     VStack(spacing: 12) {
                         AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
