@@ -115,7 +115,7 @@ struct CalendarView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 38)
+                .padding(.top, 50)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(monthTitle).font(MoilTypography.bold(32))
@@ -160,7 +160,7 @@ struct CalendarView: View {
                 switch tab {
                 case .calendar: break
                 case .members: isMemberViewPresented = true
-                case .create: isScheduleComposerPresented = true
+                case .create: isJoinGroupPresented = true
                 case .profile: isMyPagePresented = true
                 }
             }
@@ -172,8 +172,8 @@ struct CalendarView: View {
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isMemberViewPresented) { MemberView() }
-        .sheet(isPresented: $isMyPagePresented, onDismiss: {
+        .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView() }
+        .fullScreenCover(isPresented: $isMyPagePresented, onDismiss: {
             guard shouldOpenCreateGroupAfterProfile else { return }
             shouldOpenCreateGroupAfterProfile = false
             isCreateGroupPresented = true
@@ -183,14 +183,14 @@ struct CalendarView: View {
                 isMyPagePresented = false
             })
         }
-        .sheet(isPresented: $isCreateGroupPresented) { CreateGroupView() }
-        .sheet(isPresented: $isJoinGroupPresented) {
+        .fullScreenCover(isPresented: $isCreateGroupPresented) { CreateGroupView() }
+        .fullScreenCover(isPresented: $isJoinGroupPresented) {
             GroupJoinCodeView {
                 isJoinGroupPresented = false
                 isJoinProfilePresented = true
             }
         }
-        .sheet(isPresented: $isJoinProfilePresented) {
+        .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
     }
