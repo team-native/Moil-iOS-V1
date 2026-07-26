@@ -6,6 +6,7 @@ struct CalendarView: View {
     @State private var isGroupMenuPresented = false
     @State private var groupName = "우리 가족"
     @State private var isScheduleComposerPresented = false
+    @State private var isMemberViewPresented = false
 
     var body: some View {
         ZStack {
@@ -84,7 +85,12 @@ struct CalendarView: View {
                 .padding(.horizontal, 16)
                 Spacer()
                 HStack {
-                    ForEach(["calendar","checklist","person.2","person"], id: \.self) { Image(systemName: $0).frame(maxWidth: .infinity) }
+                    Image(systemName: "calendar").frame(maxWidth: .infinity)
+                    Image(systemName: "checklist").frame(maxWidth: .infinity)
+                    Button { isMemberViewPresented = true } label: {
+                        Image(systemName: "person.2").frame(maxWidth: .infinity)
+                    }
+                    Image(systemName: "person").frame(maxWidth: .infinity)
                 }
                 .padding(.vertical, 18)
                 .foregroundStyle(MoilColor.textSecondary)
@@ -95,6 +101,7 @@ struct CalendarView: View {
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isMemberViewPresented) { MemberView() }
     }
 }
 
