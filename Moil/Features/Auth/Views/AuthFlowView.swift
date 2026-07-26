@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthFlowView: View {
     @State private var route: AuthRoute = .login
+    @State private var signUpEmail = ""
 
     var body: some View {
         switch route {
@@ -11,9 +12,19 @@ struct AuthFlowView: View {
                 set: { route = $0 ? .signUpInfo : .login }
             ), onLogin: { route = .calendar })
         case .signUpInfo:
-            SignUpInfoView(onBack: { route = .login }, onNext: { route = .emailVerification })
+            SignUpInfoView(
+                onBack: { route = .login },
+                onNext: { email in
+                    signUpEmail = email
+                    route = .emailVerification
+                }
+            )
         case .emailVerification:
-            EmailVerificationView(onBack: { route = .signUpInfo }, onNext: { route = .passwordSetup })
+            EmailVerificationView(
+                email: signUpEmail,
+                onBack: { route = .signUpInfo },
+                onNext: { route = .passwordSetup }
+            )
         case .passwordSetup:
             PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .login })
         case .calendar:
@@ -112,7 +123,7 @@ private struct LoginView: View {
 
 private struct SignUpInfoView: View {
     let onBack: () -> Void
-    let onNext: () -> Void
+    let onNext: (String) -> Void
     @State private var name = ""
     @State private var email = ""
 
@@ -163,7 +174,7 @@ private struct SignUpInfoView: View {
 
                 Spacer()
 
-                Button("다음", action: onNext)
+                Button("다음") { onNext(email) }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -190,6 +201,7 @@ private struct SignUpInfoView: View {
 }
 
 private struct EmailVerificationView: View {
+    let email: String
     let onBack: () -> Void
     let onNext: () -> Void
     @State private var code = ""
@@ -212,7 +224,7 @@ private struct EmailVerificationView: View {
                         .foregroundStyle(MoilColor.textPrimary)
                 }
                 .padding(.top, 76)
-                Text("moil@example로 전송된 인증번호 6자리를 입력해주세요")
+                Text("\(email)로 전송된 인증번호 6자리를 입력해주세요")
                     .font(MoilTypography.regular(14))
                     .foregroundStyle(MoilColor.textSecondary)
                     .padding(.top, 12)
