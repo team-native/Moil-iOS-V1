@@ -21,7 +21,9 @@ struct MemberView: View {
     ]
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        GeometryReader { _ in
+            VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("멤버")
                         .font(MoilTypography.bold(26))
@@ -100,9 +102,9 @@ struct MemberView: View {
                 .padding(.horizontal, 16)
                 .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
-            }
-            .background(MoilColor.background)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+                }
+                .frame(maxWidth: .infinity)
+
                 MoilTabBar(selected: .members) { tab in
                     switch tab {
                     case .calendar:
@@ -116,7 +118,10 @@ struct MemberView: View {
                     }
                 }
             }
-            .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(MoilColor.background)
+        .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
                 TextField("그룹 이름", text: $selectedGroup)
                 Button("취소", role: .cancel) { }
                 Button("저장") { feedbackMessage = "그룹 이름을 변경했어요." }
