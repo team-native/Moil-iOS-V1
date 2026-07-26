@@ -145,6 +145,10 @@ struct MemberView: View {
     }
 }
 
+#Preview("멤버 관리") {
+    MemberView()
+}
+
 private struct InviteShareView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false

@@ -21,3 +21,7 @@ struct EmptyCalendarView: View {
         }.padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
     }
 }
+
+#Preview("빈 캘린더") {
+    EmptyCalendarView()
+}

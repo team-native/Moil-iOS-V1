@@ -36,3 +36,7 @@ struct GroupJoinProfileView: View {
     }
 }
 private struct AvatarStack: View { var body: some View { HStack(spacing: -8) { ForEach([Color.blue, .red, .green, .orange], id: \.self) { Circle().fill($0).frame(width: 22, height: 22).overlay { Image(systemName: "person.fill").font(.system(size: 8)).foregroundStyle(.white) } } } } }
+
+#Preview("그룹 참여 프로필") {
+    GroupJoinProfileView()
+}
