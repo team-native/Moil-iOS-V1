@@ -11,6 +11,7 @@ struct CalendarView: View {
     @State private var isCreateGroupPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
+    @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
     @State private var scheduledDays: Set<Int> = [5, 9]
 
@@ -177,8 +178,15 @@ struct CalendarView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isMemberViewPresented) { MemberView() }
-        .sheet(isPresented: $isMyPagePresented) {
-            MyPageView(onCreateGroup: { isMyPagePresented = false; isCreateGroupPresented = true })
+        .sheet(isPresented: $isMyPagePresented, onDismiss: {
+            guard shouldOpenCreateGroupAfterProfile else { return }
+            shouldOpenCreateGroupAfterProfile = false
+            isCreateGroupPresented = true
+        }) {
+            MyPageView(onCreateGroup: {
+                shouldOpenCreateGroupAfterProfile = true
+                isMyPagePresented = false
+            })
         }
         .sheet(isPresented: $isCreateGroupPresented) { CreateGroupView() }
         .sheet(isPresented: $isJoinGroupPresented) {
