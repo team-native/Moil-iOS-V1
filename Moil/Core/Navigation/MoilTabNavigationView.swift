@@ -7,28 +7,34 @@ struct MoilTabNavigationView: View {
     @State private var isCreatingGroup = false
 
     var body: some View {
-        ZStack {
-            if isJoiningProfile {
-                GroupJoinProfileView {
-                    withAnimation(.easeInOut(duration: 0.28)) {
-                        isJoiningProfile = false
-                        selectedTab = .calendar
+        ZStack(alignment: .bottom) {
+            ZStack {
+                if isJoiningProfile {
+                    GroupJoinProfileView {
+                        withAnimation(.easeInOut(duration: 0.28)) {
+                            isJoiningProfile = false
+                            selectedTab = .calendar
+                        }
                     }
-                }
-                .transition(contentTransition)
-            } else {
-                tabContent
-                    .id(selectedTab)
                     .transition(contentTransition)
+                } else {
+                    tabContent
+                        .id(selectedTab)
+                        .transition(contentTransition)
+                }
+            }
+            .padding(.bottom, isJoiningProfile ? 0 : 72)
+
+            if !isJoiningProfile {
+                MoilTabBar(selected: selectedTab, onSelect: select)
+                    .zIndex(10)
+                    .transaction { transaction in
+                        transaction.animation = nil
+                    }
             }
         }
         .animation(.easeInOut(duration: 0.28), value: selectedTab)
         .animation(.easeInOut(duration: 0.28), value: isJoiningProfile)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isJoiningProfile {
-                MoilTabBar(selected: selectedTab, onSelect: select)
-            }
-        }
         .fullScreenCover(isPresented: $isCreatingGroup) {
             CreateGroupView()
         }
