@@ -21,7 +21,8 @@ struct MemberView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
+        GeometryReader { _ in
+            VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("멤버")
@@ -116,8 +117,9 @@ struct MemberView: View {
                     isMyPagePresented = true
                 }
             }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
         .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
                 TextField("그룹 이름", text: $selectedGroup)
