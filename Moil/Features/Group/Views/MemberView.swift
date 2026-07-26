@@ -14,7 +14,7 @@ struct MemberView: View {
     @State private var feedbackMessage: String?
 
     private let members: [(String, String, Color)] = [
-        ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
+        ("아빠", "관리자", MoilAvatarColor.blue), ("엄마", "멤버", MoilAvatarColor.red), ("나", "멤버", MoilAvatarColor.green), ("동생", "멤버", MoilAvatarColor.orange)
     ]
 
     var body: some View {
@@ -192,13 +192,13 @@ private struct InviteShareView: View {
 private struct PermissionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var administrator: Set<String> = ["나"]
-    private let rows: [(String, Color)] = [("나", .green), ("지민", .purple), ("서연", .teal)]
+    private let rows: [(String, Color)] = [("나", MoilAvatarColor.green), ("지민", MoilAvatarColor.purple), ("서연", MoilAvatarColor.pink)]
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("멤버 권한 설정").font(MoilTypography.bold(17)).padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 14)
             ForEach(rows, id: \.0) { row in
                 HStack(spacing: 10) {
-                    Circle().fill(row.1).frame(width: 30, height: 30)
+                    MoilAvatar(color: row.1, size: 30)
                     Text(row.0).font(MoilTypography.semibold(14))
                     Spacer()
                     Picker("권한", selection: Binding(get: { administrator.contains(row.0) }, set: { enabled in
