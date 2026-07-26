@@ -16,6 +16,7 @@ struct CalendarView: View {
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
     @State private var scheduledDays: Set<Int> = [5, 9]
+    @State private var savedEvents: [Int: CalendarEvent] = [:]
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -188,8 +189,9 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView(day: scheduleDraftDay) { day in
+            ScheduleComposerView(day: scheduleDraftDay) { day, title in
                 scheduledDays.insert(day)
+                savedEvents[day] = CalendarEvent(owner: "나", title: title, color: MoilAvatarColor.green)
             }
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
@@ -225,15 +227,18 @@ struct CalendarView: View {
     private func moveMonth(by value: Int) {
         displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
         scheduledDays = []
+        savedEvents = [:]
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
         guard calendar.component(.month, from: displayedMonth) == 7 else { return [] }
+        let baseEvents: [CalendarEvent]
         switch day {
-        case 5: return [CalendarEvent(owner: "엄마", title: "생일", color: MoilAvatarColor.red)]
-        case 9: return [CalendarEvent(owner: "아빠", title: "가족 저녁", color: MoilAvatarColor.blue)]
-        default: return []
+        case 5: baseEvents = [CalendarEvent(owner: "엄마", title: "생일", color: MoilAvatarColor.red)]
+        case 9: baseEvents = [CalendarEvent(owner: "아빠", title: "가족 저녁", color: MoilAvatarColor.blue)]
+        default: baseEvents = []
         }
+        return baseEvents + (savedEvents[day].map { [$0] } ?? [])
     }
 }
 
@@ -251,7 +256,7 @@ private struct CalendarEvent: Identifiable {
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
     let day: Int
-    let onSave: (Int) -> Void
+    let onSave: (Int, String) -> Void
     @State private var title = ""
     @State private var allDay = false
     @State private var selectedMembers: Set<String> = ["아빠", "나"]
@@ -265,7 +270,7 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day)
+                    onSave(day, title.isEmpty ? "새 일정" : title)
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
