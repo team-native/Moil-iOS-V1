@@ -10,6 +10,8 @@ struct MemberView: View {
     @State private var isEditingPermissions = false
     @State private var isSharingInvite = false
     @State private var isTransferringAdmin = false
+    @State private var groupNameDraft = ""
+    @State private var newAdministrator: String?
     @State private var isLeavingGroup = false
     @State private var feedbackMessage: String?
     @State private var isJoinGroupPresented = false
@@ -102,13 +104,19 @@ struct MemberView: View {
                             .padding(.top, 24)
                             .padding(.bottom, 8)
                         VStack(spacing: 0) {
-                            AdminSettingRow(title: "그룹 이름 변경") { isEditingGroupName = true }
+                            AdminSettingRow(title: "그룹 이름 변경") {
+                                groupNameDraft = selectedGroup
+                                isEditingGroupName = true
+                            }
                             Divider()
                             AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                             Divider()
                             AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
                             Divider()
-                            AdminSettingRow(title: "관리자 권한 이전") { isTransferringAdmin = true }
+                            AdminSettingRow(title: "관리자 권한 이전") {
+                                newAdministrator = nil
+                                isTransferringAdmin = true
+                            }
                         }
                         .background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
                     }
@@ -135,13 +143,26 @@ struct MemberView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(MoilColor.background)
-        .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
-                TextField("그룹 이름", text: $selectedGroup)
-                Button("취소", role: .cancel) { }
-                Button("저장") { feedbackMessage = "그룹 이름을 변경했어요." }
-            } message: {
-                Text("새로운 그룹 이름을 입력해주세요")
+        .overlay {
+            if isEditingGroupName {
+                GroupNameEditor(name: $groupNameDraft) {
+                    selectedGroup = groupNameDraft
+                    feedbackMessage = "그룹 이름을 변경했어요."
+                    isEditingGroupName = false
+                } onCancel: {
+                    isEditingGroupName = false
+                }
+            } else if isTransferringAdmin {
+                AdministratorTransferEditor(selection: $newAdministrator) {
+                    if let newAdministrator {
+                        feedbackMessage = "\(newAdministrator)에게 관리자 권한을 이전했어요."
+                    }
+                    isTransferringAdmin = false
+                } onCancel: {
+                    isTransferringAdmin = false
+                }
             }
+        }
             .sheet(isPresented: $isEditingPermissions) {
                 PermissionEditorView()
                     .presentationDetents([.height(327)])
@@ -151,13 +172,6 @@ struct MemberView: View {
                 InviteShareView()
                     .presentationDetents([.height(250)])
                     .presentationDragIndicator(.visible)
-            }
-            .confirmationDialog("관리자 권한 이전", isPresented: $isTransferringAdmin, titleVisibility: .visible) {
-                Button("지민에게 이전") { feedbackMessage = "지민에게 관리자 권한을 이전했어요." }
-                Button("서연에게 이전") { feedbackMessage = "서연에게 관리자 권한을 이전했어요." }
-                Button("취소", role: .cancel) { }
-            } message: {
-                Text("새 관리자를 선택하면 현재 관리자 권한이 변경됩니다.")
             }
             .confirmationDialog("그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
                 Button("그룹 나가기", role: .destructive) { feedbackMessage = "\(selectedGroup) 그룹에서 나왔어요." }
@@ -213,6 +227,116 @@ private struct InviteShareView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity).background(.white)
+    }
+}
+
+private struct GroupNameEditor: View {
+    @Binding var name: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.42).ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 16) {
+                Text("그룹 이름 변경")
+                    .font(MoilTypography.bold(18))
+                TextField("그룹 이름", text: $name)
+                    .font(MoilTypography.regular(15))
+                    .padding(.horizontal, 14)
+                    .frame(height: 48)
+                    .background(MoilColor.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                HStack(spacing: 8) {
+                    Button("취소", action: onCancel)
+                        .font(MoilTypography.semibold(14))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 46)
+                        .background(.white)
+                        .overlay { RoundedRectangle(cornerRadius: 10).stroke(MoilColor.textTertiary.opacity(0.3), lineWidth: 1) }
+                    Button("저장", action: onSave)
+                        .font(MoilTypography.semibold(14))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 46)
+                        .background(MoilColor.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: 320)
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .padding(.horizontal, 32)
+        }
+    }
+}
+
+private struct AdministratorTransferEditor: View {
+    @Binding var selection: String?
+    let onTransfer: () -> Void
+    let onCancel: () -> Void
+
+    private let candidates: [(String, Color)] = [
+        ("지민", MoilAvatarColor.purple),
+        ("서연", MoilAvatarColor.blue)
+    ]
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.42).ignoresSafeArea()
+            VStack(spacing: 0) {
+                Text("관리자 권한을 넘겨주세요")
+                    .font(MoilTypography.bold(18))
+                    .padding(.top, 24)
+                Text("넘겨줄 멤버를 선택해주세요")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 6)
+                    .padding(.bottom, 18)
+
+                VStack(spacing: 8) {
+                    ForEach(candidates, id: \.0) { candidate in
+                        Button { selection = candidate.0 } label: {
+                            HStack(spacing: 12) {
+                                MoilAvatar(color: candidate.1, size: 28)
+                                Text(candidate.0).font(MoilTypography.semibold(15))
+                                Spacer()
+                                Image(systemName: selection == candidate.0 ? "largecircle.fill.circle" : "circle")
+                                    .foregroundStyle(selection == candidate.0 ? MoilColor.primary : MoilColor.textTertiary)
+                            }
+                            .padding(.horizontal, 14)
+                            .frame(height: 48)
+                            .background(MoilColor.background)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .foregroundStyle(MoilColor.textPrimary)
+                    }
+                }
+
+                Button("권한 넘기기", action: onTransfer)
+                    .font(MoilTypography.semibold(14))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(selection == nil ? MoilColor.textTertiary.opacity(0.45) : MoilColor.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .disabled(selection == nil)
+                    .padding(.top, 16)
+                Button("취소", action: onCancel)
+                    .font(MoilTypography.semibold(14))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+            .frame(maxWidth: 320)
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .padding(.horizontal, 32)
+        }
     }
 }
 
