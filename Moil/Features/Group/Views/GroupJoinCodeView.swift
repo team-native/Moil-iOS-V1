@@ -54,3 +54,7 @@ struct GroupJoinCodeView: View {
         .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
     }
 }
+
+#Preview("그룹 참여 코드") {
+    GroupJoinCodeView()
+}

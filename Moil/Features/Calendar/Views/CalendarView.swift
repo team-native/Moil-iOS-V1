@@ -163,6 +163,10 @@ struct CalendarView: View {
     }
 }
 
+#Preview("캘린더") {
+    CalendarView()
+}
+
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""

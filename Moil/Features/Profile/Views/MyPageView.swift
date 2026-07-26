@@ -76,6 +76,10 @@ struct MyPageView: View {
     }
 }
 
+#Preview("마이페이지") {
+    MyPageView()
+}
+
 private struct GroupSection<Content: View>: View {
     let title: String; @ViewBuilder let content: Content
     var body: some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary); VStack(spacing: 0) { content }.background(.white).clipShape(RoundedRectangle(cornerRadius: 18)) } }

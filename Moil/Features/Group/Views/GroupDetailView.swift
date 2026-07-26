@@ -34,3 +34,7 @@ struct GroupDetailView: View {
         }.padding(.horizontal, 16).padding(.bottom, 32) }.background(MoilColor.background)
     }
 }
+
+#Preview("그룹 상세") {
+    GroupDetailView()
+}
