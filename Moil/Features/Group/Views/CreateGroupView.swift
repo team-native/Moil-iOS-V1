@@ -8,10 +8,11 @@ struct CreateGroupView: View {
     @State private var didCreateGroup = false
     @State private var isAdditionalProfilePresented = false
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
+    var onClose: (() -> Void)? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                Button(action: dismiss.callAsFunction) {
+                Button(action: close) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(MoilColor.textPrimary)
@@ -60,7 +61,7 @@ struct CreateGroupView: View {
         .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())
         .alert("그룹을 만들었어요", isPresented: $didCreateGroup) {
-            Button("확인", action: dismiss.callAsFunction)
+            Button("확인", action: close)
         } message: {
             Text("\(name) 그룹의 초대 코드를 구성원에게 공유해보세요.")
         }
@@ -68,6 +69,14 @@ struct CreateGroupView: View {
             Button("확인", role: .cancel) { }
         } message: {
             Text("새 프로필은 그룹 생성 후에도 추가할 수 있어요.")
+        }
+    }
+
+    private func close() {
+        if let onClose {
+            onClose()
+        } else {
+            dismiss()
         }
     }
 }

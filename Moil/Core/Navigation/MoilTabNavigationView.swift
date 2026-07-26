@@ -8,7 +8,13 @@ struct MoilTabNavigationView: View {
 
     var body: some View {
         ZStack {
-            if isJoiningProfile {
+            MoilColor.background
+                .ignoresSafeArea()
+
+            if isCreatingGroup {
+                CreateGroupView(onClose: closeCreateGroup)
+                    .transition(contentTransition)
+            } else if isJoiningProfile {
                 GroupJoinProfileView {
                     withAnimation(.easeInOut(duration: 0.28)) {
                         isJoiningProfile = false
@@ -25,7 +31,7 @@ struct MoilTabNavigationView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isJoiningProfile {
+            if !isJoiningProfile && !isCreatingGroup {
                 MoilTabBar(selected: selectedTab, onSelect: select)
                     .transaction { transaction in
                         transaction.animation = nil
@@ -33,22 +39,19 @@ struct MoilTabNavigationView: View {
             }
         }
         .animation(.easeInOut(duration: 0.28), value: isJoiningProfile)
-        .fullScreenCover(isPresented: $isCreatingGroup) {
-            CreateGroupView()
-        }
     }
 
     @ViewBuilder
     private var tabContent: some View {
         switch selectedTab {
         case .calendar:
-            CalendarView(onTabSelect: select, showsTabBar: false)
+            CalendarView(onTabSelect: select, onCreateGroup: openCreateGroup, showsTabBar: false)
         case .members:
             MemberView(onTabSelect: select, showsTabBar: false)
         case .create:
             GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select, showsTabBar: false)
         case .profile:
-            MyPageView(onCreateGroup: { isCreatingGroup = true }, onTabSelect: select, showsTabBar: false)
+            MyPageView(onCreateGroup: openCreateGroup, onTabSelect: select, showsTabBar: false)
         }
     }
 
@@ -72,6 +75,20 @@ struct MoilTabNavigationView: View {
     private func openJoinProfile() {
         transitionEdge = .trailing
         isJoiningProfile = true
+    }
+
+    private func openCreateGroup() {
+        transitionEdge = .trailing
+        withAnimation(.easeInOut(duration: 0.28)) {
+            isCreatingGroup = true
+        }
+    }
+
+    private func closeCreateGroup() {
+        transitionEdge = .leading
+        withAnimation(.easeInOut(duration: 0.28)) {
+            isCreatingGroup = false
+        }
     }
 
     private func tabIndex(for tab: MoilTab) -> Int {
