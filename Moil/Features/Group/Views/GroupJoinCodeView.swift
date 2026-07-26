@@ -18,11 +18,14 @@ struct GroupJoinCodeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
+                if showsTabBar {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
+                    }
                 }
                 Text("그룹 참여").font(MoilTypography.bold(26))
+                Spacer()
             }
             .safeAreaPadding(.top, 16)
             Text("초대 코드를 입력해주세요").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary).padding(.top, 8)
