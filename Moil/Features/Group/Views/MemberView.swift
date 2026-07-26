@@ -16,9 +16,20 @@ struct MemberView: View {
     @State private var isJoinProfilePresented = false
     @State private var isMyPagePresented = false
 
-    private let members: [(String, String, Color)] = [
-        ("아빠", "관리자", MoilAvatarColor.blue), ("엄마", "멤버", MoilAvatarColor.red), ("나", "멤버", MoilAvatarColor.green), ("동생", "멤버", MoilAvatarColor.orange)
-    ]
+    private var members: [(String, String, Color)] {
+        switch selectedGroup {
+        case "대학 동기":
+            [("나", "관리자", MoilAvatarColor.green), ("지민", "멤버", MoilAvatarColor.purple), ("서연", "멤버", MoilAvatarColor.blue)]
+        case "회사 팀":
+            [("나", "멤버", MoilAvatarColor.green), ("민수", "관리자", MoilAvatarColor.blue), ("하늘", "멤버", MoilAvatarColor.orange)]
+        default:
+            [("아빠", "관리자", MoilAvatarColor.blue), ("엄마", "멤버", MoilAvatarColor.red), ("나", "멤버", MoilAvatarColor.green), ("동생", "멤버", MoilAvatarColor.orange)]
+        }
+    }
+
+    private var inviteCode: String {
+        selectedGroup == "대학 동기" ? "FRIEND-9K1M" : "FAM-7X2Q"
+    }
 
     var body: some View {
         GeometryReader { _ in
@@ -36,7 +47,10 @@ struct MemberView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                         ForEach(["우리 가족", "대학 동기", "회사 팀"], id: \.self) { group in
-                            Button(group) { selectedGroup = group }
+                            Button(group) {
+                                selectedGroup = group
+                                isAdministratorMode = group == "대학 동기"
+                            }
                                 .font(MoilTypography.semibold(13))
                                 .foregroundStyle(selectedGroup == group ? .white : MoilColor.textSecondary)
                                 .padding(.horizontal, 14).frame(height: 34)
@@ -61,7 +75,7 @@ struct MemberView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("초대 코드").font(MoilTypography.semibold(13))
                         HStack {
-                            Text("FAM-7X2Q").font(MoilTypography.bold(19)).tracking(1)
+                            Text(inviteCode).font(MoilTypography.bold(19)).tracking(1)
                             Spacer()
                             Button(copied ? "복사됨" : "복사") { copied = true }
                                 .font(MoilTypography.bold(12)).foregroundStyle(.white)
