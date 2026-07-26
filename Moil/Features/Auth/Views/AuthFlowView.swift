@@ -34,12 +34,11 @@ private struct LoginView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                MoilColor.background.ignoresSafeArea()
+        ZStack {
+            MoilColor.background.ignoresSafeArea()
 
+            ScrollView {
                 VStack(spacing: 0) {
-                    Spacer(minLength: 90)
 
                     VStack(spacing: 6) {
                         Image("MoilMascot")
@@ -53,8 +52,9 @@ private struct LoginView: View {
                             .font(MoilTypography.regular(13))
                             .foregroundStyle(MoilColor.textSecondary)
                     }
+                    .padding(.top, 92)
 
-                    Spacer(minLength: 36)
+                    Spacer(minLength: 42)
 
                     VStack(spacing: 12) {
                         AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
@@ -67,7 +67,7 @@ private struct LoginView: View {
                         }
                     }
 
-                    Spacer()
+                    Spacer(minLength: 70)
 
                     VStack(spacing: 14) {
                         Button("로그인") { }
@@ -93,9 +93,9 @@ private struct LoginView: View {
                     .padding(.bottom, 34)
                 }
                 .padding(.horizontal, 24)
-                .frame(width: min(proxy.size.width, 402))
                 .frame(maxWidth: .infinity)
             }
+            .scrollIndicators(.hidden)
         }
     }
 }
