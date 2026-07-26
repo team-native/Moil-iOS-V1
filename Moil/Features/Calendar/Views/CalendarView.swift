@@ -242,10 +242,8 @@ struct CalendarView: View {
                 }
             )
         }
-        .alert("일정 검색", isPresented: $isScheduleSearchPresented) {
-            Button("확인", role: .cancel) { }
-        } message: {
-            Text("일정 검색 기능을 준비 중이에요.")
+        .fullScreenCover(isPresented: $isScheduleSearchPresented) {
+            ScheduleSearchView()
         }
     }
 
@@ -363,5 +361,85 @@ private struct ScheduleRow: View {
         }
         .padding(.horizontal, 18).frame(height: 46)
         .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+    }
+}
+
+private struct ScheduleSearchView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private let events: [(day: String, owner: String, title: String, color: Color)] = [
+        ("7월 5일", "엄마", "생일", MoilAvatarColor.red),
+        ("7월 9일", "아빠", "가족 저녁", MoilAvatarColor.blue),
+        ("7월 28일", "동생", "시험", MoilAvatarColor.yellow)
+    ]
+
+    private var filteredEvents: [(day: String, owner: String, title: String, color: Color)] {
+        query.isEmpty ? events : events.filter { $0.title.localizedCaseInsensitiveContains(query) || $0.owner.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(MoilColor.textTertiary)
+                    TextField("일정 검색", text: $query)
+                        .font(MoilTypography.regular(16))
+                }
+                .padding(.horizontal, 14)
+                .frame(height: 48)
+                .background(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+
+                if filteredEvents.isEmpty {
+                    Spacer()
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.system(size: 36, weight: .light))
+                        .foregroundStyle(MoilColor.textTertiary)
+                    Text("검색 결과가 없어요")
+                        .font(MoilTypography.semibold(16))
+                        .padding(.top, 12)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(filteredEvents, id: \.title) { event in
+                                HStack(spacing: 12) {
+                                    Circle().fill(event.color).frame(width: 10, height: 10)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(event.title).font(MoilTypography.semibold(16))
+                                        Text("\(event.day) · \(event.owner)")
+                                            .font(MoilTypography.regular(13))
+                                            .foregroundStyle(MoilColor.textSecondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(MoilColor.textTertiary)
+                                }
+                                .padding(16)
+                                .background(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                            }
+                        }
+                        .padding(16)
+                    }
+                }
+            }
+            .background(MoilColor.background.ignoresSafeArea())
+            .navigationTitle("일정 검색")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: dismiss.callAsFunction) {
+                        Image(systemName: "chevron.left")
+                            .foregroundStyle(MoilColor.textPrimary)
+                    }
+                }
+            }
+        }
     }
 }
