@@ -45,7 +45,7 @@ struct CalendarView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 HStack(spacing: -7) {
-                                    ForEach([Color.blue, .red, .green, .orange], id: \.self) { color in
+                                    ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
                                         MoilAvatar(color: color, size: 24)
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
@@ -115,7 +115,7 @@ struct CalendarView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 62)
+                .padding(.top, 38)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(monthTitle).font(MoilTypography.bold(32))

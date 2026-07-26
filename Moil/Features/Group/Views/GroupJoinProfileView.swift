@@ -23,7 +23,7 @@ struct GroupJoinProfileView: View {
             Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             TextField("닉네임 입력", text: $nickname).font(MoilTypography.regular(15)).padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 12))
             Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
-            HStack(spacing: 14) { ForEach([Color.blue, .red, .green, .orange], id: \.self) { color in Circle().fill(color).frame(width: 34, height: 34).opacity(0.35) } }
+            HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             HStack(spacing: 14) { ForEach(colors, id: \.self) { color in Button { selectedColor = color } label: { Circle().fill(color).frame(width: 40, height: 40).overlay { Image(systemName: "person.fill").font(.system(size: 14)).foregroundStyle(.white) }.overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) } } } }
             Spacer()
@@ -38,7 +38,7 @@ struct GroupJoinProfileView: View {
 private struct AvatarStack: View {
     var body: some View {
         HStack(spacing: -8) {
-            ForEach([Color.blue, .red, .green, .orange], id: \.self) {
+            ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) {
                 MoilAvatar(color: $0, size: 22)
             }
         }
