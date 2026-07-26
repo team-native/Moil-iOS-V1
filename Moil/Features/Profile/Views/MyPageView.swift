@@ -28,23 +28,11 @@ struct MyPageView: View {
                 .padding(.bottom, 28)
 
                 HStack(spacing: 14) {
-                    Circle()
-                        .fill(MoilColor.primary.opacity(0.18))
-                        .frame(width: 64, height: 64)
-                        .overlay {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 26, weight: .medium))
-                                .foregroundStyle(MoilColor.primary)
-                        }
+                    MoilAvatar(color: Color("AvatarGreen"), size: 56)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("나").font(MoilTypography.bold(21))
-                        Text("내 일정과 그룹을 관리해요")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
                     }
                 }
-                .padding(16)
-                .background(.white, in: RoundedRectangle(cornerRadius: 20))
                 .padding(.bottom, 28)
 
                 GroupSection(title: "내 그룹") {
@@ -70,7 +58,7 @@ struct MyPageView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
                     .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
             }
-            .padding(.horizontal, 16).padding(.top, 24).padding(.bottom, 32)
+            .padding(.horizontal, 16).safeAreaPadding(.top, 18).padding(.bottom, 32)
         }
         .background(MoilColor.background)
         .sheet(isPresented: $isGroupDetailPresented) { GroupDetailView() }

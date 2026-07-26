@@ -46,10 +46,7 @@ struct CalendarView: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: -7) {
                                     ForEach([Color.blue, .red, .green, .orange], id: \.self) { color in
-                                        Circle()
-                                            .fill(color)
-                                            .frame(width: 24, height: 24)
-                                            .overlay { Image(systemName: "person.fill").font(.system(size: 8)).foregroundStyle(.white) }
+                                        MoilAvatar(color: color, size: 24)
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
                                 }
@@ -118,7 +115,7 @@ struct CalendarView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 18)
+                .padding(.top, 62)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(monthTitle).font(MoilTypography.bold(32))

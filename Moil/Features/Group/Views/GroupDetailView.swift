@@ -15,7 +15,7 @@ struct GroupDetailView: View {
                 Text("그룹 상세").font(MoilTypography.bold(17))
                 Spacer()
                 Color.clear.frame(width: 36, height: 36)
-            }.padding(.top, 16).padding(.bottom, 24)
+            }.safeAreaPadding(.top, 18).padding(.bottom, 24)
             HStack(spacing: 12) {
                 Circle().fill(MoilColor.primary.opacity(0.18)).frame(width: 48, height: 48).overlay { Image(systemName: "person.2.fill").foregroundStyle(MoilColor.primary) }
                 VStack(alignment: .leading, spacing: 4) {
