@@ -137,18 +137,30 @@ struct CalendarView: View {
                     .padding(.leading, 6)
                 }
                 .padding(16)
-                LazyVGrid(columns: columns, spacing: 14) {
+                LazyVGrid(columns: columns, spacing: 9) {
                     ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
                     ForEach(0..<leadingBlankDays, id: \.self) { _ in
-                        Color.clear.frame(height: 48)
+                        Color.clear.frame(height: 108)
                     }
                     ForEach(1...daysInMonth, id: \.self) { day in
-                        VStack(spacing: 4) {
-                            Text("\(day)").font(MoilTypography.regular(15))
-                            if scheduledDays.contains(day) {
-                                Capsule().fill(day == 5 ? Color("BrandPrimary") : MoilAvatarColor.green).frame(width: 34, height: 5)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(day)")
+                                .font(MoilTypography.regular(15))
+                                .frame(width: 32, height: 32, alignment: .center)
+                            ForEach(events(for: day)) { event in
+                                HStack(spacing: 3) {
+                                    Circle().fill(event.color).frame(width: 6, height: 6)
+                                    Text(event.owner).font(MoilTypography.regular(10))
+                                    Text(event.title).font(MoilTypography.regular(10))
+                                }
+                                .lineLimit(1)
                             }
-                        }.frame(height: 48)
+                            if scheduledDays.contains(day) && events(for: day).isEmpty {
+                                Circle().fill(MoilAvatarColor.green).frame(width: 6, height: 6)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .frame(height: 108, alignment: .topLeading)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -199,6 +211,22 @@ struct CalendarView: View {
         displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
         scheduledDays = []
     }
+
+    private func events(for day: Int) -> [CalendarEvent] {
+        guard calendar.component(.month, from: displayedMonth) == 7 else { return [] }
+        switch day {
+        case 5: return [CalendarEvent(owner: "엄마", title: "생일", color: MoilAvatarColor.red)]
+        case 9: return [CalendarEvent(owner: "아빠", title: "가족 저녁", color: MoilAvatarColor.blue)]
+        default: return []
+        }
+    }
+}
+
+private struct CalendarEvent: Identifiable {
+    let owner: String
+    let title: String
+    let color: Color
+    var id: String { "\(owner)-\(title)" }
 }
 
 #Preview("캘린더") {
