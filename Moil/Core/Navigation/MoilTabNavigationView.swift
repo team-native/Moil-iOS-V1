@@ -23,6 +23,7 @@ struct MoilTabNavigationView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isJoiningProfile {
                 MoilTabBar(selected: selectedTab, onSelect: select)
