@@ -24,6 +24,11 @@ struct MoilTabNavigationView: View {
         }
         .animation(.easeInOut(duration: 0.28), value: selectedTab)
         .animation(.easeInOut(duration: 0.28), value: isJoiningProfile)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !isJoiningProfile {
+                MoilTabBar(selected: selectedTab, onSelect: select)
+            }
+        }
         .fullScreenCover(isPresented: $isCreatingGroup) {
             CreateGroupView()
         }
@@ -33,13 +38,13 @@ struct MoilTabNavigationView: View {
     private var tabContent: some View {
         switch selectedTab {
         case .calendar:
-            CalendarView(onTabSelect: select)
+            CalendarView(onTabSelect: select, showsTabBar: false)
         case .members:
-            MemberView(onTabSelect: select)
+            MemberView(onTabSelect: select, showsTabBar: false)
         case .create:
-            GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select)
+            GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select, showsTabBar: false)
         case .profile:
-            MyPageView(onCreateGroup: { isCreatingGroup = true }, onTabSelect: select)
+            MyPageView(onCreateGroup: { isCreatingGroup = true }, onTabSelect: select, showsTabBar: false)
         }
     }
 

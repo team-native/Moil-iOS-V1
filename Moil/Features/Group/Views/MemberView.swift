@@ -3,6 +3,7 @@ import SwiftUI
 struct MemberView: View {
     @Environment(\.dismiss) private var dismiss
     var onTabSelect: ((MoilTab) -> Void)? = nil
+    var showsTabBar = true
     @State private var selectedGroup = "우리 가족"
     @State private var notificationsEnabled = true
     @State private var copied = false
@@ -128,19 +129,21 @@ struct MemberView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                MoilTabBar(selected: .members) { tab in
-                    if let onTabSelect {
-                        onTabSelect(tab)
-                    } else {
-                        switch tab {
-                        case .calendar:
-                            dismiss()
-                        case .members:
-                            break
-                        case .create:
-                            isJoinGroupPresented = true
-                        case .profile:
-                            isMyPagePresented = true
+                if showsTabBar {
+                    MoilTabBar(selected: .members) { tab in
+                        if let onTabSelect {
+                            onTabSelect(tab)
+                        } else {
+                            switch tab {
+                            case .calendar:
+                                dismiss()
+                            case .members:
+                                break
+                            case .create:
+                                isJoinGroupPresented = true
+                            case .profile:
+                                isMyPagePresented = true
+                            }
                         }
                     }
                 }

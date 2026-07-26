@@ -4,13 +4,15 @@ struct GroupJoinCodeView: View {
     @Environment(\.dismiss) private var dismiss
     let onNext: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
+    let showsTabBar: Bool
     @State private var code = ""
     @State private var error: String?
     @State private var isVerified = false
 
-    init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil) {
+    init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
         self.onNext = onNext
         self.onTabSelect = onTabSelect
+        self.showsTabBar = showsTabBar
     }
 
     var body: some View {
@@ -57,11 +59,13 @@ struct GroupJoinCodeView: View {
         }
         .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            MoilTabBar(selected: .create) { tab in
-                if let onTabSelect {
-                    onTabSelect(tab)
-                } else if tab != .create {
-                    dismiss()
+            if showsTabBar {
+                MoilTabBar(selected: .create) { tab in
+                    if let onTabSelect {
+                        onTabSelect(tab)
+                    } else if tab != .create {
+                        dismiss()
+                    }
                 }
             }
         }

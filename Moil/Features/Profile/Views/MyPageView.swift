@@ -12,11 +12,13 @@ struct MyPageView: View {
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
+    let showsTabBar: Bool
 
-    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil) {
+    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
         self.onCreateGroup = onCreateGroup
         self.onLeaveGroup = onLeaveGroup
         self.onTabSelect = onTabSelect
+        self.showsTabBar = showsTabBar
     }
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -62,19 +64,21 @@ struct MyPageView: View {
         }
         .background(MoilColor.background)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            MoilTabBar(selected: .profile) { tab in
-                if let onTabSelect {
-                    onTabSelect(tab)
-                } else {
-                    switch tab {
-                    case .calendar:
-                        dismiss()
-                    case .members:
-                        isMemberPresented = true
-                    case .create:
-                        isJoinGroupPresented = true
-                    case .profile:
-                        break
+            if showsTabBar {
+                MoilTabBar(selected: .profile) { tab in
+                    if let onTabSelect {
+                        onTabSelect(tab)
+                    } else {
+                        switch tab {
+                        case .calendar:
+                            dismiss()
+                        case .members:
+                            isMemberPresented = true
+                        case .create:
+                            isJoinGroupPresented = true
+                        case .profile:
+                            break
+                        }
                     }
                 }
             }
