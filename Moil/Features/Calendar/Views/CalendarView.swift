@@ -3,6 +3,7 @@ import SwiftUI
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
+    var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
     private let calendar = Calendar.current
@@ -50,7 +51,7 @@ struct CalendarView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background
             VStack(spacing: 0) {
                 HStack {
                     Button {
@@ -103,7 +104,11 @@ struct CalendarView: View {
                             Divider()
                             Button {
                                 isGroupMenuPresented = false
-                                isCreateGroupPresented = true
+                                if let onCreateGroup {
+                                    onCreateGroup()
+                                } else {
+                                    isCreateGroupPresented = true
+                                }
                             } label: {
                                 Label("새 그룹 만들기", systemImage: "plus")
                                     .font(MoilTypography.semibold(14))
