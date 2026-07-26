@@ -26,7 +26,7 @@ private struct LoginView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Color.moilBackground.ignoresSafeArea()
+                MoilColor.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     Spacer(minLength: 90)
@@ -37,11 +37,11 @@ private struct LoginView: View {
                             .scaledToFit()
                             .frame(width: 75, height: 74)
                         Text("모일")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(Color.moilText)
+                            .font(MoilTypography.bold(22))
+                            .foregroundStyle(MoilColor.textPrimary)
                         Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.moilSubtext)
+                            .font(MoilTypography.regular(13))
+                            .foregroundStyle(MoilColor.textSecondary)
                     }
 
                     Spacer(minLength: 36)
@@ -52,8 +52,8 @@ private struct LoginView: View {
                         HStack {
                             Spacer()
                             Button("비밀번호를 잊으셨나요?") { }
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.moilSubtext)
+                                .font(MoilTypography.regular(13))
+                                .foregroundStyle(MoilColor.textSecondary)
                         }
                     }
 
@@ -61,11 +61,11 @@ private struct LoginView: View {
 
                     VStack(spacing: 14) {
                         Button("로그인") { }
-                            .font(.system(size: 16, weight: .bold))
+                            .font(MoilTypography.bold(16))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(canSubmit ? Color.moilPrimary : Color.moilPrimary.opacity(0.78))
+                            .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .disabled(!canSubmit)
 
@@ -73,12 +73,12 @@ private struct LoginView: View {
                             showingSignUp = true
                         } label: {
                             Text("계정이 없으신가요? ")
-                                .foregroundStyle(Color.moilSubtext)
+                                .foregroundStyle(MoilColor.textSecondary)
                             + Text("회원가입")
                                 .fontWeight(.bold)
-                                .foregroundStyle(Color.moilPrimary)
+                                .foregroundStyle(MoilColor.primary)
                         }
-                        .font(.system(size: 14))
+                        .font(MoilTypography.regular(14))
                     }
                     .padding(.bottom, 34)
                 }
@@ -107,19 +107,12 @@ private struct AuthTextField: View {
         .textContentType(contentType)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
-        .font(.system(size: 15))
+        .font(MoilTypography.regular(15))
         .padding(.horizontal, 16)
         .frame(height: 53)
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
-}
-
-private extension Color {
-    static let moilBackground = Color(red: 246 / 255, green: 245 / 255, blue: 242 / 255)
-    static let moilPrimary = Color(red: 191 / 255, green: 107 / 255, blue: 96 / 255)
-    static let moilText = Color(red: 21 / 255, green: 17 / 255, blue: 13 / 255)
-    static let moilSubtext = Color(red: 93 / 255, green: 87 / 255, blue: 81 / 255)
 }
 
 #Preview {
