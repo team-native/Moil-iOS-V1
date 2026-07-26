@@ -28,7 +28,7 @@ struct AuthFlowView: View {
         case .passwordSetup:
             PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .main })
         case .main:
-            MoilTabNavigationView()
+            MoilTabNavigationView(onLogout: { route = .login })
         }
     }
 }

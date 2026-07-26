@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MoilTabNavigationView: View {
+    let onLogout: () -> Void
     @State private var selectedTab: MoilTab = .calendar
     @State private var transitionEdge: Edge = .trailing
     @State private var isJoiningProfile = false
@@ -51,7 +52,7 @@ struct MoilTabNavigationView: View {
         case .create:
             GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select, showsTabBar: false)
         case .profile:
-            MyPageView(onCreateGroup: openCreateGroup, onTabSelect: select, showsTabBar: false)
+            MyPageView(onCreateGroup: openCreateGroup, onLogout: onLogout, onTabSelect: select, showsTabBar: false)
         }
     }
 
@@ -102,6 +103,6 @@ struct MoilTabNavigationView: View {
 }
 
 #Preview("공통 탭 네비게이션") {
-    MoilTabNavigationView()
+    MoilTabNavigationView(onLogout: {})
         .environmentObject(MoilGroupStore())
 }

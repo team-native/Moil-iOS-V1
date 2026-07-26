@@ -11,12 +11,14 @@ struct MyPageView: View {
     @State private var isJoinProfilePresented = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
+    let onLogout: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
     let showsTabBar: Bool
 
-    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
+    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onLogout: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
         self.onCreateGroup = onCreateGroup
         self.onLeaveGroup = onLeaveGroup
+        self.onLogout = onLogout
         self.onTabSelect = onTabSelect
         self.showsTabBar = showsTabBar
     }
@@ -101,9 +103,11 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
-        .confirmationDialog("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented, titleVisibility: .visible) {
-            Button("로그아웃", role: .destructive, action: dismiss.callAsFunction)
+        .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
+            Button("로그아웃", role: .destructive, action: onLogout)
+        } message: {
+            Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
         }
     }
 }
