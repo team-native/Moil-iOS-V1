@@ -18,31 +18,11 @@ struct MemberView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Button(action: dismiss.callAsFunction) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(MoilColor.textPrimary)
-                                .frame(width: 36, height: 36)
-                                .background(.white, in: Circle())
-                        }
-                        Spacer()
-                        Button { isAdministratorMode.toggle() } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(MoilColor.textPrimary)
-                                .frame(width: 36, height: 36)
-                                .background(.white, in: Circle())
-                        }
-                    }
-                    .padding(.bottom, 18)
-
                     Text("멤버")
                         .font(MoilTypography.bold(26))
-                        .padding(.bottom, 6)
+                        .padding(.bottom, 4)
                     Text(selectedGroup)
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
@@ -55,7 +35,7 @@ struct MemberView: View {
                                 .font(MoilTypography.semibold(13))
                                 .foregroundStyle(selectedGroup == group ? .white : MoilColor.textSecondary)
                                 .padding(.horizontal, 14).frame(height: 34)
-                                .background(selectedGroup == group ? MoilColor.primary : .white)
+                                .background(selectedGroup == group ? MoilColor.primary : MoilColor.background)
                                 .clipShape(Capsule())
                         }
                     }
@@ -115,7 +95,7 @@ struct MemberView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .safeAreaPadding(.top, 18)
+                .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
             }
             .background(MoilColor.background)
@@ -154,7 +134,6 @@ struct MemberView: View {
             } message: {
                 Text(feedbackMessage ?? "")
             }
-        }
     }
 }
 
