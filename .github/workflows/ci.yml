@@ -1,0 +1,30 @@
+name: iOS CI
+
+on:
+  pull_request:
+    branches:
+      - Dev
+  push:
+    branches:
+      - Dev
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+      - name: Build
+        run: >-
+          xcodebuild
+          -project Moil.xcodeproj
+          -scheme Moil
+          -sdk iphonesimulator
+          CODE_SIGNING_ALLOWED=NO
+          build
