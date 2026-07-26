@@ -5,6 +5,7 @@ struct CreateGroupView: View {
     @State private var name = ""
     @State private var selectedColor = MoilAvatarColor.green
     @State private var didCreateGroup = false
+    @State private var isAdditionalProfilePresented = false
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,6 +33,14 @@ struct CreateGroupView: View {
                             .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
                     }
                 }
+                Button { isAdditionalProfilePresented = true } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(width: 40, height: 40)
+                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
+                }
+                .accessibilityLabel("프로필 추가")
             }
             Text("그룹을 만든 뒤 초대 코드로 구성원을 초대할 수 있어요.")
                 .font(MoilTypography.regular(13))
@@ -50,6 +59,11 @@ struct CreateGroupView: View {
             Button("확인", action: dismiss.callAsFunction)
         } message: {
             Text("\(name) 그룹의 초대 코드를 구성원에게 공유해보세요.")
+        }
+        .alert("프로필 추가", isPresented: $isAdditionalProfilePresented) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("새 프로필은 그룹 생성 후에도 추가할 수 있어요.")
         }
     }
 }
