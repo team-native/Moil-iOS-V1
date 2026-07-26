@@ -34,8 +34,10 @@ private struct LoginView: View {
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack {
+                MoilColor.background
+                    .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -93,9 +95,11 @@ private struct LoginView: View {
                     .padding(.bottom, 34)
                 }
                 .padding(.horizontal, 24)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
             .scrollIndicators(.hidden)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         }
     }
 }
