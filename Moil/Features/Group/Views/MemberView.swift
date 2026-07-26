@@ -101,6 +101,7 @@ struct MemberView: View {
                 .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(MoilColor.background)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 MoilTabBar(selected: .members) { tab in
