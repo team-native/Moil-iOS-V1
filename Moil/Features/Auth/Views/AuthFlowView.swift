@@ -123,27 +123,16 @@ private struct SignUpInfoView: View {
             MoilColor.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                            .frame(width: 36, height: 36)
-                    }
-                    Spacer()
-                }
-                .padding(.top, 16)
-
                 VStack(alignment: .leading, spacing: 0) {
                     Text("회원가입")
                         .font(MoilTypography.bold(28))
                         .foregroundStyle(MoilColor.textPrimary)
-                        .padding(.top, 38)
+                        .padding(.top, 76)
 
                     Text("이름")
                         .font(MoilTypography.semibold(12))
                         .foregroundStyle(MoilColor.textTertiary)
-                        .padding(.top, 32)
+                        .padding(.top, 20)
                         .padding(.bottom, 10)
                     AuthTextField(title: "이름 입력", text: $name, contentType: .name)
 
