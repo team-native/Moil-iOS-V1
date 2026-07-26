@@ -5,6 +5,7 @@ struct MemberView: View {
     @State private var notificationsEnabled = true
     @State private var copied = false
     @State private var isAdministratorMode = false
+    @State private var isEditingGroupName = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -66,7 +67,7 @@ struct MemberView: View {
 
                     if isAdministratorMode {
                         VStack(spacing: 0) {
-                            AdminSettingRow(title: "그룹 이름 변경")
+                            AdminSettingRow(title: "그룹 이름 변경") { isEditingGroupName = true }
                             Divider()
                             AdminSettingRow(title: "멤버 권한 설정")
                             Divider()
@@ -78,14 +79,22 @@ struct MemberView: View {
                 .padding(16).padding(.top, 8)
             }
             .background(MoilColor.background)
+            .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
+                TextField("그룹 이름", text: $selectedGroup)
+                Button("취소", role: .cancel) { }
+                Button("저장") { }
+            } message: {
+                Text("새로운 그룹 이름을 입력해주세요")
+            }
         }
     }
 }
 
 private struct AdminSettingRow: View {
     let title: String
+    var action: () -> Void = { }
     var body: some View {
-        Button { } label: {
+        Button(action: action) {
             HStack {
                 Text(title).font(MoilTypography.regular(15)).foregroundStyle(MoilColor.textPrimary)
                 Spacer()
