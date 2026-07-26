@@ -117,6 +117,7 @@ struct MemberView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
         .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
                 TextField("그룹 이름", text: $selectedGroup)
