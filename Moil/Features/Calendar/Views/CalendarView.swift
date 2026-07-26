@@ -23,9 +23,20 @@ struct CalendarView: View {
                                 isGroupMenuPresented.toggle()
                             }
                         } label: {
-                            Label(groupName, systemImage: "person.2.fill")
-                                .font(MoilTypography.semibold(15))
-                                .foregroundStyle(MoilColor.textPrimary)
+                            HStack(spacing: 8) {
+                                HStack(spacing: -7) {
+                                    ForEach([Color.blue, .red, .green, .orange], id: \.self) { color in
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 24, height: 24)
+                                            .overlay { Image(systemName: "person.fill").font(.system(size: 8)).foregroundStyle(.white) }
+                                            .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
+                                    }
+                                }
+                                Text(groupName)
+                                    .font(MoilTypography.semibold(15))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                            }
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(MoilColor.textSecondary)
@@ -95,7 +106,14 @@ struct CalendarView: View {
                     }
                     Spacer()
                     Image(systemName: "chevron.left")
-                    Image(systemName: "chevron.right").padding(.leading, 18)
+                        .frame(width: 30, height: 30)
+                        .background(.white)
+                        .clipShape(Circle())
+                    Image(systemName: "chevron.right")
+                        .frame(width: 30, height: 30)
+                        .background(.white)
+                        .clipShape(Circle())
+                        .padding(.leading, 6)
                 }
                 .padding(16)
                 LazyVGrid(columns: columns, spacing: 14) {
