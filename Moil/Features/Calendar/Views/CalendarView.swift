@@ -26,8 +26,18 @@ struct CalendarView: View {
     }
 
     private var leadingBlankDays: Int {
-        let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
-        return calendar.component(.weekday, from: firstDay) - 1
+        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
+        let firstDay = calendar.date(from: DateComponents(year: components.year, month: components.month, day: 1)) ?? displayedMonth
+        return (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
+    }
+
+    private var calendarRowCount: Int {
+        let occupiedCells = leadingBlankDays + daysInMonth
+        return max(5, Int(ceil(Double(occupiedCells) / 7)))
+    }
+
+    private var dayCellHeight: CGFloat {
+        calendarRowCount == 6 ? 78 : 94
     }
 
     private var monthTitle: String {
@@ -147,34 +157,13 @@ struct CalendarView: View {
                 .padding(16)
                 LazyVGrid(columns: columns, spacing: 9) {
                     ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
-                    ForEach(0..<leadingBlankDays, id: \.self) { _ in
-                        Color.clear.frame(height: 108)
-                    }
-                    ForEach(1...daysInMonth, id: \.self) { day in
-                        Button {
-                            scheduleDraftDay = day
-                            isScheduleComposerPresented = true
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                            Text("\(day)")
-                                .font(MoilTypography.regular(15))
-                                .frame(width: 32, height: 32, alignment: .center)
-                            ForEach(events(for: day)) { event in
-                                HStack(spacing: 3) {
-                                    Circle().fill(event.color).frame(width: 6, height: 6)
-                                    Text(event.owner).font(MoilTypography.regular(10))
-                                    Text(event.title).font(MoilTypography.regular(10))
-                                }
-                                .lineLimit(1)
-                            }
-                            if scheduledDays.contains(day) && events(for: day).isEmpty {
-                                Circle().fill(MoilAvatarColor.green).frame(width: 6, height: 6)
-                            }
-                                Spacer(minLength: 0)
-                            }
-                            .frame(height: 108, alignment: .topLeading)
+                    ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
+                        let day = slot - leadingBlankDays + 1
+                        if (1...daysInMonth).contains(day) {
+                            calendarDay(day)
+                        } else {
+                            Color.clear.frame(height: dayCellHeight)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -259,6 +248,33 @@ struct CalendarView: View {
         displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
         scheduledDays = []
         savedEvents = [:]
+    }
+
+    private func calendarDay(_ day: Int) -> some View {
+        Button {
+            scheduleDraftDay = day
+            isScheduleComposerPresented = true
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(day)")
+                    .font(MoilTypography.regular(15))
+                    .frame(width: 32, height: 32, alignment: .center)
+                ForEach(events(for: day)) { event in
+                    HStack(spacing: 3) {
+                        Circle().fill(event.color).frame(width: 6, height: 6)
+                        Text(event.owner).font(MoilTypography.regular(10))
+                        Text(event.title).font(MoilTypography.regular(10))
+                    }
+                    .lineLimit(1)
+                }
+                if scheduledDays.contains(day) && events(for: day).isEmpty {
+                    Circle().fill(MoilAvatarColor.green).frame(width: 6, height: 6)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(height: dayCellHeight, alignment: .topLeading)
+        }
+        .buttonStyle(.plain)
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
