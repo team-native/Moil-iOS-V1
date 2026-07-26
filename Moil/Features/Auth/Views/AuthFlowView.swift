@@ -281,21 +281,21 @@ private struct PasswordSetupView: View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
+                HStack(spacing: 10) {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(MoilColor.textPrimary)
+                    }
+                    Text("비밀번호 설정")
+                        .font(MoilTypography.bold(26))
                         .foregroundStyle(MoilColor.textPrimary)
-                        .frame(width: 36, height: 36)
                 }
-                .padding(.top, 16)
-                Text("비밀번호 설정")
-                    .font(MoilTypography.bold(28))
-                    .foregroundStyle(MoilColor.textPrimary)
-                    .padding(.top, 38)
+                .padding(.top, 76)
                 Text("비밀번호")
                     .font(MoilTypography.semibold(12))
                     .foregroundStyle(MoilColor.textTertiary)
-                    .padding(.top, 28)
+                    .padding(.top, 20)
                     .padding(.bottom, 10)
                 AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
                 if !password.isEmpty && !passwordIsValid {
