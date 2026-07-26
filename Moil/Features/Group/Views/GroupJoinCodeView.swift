@@ -18,7 +18,7 @@ struct GroupJoinCodeView: View {
                 }
                 Text("그룹 참여").font(MoilTypography.bold(26))
             }
-            .padding(.top, 24)
+            .safeAreaPadding(.top, 16)
             Text("초대 코드를 입력해주세요").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary).padding(.top, 8)
             Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 30).padding(.bottom, 10)
             TextField("FAM-0000", text: $code)
@@ -36,7 +36,7 @@ struct GroupJoinCodeView: View {
                 }
             if let error { Text(error).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 6) }
             if isVerified {
-                HStack(spacing: 10) { Circle().fill(.blue).frame(width: 30, height: 30); Text("우리 가족에 참여할 준비가 됐어요") .font(MoilTypography.semibold(14)) }
+                HStack(spacing: 10) { MoilAvatar(color: MoilAvatarColor.green, size: 30); Text("우리 가족에 참여할 준비가 됐어요") .font(MoilTypography.semibold(14)) }
                     .padding(.top, 16)
             }
             Spacer()
@@ -49,7 +49,7 @@ struct GroupJoinCodeView: View {
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(code.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
             .disabled(code.isEmpty)
-            .padding(.bottom, 30)
+            .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
     }
