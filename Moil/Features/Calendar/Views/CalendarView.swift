@@ -68,7 +68,7 @@ struct CalendarView: View {
 
                     if isGroupMenuPresented {
                         VStack(spacing: 0) {
-                            ForEach([("우리 가족", Color.blue), ("대학 동기", Color.green), ("회사 팀", Color.orange)], id: \.0) { group in
+                            ForEach([("우리 가족", MoilAvatarColor.blue), ("대학 동기", MoilAvatarColor.green), ("회사 팀", MoilAvatarColor.orange)], id: \.0) { group in
                                 Button {
                                     groupName = group.0
                                     isGroupMenuPresented = false
@@ -146,7 +146,7 @@ struct CalendarView: View {
                         VStack(spacing: 4) {
                             Text("\(day)").font(MoilTypography.regular(15))
                             if scheduledDays.contains(day) {
-                                Capsule().fill(day == 5 ? Color("BrandPrimary") : Color.green).frame(width: 34, height: 5)
+                                Capsule().fill(day == 5 ? Color("BrandPrimary") : MoilAvatarColor.green).frame(width: 34, height: 5)
                             }
                         }.frame(height: 48)
                     }
