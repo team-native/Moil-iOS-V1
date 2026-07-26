@@ -46,7 +46,7 @@ private struct LoginView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer(minLength: 120)
+                VStack(spacing: 0) {
                     VStack(spacing: 6) {
                         Image("MoilMascot")
                             .resizable()
@@ -71,10 +71,10 @@ private struct LoginView: View {
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
                     }
+                }
+                .frame(maxHeight: .infinity, alignment: .center)
 
-                    Spacer(minLength: 40)
-
-                    VStack(spacing: 14) {
+                VStack(spacing: 14) {
                         Button("로그인", action: onLogin)
                             .font(MoilTypography.bold(16))
                             .foregroundStyle(.white)
@@ -94,10 +94,11 @@ private struct LoginView: View {
                                 .foregroundStyle(MoilColor.primary)
                         }
                         .font(MoilTypography.regular(14))
-                    }
-                    .padding(.bottom, 34)
+                }
             }
+            .padding(.top, 40)
             .padding(.horizontal, 24)
+            .padding(.bottom, 34)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
