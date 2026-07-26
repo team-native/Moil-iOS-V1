@@ -252,11 +252,10 @@ private struct ScheduleComposerView: View {
                     .font(MoilTypography.semibold(13))
                     .foregroundStyle(MoilColor.textSecondary)
                 HStack(spacing: 14) {
-                    ForEach([("아빠", Color.blue), ("엄마", Color.red), ("나", Color.green), ("동생", Color.orange)], id: \.0) { member in
+                    ForEach([("아빠", MoilAvatarColor.blue), ("엄마", MoilAvatarColor.red), ("나", MoilAvatarColor.green), ("동생", MoilAvatarColor.orange)], id: \.0) { member in
                         Button { toggle(member.0) } label: {
                             VStack(spacing: 6) {
-                                Circle().fill(member.1).frame(width: 44, height: 44)
-                                    .overlay { Image(systemName: "person.fill").foregroundStyle(.white) }
+                                MoilAvatar(color: member.1, size: 44)
                                     .overlay { Circle().stroke(selectedMembers.contains(member.0) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
                                 Text(member.0).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
                             }
