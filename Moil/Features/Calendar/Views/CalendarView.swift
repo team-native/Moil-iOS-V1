@@ -42,36 +42,36 @@ struct CalendarView: View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
             VStack(spacing: 0) {
-                ZStack(alignment: .topLeading) {
-                    HStack {
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
-                                isGroupMenuPresented.toggle()
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                HStack(spacing: -7) {
-                                    ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
-                                        MoilAvatar(color: color, size: 24)
-                                            .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
-                                    }
-                                }
-                                Text(groupStore.selectedGroupName)
-                                    .font(MoilTypography.semibold(15))
-                                    .foregroundStyle(MoilColor.textPrimary)
-                            }
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(MoilColor.textSecondary)
+                HStack {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isGroupMenuPresented.toggle()
                         }
-                    Spacer()
-                        Button { isScheduleSearchPresented = true } label: {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 21, weight: .medium))
+                    } label: {
+                        HStack(spacing: 8) {
+                            HStack(spacing: -7) {
+                                ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
+                                    MoilAvatar(color: color, size: 24)
+                                        .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
+                                }
+                            }
+                            Text(groupStore.selectedGroupName)
+                                .font(MoilTypography.semibold(15))
                                 .foregroundStyle(MoilColor.textPrimary)
                         }
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(MoilColor.textSecondary)
                     }
-
+                    Spacer()
+                    Button { isScheduleSearchPresented = true } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 21, weight: .medium))
+                            .foregroundStyle(MoilColor.textPrimary)
+                    }
+                }
+                .frame(height: 32)
+                .overlay(alignment: .topLeading) {
                     if isGroupMenuPresented {
                         VStack(spacing: 0) {
                             ForEach(groupStore.groups) { group in
@@ -116,12 +116,12 @@ struct CalendarView: View {
                         .background(MoilColor.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
-                        .padding(.top, 32)
-                        .zIndex(1)
+                        .offset(y: 42)
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 50)
+                .padding(.top, 6)
+                .zIndex(1)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(monthTitle).font(MoilTypography.bold(32))

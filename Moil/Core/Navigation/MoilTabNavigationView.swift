@@ -31,7 +31,6 @@ struct MoilTabNavigationView: View {
                     }
             }
         }
-        .animation(.easeInOut(duration: 0.28), value: selectedTab)
         .animation(.easeInOut(duration: 0.28), value: isJoiningProfile)
         .fullScreenCover(isPresented: $isCreatingGroup) {
             CreateGroupView()
@@ -63,8 +62,10 @@ struct MoilTabNavigationView: View {
     private func select(_ tab: MoilTab) {
         guard tab != selectedTab || isJoiningProfile else { return }
         transitionEdge = tabIndex(for: tab) > tabIndex(for: selectedTab) ? .trailing : .leading
-        isJoiningProfile = false
-        selectedTab = tab
+        withAnimation(.easeInOut(duration: 0.28)) {
+            isJoiningProfile = false
+            selectedTab = tab
+        }
     }
 
     private func openJoinProfile() {
