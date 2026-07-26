@@ -10,6 +10,7 @@ struct CalendarView: View {
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
     @State private var isJoinGroupPresented = false
+    @State private var isJoinProfilePresented = false
 
     var body: some View {
         ZStack {
@@ -132,7 +133,15 @@ struct CalendarView: View {
             MyPageView(onCreateGroup: { isMyPagePresented = false; isCreateGroupPresented = true })
         }
         .sheet(isPresented: $isCreateGroupPresented) { CreateGroupView() }
-        .sheet(isPresented: $isJoinGroupPresented) { GroupJoinCodeView() }
+        .sheet(isPresented: $isJoinGroupPresented) {
+            GroupJoinCodeView {
+                isJoinGroupPresented = false
+                isJoinProfilePresented = true
+            }
+        }
+        .sheet(isPresented: $isJoinProfilePresented) {
+            GroupJoinProfileView { isJoinProfilePresented = false }
+        }
     }
 }
 
