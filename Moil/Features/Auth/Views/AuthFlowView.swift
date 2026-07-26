@@ -39,9 +39,8 @@ private struct LoginView: View {
                 MoilColor.background
                     .ignoresSafeArea()
 
-            ScrollView {
                 VStack(spacing: 0) {
-
+                    Spacer(minLength: max(36, proxy.size.height * 0.10))
                     VStack(spacing: 6) {
                         Image("MoilMascot")
                             .resizable()
@@ -54,9 +53,7 @@ private struct LoginView: View {
                             .font(MoilTypography.regular(13))
                             .foregroundStyle(MoilColor.textSecondary)
                     }
-                    .padding(.top, 92)
-
-                    Spacer(minLength: 42)
+                    Spacer(minLength: max(30, proxy.size.height * 0.05))
 
                     VStack(spacing: 12) {
                         AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
@@ -69,7 +66,7 @@ private struct LoginView: View {
                         }
                     }
 
-                    Spacer(minLength: 70)
+                    Spacer(minLength: 40)
 
                     VStack(spacing: 14) {
                         Button("로그인") { }
@@ -95,10 +92,7 @@ private struct LoginView: View {
                     .padding(.bottom, 34)
                 }
                 .padding(.horizontal, 24)
-                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
-            }
-            .scrollIndicators(.hidden)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         }
     }
