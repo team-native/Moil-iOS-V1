@@ -6,6 +6,7 @@ struct MemberView: View {
     @State private var copied = false
     @State private var isAdministratorMode = false
     @State private var isEditingGroupName = false
+    @State private var isEditingPermissions = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -69,7 +70,7 @@ struct MemberView: View {
                         VStack(spacing: 0) {
                             AdminSettingRow(title: "그룹 이름 변경") { isEditingGroupName = true }
                             Divider()
-                            AdminSettingRow(title: "멤버 권한 설정")
+                            AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                             Divider()
                             AdminSettingRow(title: "소셜미디어로 초대 링크 공유")
                         }
@@ -86,6 +87,47 @@ struct MemberView: View {
             } message: {
                 Text("새로운 그룹 이름을 입력해주세요")
             }
+            .sheet(isPresented: $isEditingPermissions) {
+                PermissionEditorView()
+                    .presentationDetents([.height(327)])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+}
+
+private struct PermissionEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var administrator: Set<String> = ["나"]
+    private let rows: [(String, Color)] = [("나", .green), ("지민", .purple), ("서연", .teal)]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("멤버 권한 설정").font(MoilTypography.bold(17)).padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 14)
+            ForEach(rows, id: \.0) { row in
+                HStack(spacing: 10) {
+                    Circle().fill(row.1).frame(width: 30, height: 30)
+                    Text(row.0).font(MoilTypography.semibold(14))
+                    Spacer()
+                    Picker("권한", selection: Binding(get: { administrator.contains(row.0) }, set: { enabled in
+                        if enabled {
+                            administrator.insert(row.0)
+                        } else {
+                            administrator.remove(row.0)
+                        }
+                    })) {
+                        Text("멤버").tag(false)
+                        Text("관리자").tag(true)
+                    }
+                    .pickerStyle(.segmented).frame(width: 132)
+                }
+                .padding(.horizontal, 20).frame(height: 52)
+                if row.0 != "서연" { Divider().padding(.horizontal, 20) }
+            }
+            Button("완료", action: dismiss.callAsFunction)
+                .font(MoilTypography.bold(14)).foregroundStyle(.white)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(20)
         }
     }
 }
