@@ -2,6 +2,12 @@ import SwiftUI
 
 struct MyPageView: View {
     @State private var isDarkMode = false
+    @State private var isGroupDetailPresented = false
+    let onCreateGroup: () -> Void
+
+    init(onCreateGroup: @escaping () -> Void = {}) {
+        self.onCreateGroup = onCreateGroup
+    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -10,11 +16,11 @@ struct MyPageView: View {
                     Text("나").font(MoilTypography.bold(21))
                 }
                 GroupSection(title: "내 그룹") {
-                    GroupRow("우리 가족", .blue)
-                    Divider(); GroupRow("대학 동기", .green)
-                    Divider(); GroupRow("회사 팀", .green)
+                    Button { isGroupDetailPresented = true } label: { GroupRow("우리 가족", .blue) }
+                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("대학 동기", .green) }
+                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("회사 팀", .green) }
                     Divider()
-                    Text("+ 새 그룹 만들기").font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.primary).padding(14)
+                    Button(action: onCreateGroup) { Text("+ 새 그룹 만들기").font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.primary).padding(14) }
                 }
                 GroupSection(title: "환경설정") {
                     Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
@@ -27,6 +33,7 @@ struct MyPageView: View {
             .padding(16).padding(.top, 28)
         }
         .background(MoilColor.background)
+        .sheet(isPresented: $isGroupDetailPresented) { GroupDetailView() }
     }
 }
 

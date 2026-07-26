@@ -7,6 +7,9 @@ struct CalendarView: View {
     @State private var groupName = "우리 가족"
     @State private var isScheduleComposerPresented = false
     @State private var isMemberViewPresented = false
+    @State private var isMyPagePresented = false
+    @State private var isCreateGroupPresented = false
+    @State private var isJoinGroupPresented = false
 
     var body: some View {
         ZStack {
@@ -52,6 +55,27 @@ struct CalendarView: View {
                                 .foregroundStyle(MoilColor.textPrimary)
                                 if group.0 != "회사 팀" { Divider() }
                             }
+                            Divider()
+                            Button {
+                                isGroupMenuPresented = false
+                                isJoinGroupPresented = true
+                            } label: {
+                                Label("그룹 참여", systemImage: "person.badge.plus")
+                                    .font(MoilTypography.semibold(14))
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 46)
+                            }
+                            .foregroundStyle(MoilColor.primary)
+                            Button {
+                                isGroupMenuPresented = false
+                                isCreateGroupPresented = true
+                            } label: {
+                                Label("새 그룹 만들기", systemImage: "plus")
+                                    .font(MoilTypography.semibold(14))
+                                    .padding(.horizontal, 14)
+                                    .frame(height: 46)
+                            }
+                            .foregroundStyle(MoilColor.primary)
                         }
                         .frame(width: 180)
                         .background(.white)
@@ -90,7 +114,9 @@ struct CalendarView: View {
                     Button { isMemberViewPresented = true } label: {
                         Image(systemName: "person.2").frame(maxWidth: .infinity)
                     }
-                    Image(systemName: "person").frame(maxWidth: .infinity)
+                    Button { isMyPagePresented = true } label: {
+                        Image(systemName: "person").frame(maxWidth: .infinity)
+                    }
                 }
                 .padding(.vertical, 18)
                 .foregroundStyle(MoilColor.textSecondary)
@@ -102,6 +128,11 @@ struct CalendarView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isMemberViewPresented) { MemberView() }
+        .sheet(isPresented: $isMyPagePresented) {
+            MyPageView(onCreateGroup: { isMyPagePresented = false; isCreateGroupPresented = true })
+        }
+        .sheet(isPresented: $isCreateGroupPresented) { CreateGroupView() }
+        .sheet(isPresented: $isJoinGroupPresented) { GroupJoinCodeView() }
     }
 }
 
