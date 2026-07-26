@@ -7,27 +7,25 @@ struct MoilTabNavigationView: View {
     @State private var isCreatingGroup = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ZStack {
-                if isJoiningProfile {
-                    GroupJoinProfileView {
-                        withAnimation(.easeInOut(duration: 0.28)) {
-                            isJoiningProfile = false
-                            selectedTab = .calendar
-                        }
+        ZStack {
+            if isJoiningProfile {
+                GroupJoinProfileView {
+                    withAnimation(.easeInOut(duration: 0.28)) {
+                        isJoiningProfile = false
+                        selectedTab = .calendar
                     }
-                    .transition(contentTransition)
-                } else {
-                    tabContent
-                        .id(selectedTab)
-                        .transition(contentTransition)
                 }
+                .transition(contentTransition)
+            } else {
+                tabContent
+                    .id(selectedTab)
+                    .transition(contentTransition)
             }
-            .padding(.bottom, isJoiningProfile ? 0 : 72)
-
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isJoiningProfile {
                 MoilTabBar(selected: selectedTab, onSelect: select)
-                    .zIndex(10)
                     .transaction { transaction in
                         transaction.animation = nil
                     }
