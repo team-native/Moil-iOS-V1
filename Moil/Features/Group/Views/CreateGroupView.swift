@@ -23,7 +23,7 @@ struct CreateGroupView: View {
             TextField("예: 우리 가족", text: $name)
                 .font(MoilTypography.regular(15))
                 .padding(16)
-                .background(.white)
+                .background(MoilColor.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             HStack(spacing: 16) {

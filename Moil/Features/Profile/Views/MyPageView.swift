@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var isDarkMode = false
+    @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
     let onCreateGroup: () -> Void
@@ -44,7 +44,7 @@ struct MyPageView: View {
                 Button("로그아웃") { isLogoutConfirmationPresented = true }
                     .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
-                    .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .padding(.horizontal, 16).safeAreaPadding(.top, 8).padding(.bottom, 32)
         }
@@ -73,7 +73,7 @@ struct MyPageView: View {
 
 private struct GroupSection<Content: View>: View {
     let title: String; @ViewBuilder let content: Content
-    var body: some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary); VStack(spacing: 0) { content }.background(.white).clipShape(RoundedRectangle(cornerRadius: 18)) } }
+    var body: some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary); VStack(spacing: 0) { content }.background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18)) } }
 }
 private struct GroupRow: View {
     let title: String; let color: Color

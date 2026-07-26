@@ -20,9 +20,9 @@ struct GroupJoinProfileView: View {
             }
             .safeAreaPadding(.top, 16)
             HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text("우리 가족").font(MoilTypography.bold(14)); Text("구성원 4명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
-                .padding(13).background(.white).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
+                .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
             Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            TextField("닉네임 입력", text: $nickname).font(MoilTypography.regular(15)).padding(14).background(.white).clipShape(RoundedRectangle(cornerRadius: 12))
+            TextField("닉네임 입력", text: $nickname).font(MoilTypography.regular(15)).padding(14).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
             Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)

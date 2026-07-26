@@ -26,7 +26,7 @@ struct GroupJoinCodeView: View {
                 .autocorrectionDisabled()
                 .font(MoilTypography.bold(15)).tracking(1)
                 .padding(.horizontal, 17).frame(height: 56)
-                .background(.white).clipShape(RoundedRectangle(cornerRadius: 14))
+                .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay { RoundedRectangle(cornerRadius: 14).stroke(error == nil ? Color.clear : MoilColor.error, lineWidth: 1) }
                 .onChange(of: code) { _, value in
                     let normalized = String(value.uppercased().prefix(8))
