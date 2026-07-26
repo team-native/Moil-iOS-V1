@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
@@ -27,9 +28,15 @@ struct MyPageView: View {
                 .padding(.bottom, 20)
 
                 GroupSection(title: "내 그룹") {
-                    Button { isGroupDetailPresented = true } label: { GroupRow("우리 가족", MoilAvatarColor.blue) }
-                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("대학 동기", MoilAvatarColor.green) }
-                    Divider(); Button { isGroupDetailPresented = true } label: { GroupRow("회사 팀", MoilAvatarColor.green) }
+                    ForEach(groupStore.groups) { group in
+                        Button {
+                            groupStore.selectGroup(group.name)
+                            isGroupDetailPresented = true
+                        } label: {
+                            GroupRow(group.name, group.color)
+                        }
+                        if group.id != groupStore.groups.last?.id { Divider() }
+                    }
                     Divider()
                     Button(action: onCreateGroup) {
                         Label("새 그룹 만들기", systemImage: "plus")

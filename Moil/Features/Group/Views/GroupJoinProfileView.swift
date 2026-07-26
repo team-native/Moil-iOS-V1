@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GroupJoinProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
     let onComplete: () -> Void
     @State private var nickname = ""
     @State private var selectedColor = MoilAvatarColor.green
@@ -43,7 +44,10 @@ struct GroupJoinProfileView: View {
                 .accessibilityLabel("프로필 추가")
             }
             Spacer()
-            Button("참여하기", action: onComplete)
+            Button("참여하기") {
+                groupStore.joinGroup(name: "우리 가족", color: selectedColor)
+                onComplete()
+            }
                 .disabled(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
                 .background(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
