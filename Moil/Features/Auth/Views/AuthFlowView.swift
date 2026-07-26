@@ -13,7 +13,9 @@ struct AuthFlowView: View {
         case .signUpInfo:
             SignUpInfoView(onBack: { route = .login }, onNext: { route = .emailVerification })
         case .emailVerification:
-            EmailVerificationView(onBack: { route = .signUpInfo })
+            EmailVerificationView(onBack: { route = .signUpInfo }, onNext: { route = .passwordSetup })
+        case .passwordSetup:
+            Text("비밀번호 설정")
         }
     }
 }
@@ -22,6 +24,7 @@ private enum AuthRoute {
     case login
     case signUpInfo
     case emailVerification
+    case passwordSetup
 }
 
 private struct LoginView: View {
@@ -190,6 +193,7 @@ private struct SignUpInfoView: View {
 
 private struct EmailVerificationView: View {
     let onBack: () -> Void
+    let onNext: () -> Void
     @State private var code = ""
     @State private var resendMessage = ""
 
@@ -242,7 +246,7 @@ private struct EmailVerificationView: View {
                 }
 
                 Spacer()
-                Button("다음") { }
+                Button("다음", action: onNext)
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
