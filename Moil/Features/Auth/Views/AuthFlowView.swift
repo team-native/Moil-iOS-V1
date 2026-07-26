@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ContentView: View {
+struct AuthFlowView: View {
     @State private var route: AuthRoute = .login
 
     var body: some View {
@@ -286,5 +286,5 @@ private struct AuthTextField: View {
 }
 
 #Preview {
-    ContentView()
+    AuthFlowView()
 }
