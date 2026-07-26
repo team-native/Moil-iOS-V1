@@ -5,6 +5,7 @@ enum MoilAvatarColor {
     static let red = Color("AvatarRed")
     static let green = Color("AvatarGreen")
     static let orange = Color("AvatarOrange")
+    static let yellow = Color("AvatarYellow")
     static let purple = Color("AvatarPurple")
     static let pink = Color("AvatarPink")
 }
