@@ -5,6 +5,7 @@ struct CalendarView: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
     @State private var isGroupMenuPresented = false
     @State private var groupName = "우리 가족"
+    @State private var isScheduleComposerPresented = false
 
     var body: some View {
         ZStack {
@@ -25,7 +26,11 @@ struct CalendarView: View {
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
                     Spacer()
-                        Image(systemName: "bell")
+                        Button { isScheduleComposerPresented = true } label: {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 21, weight: .medium))
+                                .foregroundStyle(MoilColor.textPrimary)
+                        }
                     }
 
                     if isGroupMenuPresented {
@@ -85,5 +90,93 @@ struct CalendarView: View {
                 .foregroundStyle(MoilColor.textSecondary)
             }
         }
+        .sheet(isPresented: $isScheduleComposerPresented) {
+            ScheduleComposerView()
+                .presentationDetents([.height(463)])
+                .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+private struct ScheduleComposerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var allDay = false
+    @State private var selectedMembers: Set<String> = ["아빠", "나"]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("취소", action: dismiss.callAsFunction)
+                    .foregroundStyle(MoilColor.textSecondary)
+                Spacer()
+                Text("새 일정").font(MoilTypography.semibold(16))
+                Spacer()
+                Button("저장", action: dismiss.callAsFunction)
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(MoilColor.primary)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+
+            TextField("일정 제목", text: $title)
+                .font(MoilTypography.semibold(21))
+                .padding(.horizontal, 18)
+                .frame(height: 58)
+                .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+
+            ScheduleRow(title: "날짜", value: "7월 22일 (수)")
+            HStack {
+                Text("하루 종일").font(MoilTypography.regular(15))
+                Spacer()
+                Toggle("", isOn: $allDay).labelsHidden().tint(MoilColor.primary)
+            }
+            .padding(.horizontal, 18).frame(height: 50)
+            .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+            ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
+            ScheduleRow(title: "위치", value: "추가", secondary: true)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("누구와 공유할까요")
+                    .font(MoilTypography.semibold(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                HStack(spacing: 14) {
+                    ForEach([("아빠", Color.blue), ("엄마", Color.red), ("나", Color.green), ("동생", Color.orange)], id: \.0) { member in
+                        Button { toggle(member.0) } label: {
+                            VStack(spacing: 6) {
+                                Circle().fill(member.1).frame(width: 44, height: 44)
+                                    .overlay { Image(systemName: "person.fill").foregroundStyle(.white) }
+                                    .overlay { Circle().stroke(selectedMembers.contains(member.0) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
+                                Text(member.0).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18).padding(.top, 16)
+            Spacer()
+        }
+        .background(.white)
+    }
+
+    private func toggle(_ member: String) {
+        if selectedMembers.contains(member) { selectedMembers.remove(member) } else { selectedMembers.insert(member) }
+    }
+}
+
+private struct ScheduleRow: View {
+    let title: String
+    let value: String
+    var secondary = false
+
+    var body: some View {
+        HStack {
+            Text(title).font(MoilTypography.regular(15))
+            Spacer()
+            Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
+        }
+        .padding(.horizontal, 18).frame(height: 46)
+        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
     }
 }
