@@ -13,6 +13,7 @@ struct CalendarView: View {
     @State private var isCreateGroupPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
+    @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
     @State private var scheduledDays: Set<Int> = [5, 9]
@@ -202,10 +203,18 @@ struct CalendarView: View {
             shouldOpenCreateGroupAfterProfile = false
             isCreateGroupPresented = true
         }) {
-            MyPageView(onCreateGroup: {
-                shouldOpenCreateGroupAfterProfile = true
-                isMyPagePresented = false
-            })
+            MyPageView(
+                onCreateGroup: {
+                    shouldOpenCreateGroupAfterProfile = true
+                    isMyPagePresented = false
+                },
+                onLeaveGroup: {
+                    isMyPagePresented = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isEmptyCalendarPresented = true
+                    }
+                }
+            )
         }
         .fullScreenCover(isPresented: $isCreateGroupPresented) { CreateGroupView() }
         .fullScreenCover(isPresented: $isJoinGroupPresented) {
@@ -216,6 +225,22 @@ struct CalendarView: View {
         }
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
+        }
+        .fullScreenCover(isPresented: $isEmptyCalendarPresented) {
+            EmptyCalendarView(
+                onJoin: {
+                    isEmptyCalendarPresented = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isJoinGroupPresented = true
+                    }
+                },
+                onCreate: {
+                    isEmptyCalendarPresented = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isCreateGroupPresented = true
+                    }
+                }
+            )
         }
         .alert("일정 검색", isPresented: $isScheduleSearchPresented) {
             Button("확인", role: .cancel) { }

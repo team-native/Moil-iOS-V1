@@ -14,6 +14,11 @@ enum MoilColor {
     static let textSecondary = Color("TextSecondary")
     static let textTertiary = Color("TextTertiary")
     static let label = Color("MoilLabel")
+    static let groupDetailBackground = Color("GroupDetailBackground")
+    static let groupDetailSurface = Color("GroupDetailSurface")
+    static let groupDetailTextPrimary = Color("GroupDetailTextPrimary")
+    static let groupDetailTextSecondary = Color("GroupDetailTextSecondary")
+    static let groupDetailSeparator = Color("GroupDetailSeparator")
     static let black = Color.black
     static let black25 = Color.black.opacity(0.25)
     static let black35 = Color.black.opacity(0.35)
