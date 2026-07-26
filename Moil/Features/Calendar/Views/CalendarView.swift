@@ -111,7 +111,7 @@ struct CalendarView: View {
                             .foregroundStyle(MoilColor.primary)
                         }
                         .frame(width: 180)
-                        .background(.white)
+                        .background(MoilColor.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
                         .padding(.top, 32)
@@ -129,14 +129,14 @@ struct CalendarView: View {
                     Button { moveMonth(by: -1) } label: {
                         Image(systemName: "chevron.left")
                         .frame(width: 30, height: 30)
-                        .background(.white)
+                        .background(MoilColor.surface)
                         .clipShape(Circle())
                     }
                     .foregroundStyle(MoilColor.textPrimary)
                     Button { moveMonth(by: 1) } label: {
                         Image(systemName: "chevron.right")
                         .frame(width: 30, height: 30)
-                        .background(.white)
+                        .background(MoilColor.surface)
                         .clipShape(Circle())
                     }
                     .foregroundStyle(MoilColor.textPrimary)
@@ -340,7 +340,7 @@ private struct ScheduleComposerView: View {
             .padding(.horizontal, 18).padding(.top, 16)
             Spacer()
         }
-        .background(.white)
+        .background(MoilColor.surface)
     }
 
     private func toggle(_ member: String) {
@@ -389,7 +389,7 @@ private struct ScheduleSearchView: View {
                 }
                 .padding(.horizontal, 14)
                 .frame(height: 48)
-                .background(.white)
+                .background(MoilColor.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -421,7 +421,7 @@ private struct ScheduleSearchView: View {
                                         .foregroundStyle(MoilColor.textTertiary)
                                 }
                                 .padding(16)
-                                .background(.white)
+                                .background(MoilColor.surface)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                             }
                         }

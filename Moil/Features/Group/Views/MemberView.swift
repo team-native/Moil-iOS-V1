@@ -71,7 +71,7 @@ struct MemberView: View {
                             if index < members.count - 1 { Divider().padding(.leading, 64) }
                         }
                     }
-                    .padding(.vertical, 4).background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.vertical, 4).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.bottom, 24)
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -85,7 +85,7 @@ struct MemberView: View {
                                 .background(MoilColor.primary).clipShape(Capsule())
                         }
                     }
-                    .padding(16).background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(16).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.bottom, 24)
 
                     SectionTitle("그룹 설정")
@@ -97,7 +97,7 @@ struct MemberView: View {
                             .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                     }
-                    .background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
 
                     if isAdministratorMode {
                         SectionTitle("관리자 설정")
@@ -118,7 +118,7 @@ struct MemberView: View {
                                 isTransferringAdmin = true
                             }
                         }
-                        .background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                        .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                 }
                 .padding(.horizontal, 16)
@@ -226,7 +226,7 @@ private struct InviteShareView: View {
                 .font(MoilTypography.regular(12)).foregroundStyle(MoilColor.primary)
             Spacer()
         }
-        .frame(maxWidth: .infinity).background(.white)
+        .frame(maxWidth: .infinity).background(MoilColor.surface)
     }
 }
 
@@ -253,7 +253,7 @@ private struct GroupNameEditor: View {
                         .foregroundStyle(MoilColor.textSecondary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 46)
-                        .background(.white)
+                        .background(MoilColor.surface)
                         .overlay { RoundedRectangle(cornerRadius: 10).stroke(MoilColor.textTertiary.opacity(0.3), lineWidth: 1) }
                     Button("저장", action: onSave)
                         .font(MoilTypography.semibold(14))
@@ -266,7 +266,7 @@ private struct GroupNameEditor: View {
             }
             .padding(20)
             .frame(maxWidth: 320)
-            .background(.white)
+            .background(MoilColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 32)
         }
@@ -333,7 +333,7 @@ private struct AdministratorTransferEditor: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
             .frame(maxWidth: 320)
-            .background(.white)
+            .background(MoilColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 32)
         }

@@ -234,7 +234,7 @@ private struct EmailVerificationView: View {
                         Text(code.character(at: index))
                             .font(MoilTypography.bold(19))
                             .frame(width: 52, height: 52)
-                            .background(.white)
+                            .background(MoilColor.surface)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(index == code.count && !code.isEmpty ? MoilColor.error : .clear, lineWidth: 1) }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -371,7 +371,7 @@ private struct AuthTextField: View {
         .font(MoilTypography.regular(15))
         .padding(.horizontal, 16)
         .frame(height: 53)
-        .background(.white)
+        .background(MoilColor.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

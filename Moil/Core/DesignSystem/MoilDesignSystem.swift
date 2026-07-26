@@ -9,7 +9,7 @@ enum MoilColor {
     // Neutral
     static let background = Color("Background")
     static let systemBackground = Color("MoilSystemBackground")
-    static let surface = Color.white
+    static let surface = Color("Surface")
     static let textPrimary = Color("TextPrimary")
     static let textSecondary = Color("TextSecondary")
     static let textTertiary = Color("TextTertiary")
