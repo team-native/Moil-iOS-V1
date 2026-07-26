@@ -195,34 +195,41 @@ private struct EmailVerificationView: View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
+                HStack(spacing: 10) {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(MoilColor.textPrimary)
+                    }
+                    Text("이메일 인증")
+                        .font(MoilTypography.bold(26))
                         .foregroundStyle(MoilColor.textPrimary)
-                        .frame(width: 36, height: 36)
                 }
-                .padding(.top, 16)
-
-                Text("이메일 인증")
-                    .font(MoilTypography.bold(28))
-                    .foregroundStyle(MoilColor.textPrimary)
-                    .padding(.top, 38)
+                .padding(.top, 76)
                 Text("moil@example로 전송된 인증번호 6자리를 입력해주세요")
                     .font(MoilTypography.regular(14))
                     .foregroundStyle(MoilColor.textSecondary)
                     .padding(.top, 12)
 
-                TextField("", text: $code)
-                    .keyboardType(.numberPad)
-                    .font(MoilTypography.bold(24))
-                    .multilineTextAlignment(.center)
+                HStack(spacing: 8) {
+                    ForEach(0..<6, id: \.self) { index in
+                        Text(code.character(at: index))
+                            .font(MoilTypography.bold(19))
+                            .frame(width: 52, height: 52)
+                            .background(.white)
+                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(index == code.count && !code.isEmpty ? MoilColor.error : .clear, lineWidth: 1) }
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .overlay {
+                    TextField("", text: $code)
+                        .keyboardType(.numberPad)
+                        .opacity(0.01)
+                }
                     .onChange(of: code) { _, value in
                         code = String(value.filter(\.isNumber).prefix(6))
                     }
-                    .frame(height: 64)
-                    .background(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.top, 20)
+                    .padding(.top, 16)
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
                     .font(MoilTypography.semibold(13))
@@ -251,6 +258,13 @@ private struct EmailVerificationView: View {
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
         }
+    }
+}
+
+private extension String {
+    func character(at index: Int) -> String {
+        guard index < count else { return "" }
+        return String(self[self.index(startIndex, offsetBy: index)])
     }
 }
 
