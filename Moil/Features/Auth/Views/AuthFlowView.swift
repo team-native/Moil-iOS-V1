@@ -15,7 +15,7 @@ struct AuthFlowView: View {
         case .emailVerification:
             EmailVerificationView(onBack: { route = .signUpInfo }, onNext: { route = .passwordSetup })
         case .passwordSetup:
-            Text("비밀번호 설정")
+            PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .login })
         }
     }
 }
@@ -255,6 +255,71 @@ private struct EmailVerificationView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .disabled(!isComplete)
                     .padding(.bottom, 44)
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 402)
+        }
+    }
+}
+
+private struct PasswordSetupView: View {
+    let onBack: () -> Void
+    let onComplete: () -> Void
+    @State private var password = ""
+    @State private var confirmation = ""
+
+    private var passwordIsValid: Bool { password.count >= 8 }
+    private var passwordsMatch: Bool { !confirmation.isEmpty && password == confirmation }
+
+    var body: some View {
+        ZStack {
+            MoilColor.background.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .frame(width: 36, height: 36)
+                }
+                .padding(.top, 16)
+                Text("비밀번호 설정")
+                    .font(MoilTypography.bold(28))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.top, 38)
+                Text("비밀번호")
+                    .font(MoilTypography.semibold(12))
+                    .foregroundStyle(MoilColor.textTertiary)
+                    .padding(.top, 28)
+                    .padding(.bottom, 10)
+                AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+                if !password.isEmpty && !passwordIsValid {
+                    Text("비밀번호는 8자 이상이어야 해요")
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.error)
+                        .padding(.top, 8)
+                }
+                Text("비밀번호 확인")
+                    .font(MoilTypography.semibold(12))
+                    .foregroundStyle(MoilColor.textTertiary)
+                    .padding(.top, 22)
+                    .padding(.bottom, 10)
+                AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
+                if !confirmation.isEmpty && !passwordsMatch {
+                    Text("비밀번호가 일치하지 않아요")
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.error)
+                        .padding(.top, 8)
+                }
+                Spacer()
+                Button("가입하기", action: onComplete)
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(passwordIsValid && passwordsMatch ? MoilColor.primary : MoilColor.primary.opacity(0.78))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .disabled(!(passwordIsValid && passwordsMatch))
+                    .padding(.bottom, 38)
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
