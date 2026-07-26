@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MemberView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedGroup = "우리 가족"
     @State private var notificationsEnabled = true
     @State private var copied = false
@@ -16,34 +17,59 @@ struct MemberView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("멤버").font(MoilTypography.bold(26))
-                    Text(selectedGroup).font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary)
-                    HStack(spacing: 8) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Button(action: dismiss.callAsFunction) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(MoilColor.textPrimary)
+                                .frame(width: 36, height: 36)
+                                .background(.white, in: Circle())
+                        }
+                        Spacer()
+                        Button { isAdministratorMode.toggle() } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(MoilColor.textPrimary)
+                                .frame(width: 36, height: 36)
+                                .background(.white, in: Circle())
+                        }
+                    }
+                    .padding(.bottom, 18)
+
+                    Text("멤버")
+                        .font(MoilTypography.bold(26))
+                        .padding(.bottom, 6)
+                    Text(selectedGroup)
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .padding(.bottom, 20)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
                         ForEach(["우리 가족", "대학 동기", "회사 팀"], id: \.self) { group in
                             Button(group) { selectedGroup = group }
                                 .font(MoilTypography.semibold(13))
                                 .foregroundStyle(selectedGroup == group ? .white : MoilColor.textSecondary)
                                 .padding(.horizontal, 14).frame(height: 34)
-                                .background(selectedGroup == group ? MoilColor.primary : Color.clear)
+                                .background(selectedGroup == group ? MoilColor.primary : .white)
                                 .clipShape(Capsule())
                         }
                     }
-                    .padding(.vertical, 6)
-
-                    Toggle("관리자 권한으로 보기", isOn: $isAdministratorMode)
-                        .font(MoilTypography.regular(13))
-                        .tint(MoilColor.primary)
+                    }
+                    .padding(.bottom, 28)
 
                     SectionTitle("구성원")
+                        .padding(.bottom, 8)
                     VStack(spacing: 0) {
                         ForEach(members.indices, id: \.self) { index in
                             MemberRow(member: members[index])
                             if index < members.count - 1 { Divider().padding(.leading, 64) }
                         }
                     }
-                    .padding(.vertical, 4).background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                    .padding(.vertical, 4).background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.bottom, 24)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("초대 코드").font(MoilTypography.semibold(13))
@@ -56,9 +82,11 @@ struct MemberView: View {
                                 .background(MoilColor.primary).clipShape(Capsule())
                         }
                     }
-                    .padding(16).background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                    .padding(16).background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.bottom, 24)
 
                     SectionTitle("그룹 설정")
+                        .padding(.bottom, 8)
                     VStack(spacing: 0) {
                         Toggle("알림 받기", isOn: $notificationsEnabled).padding(14).tint(MoilColor.primary)
                         Divider()
@@ -66,9 +94,12 @@ struct MemberView: View {
                             .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                     }
-                    .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                    .background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
 
                     if isAdministratorMode {
+                        SectionTitle("관리자 설정")
+                            .padding(.top, 24)
+                            .padding(.bottom, 8)
                         VStack(spacing: 0) {
                             AdminSettingRow(title: "그룹 이름 변경") { isEditingGroupName = true }
                             Divider()
@@ -78,10 +109,12 @@ struct MemberView: View {
                             Divider()
                             AdminSettingRow(title: "관리자 권한 이전") { isTransferringAdmin = true }
                         }
-                        .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
+                        .background(.white).clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                 }
-                .padding(16).padding(.top, 8)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
             .background(MoilColor.background)
             .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
