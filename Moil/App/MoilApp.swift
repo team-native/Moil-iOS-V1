@@ -12,6 +12,8 @@ struct MoilApp: App {
     var body: some Scene {
         WindowGroup {
             AuthFlowView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
         }
     }
 }
