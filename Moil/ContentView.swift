@@ -1,17 +1,24 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var showingSignUp = false
+    @State private var route: AuthRoute = .login
 
     var body: some View {
-        Group {
-            if showingSignUp {
-                Text("회원가입 화면은 준비 중입니다")
-            } else {
-                LoginView(showingSignUp: $showingSignUp)
-            }
+        switch route {
+        case .login:
+            LoginView(showingSignUp: Binding(
+                get: { route == .signUpInfo },
+                set: { route = $0 ? .signUpInfo : .login }
+            ))
+        case .signUpInfo:
+            SignUpInfoView(onBack: { route = .login })
         }
     }
+}
+
+private enum AuthRoute {
+    case login
+    case signUpInfo
 }
 
 private struct LoginView: View {
@@ -86,6 +93,95 @@ private struct LoginView: View {
                 .frame(width: min(proxy.size.width, 402))
                 .frame(maxWidth: .infinity)
             }
+        }
+    }
+}
+
+private struct SignUpInfoView: View {
+    let onBack: () -> Void
+    @State private var name = ""
+    @State private var email = ""
+
+    private var emailIsValid: Bool {
+        email.isEmpty || (email.contains("@") && email.contains("."))
+    }
+
+    private var canProceed: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && !email.isEmpty && emailIsValid
+    }
+
+    var body: some View {
+        ZStack {
+            MoilColor.background.ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                HStack {
+                    Button(action: onBack) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(MoilColor.textPrimary)
+                            .frame(width: 36, height: 36)
+                    }
+                    Spacer()
+                }
+                .padding(.top, 16)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("회원가입")
+                        .font(MoilTypography.bold(28))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .padding(.top, 38)
+
+                    Text("이름")
+                        .font(MoilTypography.semibold(12))
+                        .foregroundStyle(MoilColor.textTertiary)
+                        .padding(.top, 32)
+                        .padding(.bottom, 10)
+                    AuthTextField(title: "이름 입력", text: $name, contentType: .name)
+
+                    Text("이메일")
+                        .font(MoilTypography.semibold(12))
+                        .foregroundStyle(MoilColor.textTertiary)
+                        .padding(.top, 18)
+                        .padding(.bottom, 10)
+                    AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(emailIsValid ? .clear : MoilColor.error, lineWidth: 1)
+                        }
+
+                    if !emailIsValid {
+                        Text("올바른 이메일 주소를 입력해주세요")
+                            .font(MoilTypography.regular(12))
+                            .foregroundStyle(MoilColor.error)
+                            .padding(.top, 8)
+                    }
+                }
+
+                Spacer()
+
+                Button("다음") { }
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(canProceed ? MoilColor.primary : MoilColor.primary.opacity(0.78))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .disabled(!canProceed)
+
+                Button(action: onBack) {
+                    Text("이미 계정이 있으신가요? ")
+                        .foregroundStyle(MoilColor.textSecondary)
+                    + Text("로그인")
+                        .fontWeight(.bold)
+                        .foregroundStyle(MoilColor.primary)
+                }
+                .font(MoilTypography.regular(14))
+                .padding(.top, 14)
+                .padding(.bottom, 30)
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 402)
         }
     }
 }
