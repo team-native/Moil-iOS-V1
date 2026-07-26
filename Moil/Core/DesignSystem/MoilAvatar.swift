@@ -1,5 +1,12 @@
 import SwiftUI
 
+enum MoilAvatarColor {
+    static let blue = Color("AvatarBlue")
+    static let red = Color("AvatarRed")
+    static let green = Color("AvatarGreen")
+    static let orange = Color("AvatarOrange")
+}
+
 struct MoilAvatar: View {
     let color: Color
     var size: CGFloat = 56
