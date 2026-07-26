@@ -11,7 +11,9 @@ struct ContentView: View {
                 set: { route = $0 ? .signUpInfo : .login }
             ))
         case .signUpInfo:
-            SignUpInfoView(onBack: { route = .login })
+            SignUpInfoView(onBack: { route = .login }, onNext: { route = .emailVerification })
+        case .emailVerification:
+            EmailVerificationView(onBack: { route = .signUpInfo })
         }
     }
 }
@@ -19,6 +21,7 @@ struct ContentView: View {
 private enum AuthRoute {
     case login
     case signUpInfo
+    case emailVerification
 }
 
 private struct LoginView: View {
@@ -99,6 +102,7 @@ private struct LoginView: View {
 
 private struct SignUpInfoView: View {
     let onBack: () -> Void
+    let onNext: () -> Void
     @State private var name = ""
     @State private var email = ""
 
@@ -160,7 +164,7 @@ private struct SignUpInfoView: View {
 
                 Spacer()
 
-                Button("다음") { }
+                Button("다음", action: onNext)
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -179,6 +183,76 @@ private struct SignUpInfoView: View {
                 .font(MoilTypography.regular(14))
                 .padding(.top, 14)
                 .padding(.bottom, 30)
+            }
+            .padding(.horizontal, 24)
+            .frame(maxWidth: 402)
+        }
+    }
+}
+
+private struct EmailVerificationView: View {
+    let onBack: () -> Void
+    @State private var code = ""
+    @State private var resendMessage = ""
+
+    private var isComplete: Bool { code.count == 6 }
+
+    var body: some View {
+        ZStack {
+            MoilColor.background.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .frame(width: 36, height: 36)
+                }
+                .padding(.top, 16)
+
+                Text("이메일 인증")
+                    .font(MoilTypography.bold(28))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.top, 38)
+                Text("moil@example로 전송된 인증번호 6자리를 입력해주세요")
+                    .font(MoilTypography.regular(14))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 12)
+
+                TextField("", text: $code)
+                    .keyboardType(.numberPad)
+                    .font(MoilTypography.bold(24))
+                    .multilineTextAlignment(.center)
+                    .onChange(of: code) { _, value in
+                        code = String(value.filter(\.isNumber).prefix(6))
+                    }
+                    .frame(height: 64)
+                    .background(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.top, 20)
+
+                Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
+                    .font(MoilTypography.semibold(13))
+                    .foregroundStyle(MoilColor.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 18)
+                if !resendMessage.isEmpty {
+                    Text(resendMessage)
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
+                }
+
+                Spacer()
+                Button("다음") { }
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(isComplete ? MoilColor.primary : MoilColor.primary.opacity(0.78))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .disabled(!isComplete)
+                    .padding(.bottom, 44)
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
