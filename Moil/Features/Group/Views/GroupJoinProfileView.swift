@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct GroupJoinProfileView: View {
+    let onComplete: () -> Void
     @State private var nickname = ""
     @State private var selectedColor: Color = .teal
     private let colors: [Color] = [.teal, .purple, .pink]
+    init(onComplete: @escaping () -> Void = {}) { self.onComplete = onComplete }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("프로필 설정").font(MoilTypography.bold(26)).padding(.top, 34)
@@ -16,7 +19,7 @@ struct GroupJoinProfileView: View {
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             HStack(spacing: 12) { ForEach(colors, id: \.self) { color in Button { selectedColor = color } label: { Circle().fill(color).frame(width: 36, height: 36).overlay { Circle().stroke(MoilColor.primary, lineWidth: selectedColor == color ? 3 : 0).padding(-5) } } } }
             Spacer()
-            Button("참여하기") { }.font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54).background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.bottom, 30)
+            Button("참여하기", action: onComplete).font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54).background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.bottom, 30)
         }.padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
     }
 }

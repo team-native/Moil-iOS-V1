@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct GroupJoinCodeView: View {
+    let onNext: () -> Void
     @State private var code = ""
     @State private var error: String?
     @State private var isVerified = false
+
+    init(onNext: @escaping () -> Void = {}) { self.onNext = onNext }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -25,7 +28,9 @@ struct GroupJoinCodeView: View {
             }
             Spacer()
             Button(isVerified ? "다음" : "확인") {
-                if code.uppercased() == "FAM-7X2Q" { isVerified = true } else { error = "존재하지 않는 초대 코드예요" }
+                if isVerified { onNext() }
+                else if code.uppercased() == "FAM-7X2Q" { isVerified = true }
+                else { error = "존재하지 않는 초대 코드예요" }
             }
             .font(MoilTypography.bold(16)).foregroundStyle(.white)
             .frame(maxWidth: .infinity).frame(height: 54).background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
