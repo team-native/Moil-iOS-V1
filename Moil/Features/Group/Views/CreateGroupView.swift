@@ -3,9 +3,9 @@ import SwiftUI
 struct CreateGroupView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var selectedColor: Color = .teal
+    @State private var selectedColor = MoilAvatarColor.green
     @State private var didCreateGroup = false
-    private let colors: [Color] = [.teal, .purple, .pink]
+    private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
@@ -17,7 +17,7 @@ struct CreateGroupView: View {
                 }
                 Text("새 그룹 만들기").font(MoilTypography.bold(22))
             }
-            .padding(.top, 24)
+            .safeAreaPadding(.top, 16)
             Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
             TextField("예: 우리 가족", text: $name)
                 .font(MoilTypography.regular(15))
@@ -28,8 +28,7 @@ struct CreateGroupView: View {
             HStack(spacing: 16) {
                 ForEach(colors, id: \.self) { color in
                     Button { selectedColor = color } label: {
-                        Circle().fill(color).frame(width: 46, height: 46)
-                            .overlay { Image(systemName: "person.fill").font(.system(size: 16)).foregroundStyle(.white) }
+                        MoilAvatar(color: color, size: 46)
                             .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
                     }
                 }
@@ -43,7 +42,7 @@ struct CreateGroupView: View {
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
                 .background(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).padding(.bottom, 30)
+                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())
