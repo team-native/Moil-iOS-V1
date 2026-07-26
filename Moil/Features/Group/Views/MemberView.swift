@@ -8,6 +8,7 @@ struct MemberView: View {
     @State private var isEditingGroupName = false
     @State private var isEditingPermissions = false
     @State private var isSharingInvite = false
+    @State private var isTransferringAdmin = false
 
     private let members: [(String, String, Color)] = [
         ("아빠", "관리자", .blue), ("엄마", "멤버", .red), ("나", "멤버", .green), ("동생", "멤버", .orange)
@@ -74,6 +75,8 @@ struct MemberView: View {
                             AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                             Divider()
                             AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
+                            Divider()
+                            AdminSettingRow(title: "관리자 권한 이전") { isTransferringAdmin = true }
                         }
                         .background(.white).clipShape(RoundedRectangle(cornerRadius: 18))
                     }
@@ -97,6 +100,13 @@ struct MemberView: View {
                 InviteShareView()
                     .presentationDetents([.height(250)])
                     .presentationDragIndicator(.visible)
+            }
+            .confirmationDialog("관리자 권한 이전", isPresented: $isTransferringAdmin, titleVisibility: .visible) {
+                Button("지민에게 이전") { }
+                Button("서연에게 이전") { }
+                Button("취소", role: .cancel) { }
+            } message: {
+                Text("새 관리자를 선택하면 현재 관리자 권한이 변경됩니다.")
             }
         }
     }
