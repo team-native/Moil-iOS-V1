@@ -22,6 +22,7 @@ struct CalendarView: View {
     @State private var displayedMonth = Date()
     @State private var remoteEvents: [CalendarEvent] = []
     @State private var selectedEvent: CalendarEvent?
+    @State private var serverError: String?
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -246,6 +247,11 @@ struct CalendarView: View {
         .fullScreenCover(isPresented: $isScheduleSearchPresented) {
             ScheduleSearchView()
         }
+        .alert("서버 오류", isPresented: Binding(get: { serverError != nil }, set: { if !$0 { serverError = nil } })) {
+            Button("확인", role: .cancel) { serverError = nil }
+        } message: {
+            Text(serverError ?? "")
+        }
         .task(id: "\(groupStore.selectedGroupId ?? "")-\(monthRequestValue)") {
             await loadEvents()
         }
@@ -269,6 +275,7 @@ struct CalendarView: View {
             remoteEvents = try await sessionStore.service().events(groupId: groupId, month: monthRequestValue).compactMap(CalendarEvent.init(remote:))
         } catch {
             remoteEvents = []
+            serverError = error.localizedDescription
         }
     }
 
@@ -281,7 +288,7 @@ struct CalendarView: View {
             do {
                 _ = try await sessionStore.service().createEvent(CreateEventRequest(groupId: groupId, title: title, date: date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: []))
                 await loadEvents()
-            } catch { }
+            } catch { serverError = error.localizedDescription }
         }
     }
 
@@ -292,7 +299,7 @@ struct CalendarView: View {
                 let request = CreateEventRequest(groupId: groupId, title: title, date: event.date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: [])
                 _ = try await sessionStore.service().updateEvent(id: event.id, request: request)
                 await loadEvents()
-            } catch { }
+            } catch { serverError = error.localizedDescription }
         }
     }
 
@@ -301,7 +308,7 @@ struct CalendarView: View {
             do {
                 try await sessionStore.service().deleteEvent(id: event.id)
                 await loadEvents()
-            } catch { }
+            } catch { serverError = error.localizedDescription }
         }
     }
 

@@ -112,7 +112,7 @@ struct MyPageView: View {
         }
         .sheet(isPresented: $isAccountSecurityPresented) {
             AccountSecurityView { email, password, leftData in
-                Task { await deleteAccount(email: email, password: password, leftData: leftData) }
+                await deleteAccount(email: email, password: password, leftData: leftData)
             }
             .presentationDetents([.large])
         }
@@ -124,13 +124,14 @@ struct MyPageView: View {
         }
     }
 
-    private func deleteAccount(email: String, password: String, leftData: Bool) async {
+    private func deleteAccount(email: String, password: String, leftData: Bool) async -> String? {
         do {
             try await sessionStore.service().deleteAccount(email: email, password: password, leftData: leftData)
             sessionStore.clear()
             groupStore.reset()
             onLogout()
-        } catch { }
+            return nil
+        } catch { return error.localizedDescription }
     }
 }
 
@@ -148,7 +149,8 @@ private struct AccountSecurityView: View {
     @State private var deletionPassword = ""
     @State private var leftData = false
     @State private var message: String?
-    let onDelete: (String, String, Bool) -> Void
+    let onDelete: (String, String, Bool) async -> String?
+    @State private var isDeleting = false
 
     var body: some View {
         NavigationStack {
@@ -166,9 +168,16 @@ private struct AccountSecurityView: View {
                     TextField("이메일", text: $email).accountField()
                     SecureField("비밀번호", text: $deletionPassword).accountField()
                     Toggle("그룹 데이터 유지", isOn: $leftData).tint(MoilColor.primary)
-                    Button("회원 탈퇴", role: .destructive) { onDelete(email, deletionPassword, leftData); dismiss() }
+                    Button("회원 탈퇴", role: .destructive) {
+                        Task {
+                            isDeleting = true
+                            message = await onDelete(email, deletionPassword, leftData)
+                            isDeleting = false
+                            if message == nil { dismiss() }
+                        }
+                    }
                         .frame(maxWidth: .infinity).frame(height: 50)
-                        .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 14))
+                        .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(isDeleting)
                     if let message { Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error) }
                 }
                 .padding(20)
