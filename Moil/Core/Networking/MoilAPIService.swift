@@ -11,6 +11,10 @@ struct MoilAPIService {
         try await client.request("auth/login", method: "POST", body: LoginRequest(email: email, password: password), requiresAuthentication: false)
     }
 
+    func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
+        try await client.request("auth/refresh", method: "POST", body: RefreshTokenRequest(refreshToken: refreshToken), requiresAuthentication: false)
+    }
+
     func sendVerificationCode(name: String?, email: String, step: VerificationStep) async throws -> MoilVerificationResponse {
         try await client.request("auth/send-code", method: "POST", body: SendCodeRequest(name: name, email: email, step: step), requiresAuthentication: false)
     }
@@ -83,6 +87,7 @@ enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET"
 
 private struct EmptyRequest: Encodable { }
 private struct LoginRequest: Encodable { let email: String; let password: String }
+private struct RefreshTokenRequest: Encodable { let refreshToken: String }
 private struct SendCodeRequest: Encodable { let name: String?; let email: String; let step: VerificationStep }
 private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: String }
 private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }

@@ -10,8 +10,10 @@ struct AuthFlowView: View {
     @State private var signUpSessionId = ""
     @State private var resetEmail = ""
     @State private var resetSessionId = ""
+    @State private var hasRestoredSession = false
 
     var body: some View {
+        Group {
         switch route {
         case .login:
             LoginView(showingSignUp: Binding(
@@ -44,6 +46,8 @@ struct AuthFlowView: View {
         case .main:
             MoilTabNavigationView(onLogout: logout)
         }
+        }
+        .task { await restoreSession() }
     }
 
     private func login(email: String, password: String) async -> String? {
@@ -55,6 +59,19 @@ struct AuthFlowView: View {
             return nil
         } catch {
             return error.localizedDescription
+        }
+    }
+
+    private func restoreSession() async {
+        guard !hasRestoredSession else { return }
+        hasRestoredSession = true
+        guard await sessionStore.refreshSession() else { return }
+        do {
+            try await groupStore.load(using: sessionStore.service())
+            route = .main
+        } catch {
+            sessionStore.clear()
+            groupStore.reset()
         }
     }
 
