@@ -64,6 +64,12 @@ final class MoilGroupStore: ObservableObject {
         selectedGroupId = id
     }
 
+    func refreshDetail(id: String, using service: MoilAPIService) async throws {
+        let remoteGroup = try await service.groupDetail(groupId: id)
+        guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+        groups[index] = MoilGroup(remote: remoteGroup)
+    }
+
     func removeGroup(_ id: String) {
         groups.removeAll { $0.id == id }
         if selectedGroupId == id {
