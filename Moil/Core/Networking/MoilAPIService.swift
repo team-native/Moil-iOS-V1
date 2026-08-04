@@ -1,0 +1,143 @@
+import Foundation
+
+struct MoilAPIService {
+    private let client: MoilAPIClient
+
+    init(tokenProvider: @escaping () -> String? = { nil }) {
+        client = MoilAPIClient(tokenProvider: tokenProvider)
+    }
+
+    func login(email: String, password: String) async throws -> MoilTokenResponse {
+        try await client.request("auth/login", method: "POST", body: LoginRequest(email: email, password: password), requiresAuthentication: false)
+    }
+
+    func sendVerificationCode(name: String?, email: String, step: VerificationStep) async throws -> MoilVerificationResponse {
+        try await client.request("auth/send-code", method: "POST", body: SendCodeRequest(name: name, email: email, step: step), requiresAuthentication: false)
+    }
+
+    func verifyCode(verifyId: String, code: String) async throws -> MoilVerificationSession {
+        try await client.request("auth/verify-code", method: "POST", body: VerifyCodeRequest(verifyId: verifyId, code: code), requiresAuthentication: false)
+    }
+
+    func confirmSignUp(sessionId: String, password: String, confirmation: String) async throws -> MoilTokenResponse {
+        try await client.request("auth/confirm", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
+    }
+
+    func logout() async throws {
+        try await client.request("auth/logout", method: "POST", body: EmptyRequest())
+    }
+
+    func groups() async throws -> [MoilRemoteGroup] {
+        try await client.request("groups/me", method: "POST", body: EmptyRequest())
+    }
+
+    func createGroup(name: String, nickname: String, colorId: String) async throws -> MoilRemoteGroup {
+        try await client.request("groups", method: "POST", body: CreateGroupRequest(name: name, nickname: nickname, colorId: colorId))
+    }
+
+    func verifyInviteCode(_ inviteCode: String) async throws -> MoilInviteVerification {
+        try await client.request("groups/join/verify", method: "POST", body: InviteCodeRequest(inviteCode: inviteCode))
+    }
+
+    func joinGroup(inviteCode: String, nickname: String, colorId: String) async throws -> MoilRemoteGroup {
+        try await client.request("groups/join", method: "POST", body: JoinGroupRequest(inviteCode: inviteCode, nickname: nickname, colorId: colorId))
+    }
+
+    func members(groupId: String) async throws -> [MoilRemoteMember] {
+        try await client.request("groups/\(groupId)/members", method: "GET")
+    }
+
+    func setNotification(groupId: String, enabled: Bool) async throws {
+        try await client.request("groups/\(groupId)/notification", method: "PATCH", body: NotificationRequest(enabled: enabled))
+    }
+
+    func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
+        try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
+    }
+
+    func createEvent(_ request: CreateEventRequest) async throws -> MoilRemoteEvent {
+        try await client.request("events", method: "POST", body: request)
+    }
+}
+
+enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET" }
+
+private struct EmptyRequest: Encodable { }
+private struct LoginRequest: Encodable { let email: String; let password: String }
+private struct SendCodeRequest: Encodable { let name: String?; let email: String; let step: VerificationStep }
+private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: String }
+private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }
+private struct CreateGroupRequest: Encodable { let name: String; let nickname: String; let colorId: String }
+private struct InviteCodeRequest: Encodable { let inviteCode: String }
+private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
+private struct NotificationRequest: Encodable { let enabled: Bool }
+
+struct MoilTokenResponse: Decodable {
+    let accessToken: String
+    let refreshToken: String?
+}
+
+struct MoilVerificationResponse: Decodable {
+    let verifyId: String
+}
+
+struct MoilVerificationSession: Decodable {
+    let sessionId: String
+}
+
+struct MoilInviteVerification: Decodable {
+    let groupName: String
+    let memberCount: Int
+}
+
+struct MoilRemoteGroup: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let colorId: String?
+    let inviteCode: String?
+
+    private enum CodingKeys: String, CodingKey { case id, groupId, name, groupName, colorId, inviteCode }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.string(for: [.id, .groupId])
+        name = try container.string(for: [.name, .groupName])
+        colorId = try? container.decode(String.self, forKey: .colorId)
+        inviteCode = try? container.decode(String.self, forKey: .inviteCode)
+    }
+}
+
+struct MoilRemoteMember: Decodable, Identifiable {
+    let id: String
+    let nickname: String
+    let role: String
+    let colorId: String?
+}
+
+struct MoilRemoteEvent: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let date: String
+    let ownerName: String?
+    let colorId: String?
+}
+
+struct CreateEventRequest: Encodable {
+    let groupId: String
+    let title: String
+    let date: String
+    let isAllDay: Bool
+    let startTime: String?
+    let endTime: String?
+    let location: String?
+    let sharedMemberIds: [String]
+}
+
+private extension KeyedDecodingContainer {
+    func string(for keys: [Key]) throws -> String {
+        for key in keys {
+            if let string = try? decode(String.self, forKey: key) { return string }
+            if let integer = try? decode(Int.self, forKey: key) { return String(integer) }
+        }
+        throw MoilAPIError.decoding
+    }
+}
