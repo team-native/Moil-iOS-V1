@@ -5,17 +5,19 @@ struct MoilGroup: Identifiable {
     let id: String
     var name: String
     var colorId: String?
+    var inviteCode: String?
 
     var color: Color { MoilAvatarColor.color(for: colorId) }
 
-    init(id: String, name: String, colorId: String? = nil) {
+    init(id: String, name: String, colorId: String? = nil, inviteCode: String? = nil) {
         self.id = id
         self.name = name
         self.colorId = colorId
+        self.inviteCode = inviteCode
     }
 
     init(remote: MoilRemoteGroup) {
-        self.init(id: remote.id, name: remote.name, colorId: remote.colorId)
+        self.init(id: remote.id, name: remote.name, colorId: remote.colorId, inviteCode: remote.inviteCode)
     }
 }
 
