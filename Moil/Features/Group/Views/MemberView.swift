@@ -68,18 +68,17 @@ struct MemberView: View {
                     isEditingGroupName = false
                 }
             } else if isTransferringAdmin {
-                AdministratorTransferEditor(selection: $newAdministrator) {
-                    if let newAdministrator {
-                        feedbackMessage = "\(newAdministrator)에게 관리자 권한을 이전했어요."
-                    }
-                    isTransferringAdmin = false
+                AdministratorTransferEditor(selection: $newAdministrator, candidates: remoteMembers) {
+                    Task { await transferAdministrator() }
                 } onCancel: {
                     isTransferringAdmin = false
                 }
             }
         }
             .sheet(isPresented: $isEditingPermissions) {
-                PermissionEditorView()
+                PermissionEditorView(members: remoteMembers) { updatedRoles in
+                    Task { await updateRoles(updatedRoles) }
+                }
                     .presentationDetents([.height(327)])
                     .presentationDragIndicator(.visible)
             }
@@ -232,6 +231,7 @@ struct MemberView: View {
         guard let groupId = selectedGroup?.id else { remoteMembers = []; return }
         do {
             remoteMembers = try await sessionStore.service().members(groupId: groupId)
+            isAdministratorMode = remoteMembers.contains { $0.nickname == "나" && ($0.role == "OWNER" || $0.role == "ADMIN") }
         } catch {
             remoteMembers = []
         }
@@ -257,6 +257,31 @@ struct MemberView: View {
             feedbackMessage = "\(group.name) 그룹에서 나왔어요."
         } catch {
             feedbackMessage = "그룹을 나가지 못했어요."
+        }
+    }
+
+    private func transferAdministrator() async {
+        guard let groupId = selectedGroup?.id,
+              let nickname = newAdministrator,
+              let target = remoteMembers.first(where: { $0.nickname == nickname }) else { return }
+        do {
+            try await sessionStore.service().transferAdmin(groupId: groupId, targetUserId: target.id)
+            isTransferringAdmin = false
+            feedbackMessage = "\(target.nickname)에게 관리자 권한을 이전했어요."
+            await loadMembers()
+        } catch {
+            feedbackMessage = "관리자 권한을 이전하지 못했어요."
+        }
+    }
+
+    private func updateRoles(_ roles: [MemberRoleRequest]) async {
+        guard let groupId = selectedGroup?.id else { return }
+        do {
+            try await sessionStore.service().updateMemberRoles(groupId: groupId, members: roles)
+            isEditingPermissions = false
+            await loadMembers()
+        } catch {
+            feedbackMessage = "멤버 권한을 변경하지 못했어요."
         }
     }
 }
@@ -337,13 +362,13 @@ private struct GroupNameEditor: View {
 
 private struct AdministratorTransferEditor: View {
     @Binding var selection: String?
+    let candidates: [MoilRemoteMember]
     let onTransfer: () -> Void
     let onCancel: () -> Void
 
-    private let candidates: [(String, Color)] = [
-        ("지민", MoilAvatarColor.purple),
-        ("서연", MoilAvatarColor.blue)
-    ]
+    private var eligibleCandidates: [MoilRemoteMember] {
+        candidates.filter { $0.nickname != "나" }
+    }
 
     var body: some View {
         ZStack {
@@ -359,14 +384,14 @@ private struct AdministratorTransferEditor: View {
                     .padding(.bottom, 18)
 
                 VStack(spacing: 8) {
-                    ForEach(candidates, id: \.0) { candidate in
-                        Button { selection = candidate.0 } label: {
+                    ForEach(eligibleCandidates, id: \.id) { candidate in
+                        Button { selection = candidate.nickname } label: {
                             HStack(spacing: 12) {
-                                MoilAvatar(color: candidate.1, size: 28)
-                                Text(candidate.0).font(MoilTypography.semibold(15))
+                                MoilAvatar(color: MoilAvatarColor.color(for: candidate.colorId), size: 28)
+                                Text(candidate.nickname).font(MoilTypography.semibold(15))
                                 Spacer()
-                                Image(systemName: selection == candidate.0 ? "largecircle.fill.circle" : "circle")
-                                    .foregroundStyle(selection == candidate.0 ? MoilColor.primary : MoilColor.textTertiary)
+                                Image(systemName: selection == candidate.nickname ? "largecircle.fill.circle" : "circle")
+                                    .foregroundStyle(selection == candidate.nickname ? MoilColor.primary : MoilColor.textTertiary)
                             }
                             .padding(.horizontal, 14)
                             .frame(height: 48)
@@ -404,21 +429,29 @@ private struct AdministratorTransferEditor: View {
 
 private struct PermissionEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var administrator: Set<String> = ["나"]
-    private let rows: [(String, Color)] = [("나", MoilAvatarColor.green), ("지민", MoilAvatarColor.purple), ("서연", MoilAvatarColor.pink)]
+    let members: [MoilRemoteMember]
+    let onSave: ([MemberRoleRequest]) -> Void
+    @State private var administrators: Set<String>
+
+    init(members: [MoilRemoteMember], onSave: @escaping ([MemberRoleRequest]) -> Void) {
+        self.members = members
+        self.onSave = onSave
+        _administrators = State(initialValue: Set(members.filter { $0.role == "OWNER" || $0.role == "ADMIN" }.map(\.id)))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("멤버 권한 설정").font(MoilTypography.bold(17)).padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 14)
-            ForEach(rows, id: \.0) { row in
+            ForEach(members) { member in
                 HStack(spacing: 10) {
-                    MoilAvatar(color: row.1, size: 30)
-                    Text(row.0).font(MoilTypography.semibold(14))
+                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 30)
+                    Text(member.nickname).font(MoilTypography.semibold(14))
                     Spacer()
-                    Picker("권한", selection: Binding(get: { administrator.contains(row.0) }, set: { enabled in
+                    Picker("권한", selection: Binding(get: { administrators.contains(member.id) }, set: { enabled in
                         if enabled {
-                            administrator.insert(row.0)
+                            administrators.insert(member.id)
                         } else {
-                            administrator.remove(row.0)
+                            administrators.remove(member.id)
                         }
                     })) {
                         Text("멤버").tag(false)
@@ -427,9 +460,11 @@ private struct PermissionEditorView: View {
                     .pickerStyle(.segmented).frame(width: 132)
                 }
                 .padding(.horizontal, 20).frame(height: 52)
-                if row.0 != "서연" { Divider().padding(.horizontal, 20) }
+                if member.id != members.last?.id { Divider().padding(.horizontal, 20) }
             }
-            Button("완료", action: dismiss.callAsFunction)
+            Button("완료") {
+                onSave(members.map { MemberRoleRequest(userId: $0.id, role: administrators.contains($0.id) ? "ADMIN" : "MEMBER") })
+            }
                 .font(MoilTypography.bold(14)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
                 .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
