@@ -256,7 +256,8 @@ struct CalendarView: View {
     }
 
     private var monthRequestValue: String {
-        displayedMonth.formatted(.dateTime.year().month(.twoDigits))
+        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
+        return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
     }
 
     private func loadEvents() async {
