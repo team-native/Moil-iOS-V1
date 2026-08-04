@@ -31,6 +31,14 @@ struct MoilAPIService {
         try await client.request("auth/reset-password", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
     }
 
+    func changePassword(origin: String, newPassword: String, confirmation: String) async throws {
+        try await client.request("auth/change-password", method: "POST", body: ChangePasswordRequest(origin: origin, newpwd: newPassword, checkpwd: confirmation))
+    }
+
+    func deleteAccount(email: String, password: String, leftData: Bool) async throws {
+        try await client.request("auth/delete-account", method: "POST", body: DeleteAccountRequest(email: email, password: password, leftData: leftData))
+    }
+
     func logout() async throws {
         try await client.request("auth/logout", method: "POST", body: EmptyRequest())
     }
@@ -103,6 +111,8 @@ private struct RefreshTokenRequest: Encodable { let refreshToken: String }
 private struct SendCodeRequest: Encodable { let name: String?; let email: String; let step: VerificationStep }
 private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: String }
 private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }
+private struct ChangePasswordRequest: Encodable { let origin: String; let newpwd: String; let checkpwd: String }
+private struct DeleteAccountRequest: Encodable { let email: String; let password: String; let leftData: Bool }
 private struct CreateGroupRequest: Encodable { let name: String; let nickname: String; let colorId: String }
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
