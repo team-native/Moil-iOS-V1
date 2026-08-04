@@ -65,6 +65,14 @@ struct MoilAPIService {
     func createEvent(_ request: CreateEventRequest) async throws -> MoilRemoteEvent {
         try await client.request("events", method: "POST", body: request)
     }
+
+    func updateEvent(id: String, request: CreateEventRequest) async throws -> MoilRemoteEvent {
+        try await client.request("events/\(id)", method: "PATCH", body: request)
+    }
+
+    func deleteEvent(id: String) async throws {
+        try await client.request("events/\(id)", method: "DELETE", body: EmptyRequest())
+    }
 }
 
 enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET" }

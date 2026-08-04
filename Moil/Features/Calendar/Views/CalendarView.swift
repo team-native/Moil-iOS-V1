@@ -21,6 +21,7 @@ struct CalendarView: View {
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
     @State private var remoteEvents: [CalendarEvent] = []
+    @State private var selectedEvent: CalendarEvent?
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -188,6 +189,15 @@ struct CalendarView: View {
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedEvent) { event in
+            EventEditorView(event: event) { title in
+                updateEvent(event, title: title)
+            } onDelete: {
+                deleteEvent(event)
+            }
+            .presentationDetents([.height(300)])
+            .presentationDragIndicator(.visible)
+        }
         .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView() }
         .fullScreenCover(isPresented: $isMyPagePresented, onDismiss: {
             guard shouldOpenCreateGroupAfterProfile else { return }
@@ -274,6 +284,26 @@ struct CalendarView: View {
         }
     }
 
+    private func updateEvent(_ event: CalendarEvent, title: String) {
+        guard let groupId = groupStore.selectedGroupId else { return }
+        Task {
+            do {
+                let request = CreateEventRequest(groupId: groupId, title: title, date: event.date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: [])
+                _ = try await sessionStore.service().updateEvent(id: event.id, request: request)
+                await loadEvents()
+            } catch { }
+        }
+    }
+
+    private func deleteEvent(_ event: CalendarEvent) {
+        Task {
+            do {
+                try await sessionStore.service().deleteEvent(id: event.id)
+                await loadEvents()
+            } catch { }
+        }
+    }
+
     private func calendarDay(_ day: Int) -> some View {
         Button {
             scheduleDraftDay = day
@@ -296,6 +326,9 @@ struct CalendarView: View {
             .frame(height: dayCellHeight, alignment: .topLeading)
         }
         .buttonStyle(.plain)
+        .onLongPressGesture {
+            selectedEvent = events(for: day).first
+        }
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
@@ -308,6 +341,7 @@ private struct CalendarEvent: Identifiable {
     let day: Int
     let owner: String
     let title: String
+    let date: String
     let color: Color
 
     init?(remote: MoilRemoteEvent) {
@@ -317,6 +351,7 @@ private struct CalendarEvent: Identifiable {
         day = eventDay
         owner = remote.ownerName ?? "나"
         title = remote.title
+        date = remote.date
         color = MoilAvatarColor.color(for: remote.colorId)
     }
 }
@@ -393,6 +428,46 @@ private struct ScheduleComposerView: View {
 
     private func toggle(_ member: String) {
         if selectedMembers.contains(member) { selectedMembers.remove(member) } else { selectedMembers.insert(member) }
+    }
+}
+
+private struct EventEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+    let event: CalendarEvent
+    let onSave: (String) -> Void
+    let onDelete: () -> Void
+    @State private var title: String
+
+    init(event: CalendarEvent, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
+        self.event = event
+        self.onSave = onSave
+        self.onDelete = onDelete
+        _title = State(initialValue: event.title)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("일정 수정").font(MoilTypography.bold(20))
+                Spacer()
+                Button("닫기", action: dismiss.callAsFunction).foregroundStyle(MoilColor.textSecondary)
+            }
+            TextField("일정 제목", text: $title)
+                .font(MoilTypography.semibold(17))
+                .padding(.horizontal, 14).frame(height: 52)
+                .background(MoilColor.background).clipShape(RoundedRectangle(cornerRadius: 12))
+            HStack(spacing: 10) {
+                Button("삭제", role: .destructive) { onDelete(); dismiss() }
+                    .frame(maxWidth: .infinity).frame(height: 48)
+                    .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 12))
+                Button("저장") { onSave(title.isEmpty ? event.title : title); dismiss() }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 48)
+                    .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(20)
+        .background(MoilColor.surface)
     }
 }
 
