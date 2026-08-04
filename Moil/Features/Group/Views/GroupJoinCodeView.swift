@@ -2,12 +2,15 @@ import SwiftUI
 
 struct GroupJoinCodeView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     let onNext: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
     let showsTabBar: Bool
     @State private var code = ""
     @State private var error: String?
     @State private var isVerified = false
+    @State private var isVerifying = false
 
     init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
         self.onNext = onNext
@@ -45,14 +48,27 @@ struct GroupJoinCodeView: View {
                 }
             if let error { Text(error).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 6) }
             if isVerified {
-                HStack(spacing: 10) { MoilAvatar(color: MoilAvatarColor.green, size: 30); Text("우리 가족에 참여할 준비가 됐어요") .font(MoilTypography.semibold(14)) }
+                HStack(spacing: 10) { MoilAvatar(color: MoilAvatarColor.green, size: 30); Text("\(groupStore.pendingInviteGroupName)에 참여할 준비가 됐어요") .font(MoilTypography.semibold(14)) }
                     .padding(.top, 16)
             }
             Spacer()
             Button(isVerified ? "다음" : "확인") {
                 if isVerified { onNext() }
-                else if code.uppercased() == "FAM-7X2Q" { isVerified = true }
-                else { error = "존재하지 않는 초대 코드예요" }
+                else {
+                    Task {
+                        isVerifying = true
+                        do {
+                            let verification = try await sessionStore.service().verifyInviteCode(code)
+                            groupStore.pendingInviteCode = code
+                            groupStore.pendingInviteGroupName = verification.groupName
+                            groupStore.pendingInviteMemberCount = verification.memberCount
+                            isVerified = true
+                        } catch let requestError {
+                            error = requestError.localizedDescription
+                        }
+                        isVerifying = false
+                    }
+                }
             }
             .font(MoilTypography.bold(16)).foregroundStyle(.white)
             .frame(maxWidth: .infinity).frame(height: 54)

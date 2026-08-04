@@ -36,7 +36,7 @@ struct MyPageView: View {
                 GroupSection(title: "내 그룹") {
                     ForEach(groupStore.groups) { group in
                         Button {
-                            groupStore.selectGroup(group.name)
+                            groupStore.selectGroup(group.id)
                             isGroupDetailPresented = true
                         } label: {
                             GroupRow(group.name, group.color)
