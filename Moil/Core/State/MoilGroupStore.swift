@@ -64,6 +64,13 @@ final class MoilGroupStore: ObservableObject {
         selectedGroupId = id
     }
 
+    func removeGroup(_ id: String) {
+        groups.removeAll { $0.id == id }
+        if selectedGroupId == id {
+            selectedGroupId = groups.first?.id
+        }
+    }
+
     func reset() {
         groups = []
         selectedGroupId = nil
