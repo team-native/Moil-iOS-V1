@@ -53,6 +53,10 @@ struct MoilAPIService {
         try await client.request("groups/\(groupId)/notification", method: "PATCH", body: NotificationRequest(enabled: enabled))
     }
 
+    func leaveGroup(groupId: String) async throws {
+        try await client.request("groups/\(groupId)/members/me", method: "DELETE", body: EmptyRequest())
+    }
+
     func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
         let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
         return response.events

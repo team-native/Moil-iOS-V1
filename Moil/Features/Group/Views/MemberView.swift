@@ -22,6 +22,7 @@ struct MemberView: View {
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
     @State private var isMyPagePresented = false
+    @State private var isSavingNotification = false
 
     private var selectedGroup: MoilGroup? {
         groupStore.groups.first { $0.id == selectedGroupId } ?? groupStore.selectedGroup
@@ -36,127 +37,32 @@ struct MemberView: View {
     }
 
     var body: some View {
-        GeometryReader { _ in
-            VStack(spacing: 0) {
+        screenContent
+    }
+
+    private var screenContent: some View {
+        VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("멤버")
-                        .font(MoilTypography.bold(26))
-                        .padding(.bottom, 4)
-                    Text(selectedGroup?.name ?? "")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .padding(.bottom, 20)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                        ForEach(groupStore.groups) { group in
-                            Button(group.name) {
-                                selectedGroupId = group.id
-                                groupStore.selectGroup(group.id)
-                                isAdministratorMode = false
-                            }
-                                .font(MoilTypography.semibold(13))
-                                .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
-                                .padding(.horizontal, 14).frame(height: 34)
-                                .background(selectedGroup?.id == group.id ? MoilColor.primary : MoilColor.background)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    }
-                    .padding(.bottom, 28)
-
-                    SectionTitle("구성원")
-                        .padding(.bottom, 8)
-                    VStack(spacing: 0) {
-                        ForEach(members.indices, id: \.self) { index in
-                            MemberRow(member: members[index])
-                            if index < members.count - 1 { Divider().padding(.leading, 64) }
-                        }
-                    }
-                    .padding(.vertical, 4).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-                    .padding(.bottom, 24)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("초대 코드").font(MoilTypography.semibold(13))
-                        HStack {
-                            Text(inviteCode).font(MoilTypography.bold(19)).tracking(1)
-                            Spacer()
-                            Button(copied ? "복사됨" : "복사") { copied = true }
-                                .font(MoilTypography.bold(12)).foregroundStyle(.white)
-                                .padding(.horizontal, 12).frame(height: 34)
-                                .background(MoilColor.primary).clipShape(Capsule())
-                        }
-                    }
-                    .padding(16).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-                    .padding(.bottom, 24)
-
-                    SectionTitle("그룹 설정")
-                        .padding(.bottom, 8)
-                    VStack(spacing: 0) {
-                        Toggle("알림 받기", isOn: $notificationsEnabled).padding(14).tint(MoilColor.primary)
-                        Divider()
-                        Button("그룹 나가기") { isLeavingGroup = true }
-                            .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
-                            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-                    }
-                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-
-                    if isAdministratorMode {
-                        SectionTitle("관리자 설정")
-                            .padding(.top, 24)
-                            .padding(.bottom, 8)
-                        VStack(spacing: 0) {
-                            AdminSettingRow(title: "그룹 이름 변경") {
-                                groupNameDraft = selectedGroup?.name ?? ""
-                                isEditingGroupName = true
-                            }
-                            Divider()
-                            AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
-                            Divider()
-                            AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
-                            Divider()
-                            AdminSettingRow(title: "관리자 권한 이전") {
-                                newAdministrator = nil
-                                isTransferringAdmin = true
-                            }
-                        }
-                        .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-                    }
+                    memberHeader
+                    groupPicker
+                    memberList
+                    inviteCodeCard
+                    groupSettings
+                    administratorSettings
                 }
                 .padding(.horizontal, 16)
                 .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
-                }
-                .frame(maxWidth: .infinity)
-
-                if showsTabBar {
-                    MoilTabBar(selected: .members) { tab in
-                        if let onTabSelect {
-                            onTabSelect(tab)
-                        } else {
-                            switch tab {
-                            case .calendar:
-                                dismiss()
-                            case .members:
-                                break
-                            case .create:
-                                isJoinGroupPresented = true
-                            case .profile:
-                                isMyPagePresented = true
-                            }
-                        }
-                    }
-                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if showsTabBar { tabBar }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
         .overlay {
             if isEditingGroupName {
                 GroupNameEditor(name: $groupNameDraft) {
-                    selectedGroup = groupNameDraft
-                    feedbackMessage = "그룹 이름을 변경했어요."
+                    feedbackMessage = "그룹 이름 변경은 서버 연동 준비 중입니다."
                     isEditingGroupName = false
                 } onCancel: {
                     isEditingGroupName = false
@@ -183,7 +89,9 @@ struct MemberView: View {
                     .presentationDragIndicator(.visible)
             }
             .confirmationDialog("그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
-                Button("그룹 나가기", role: .destructive) { feedbackMessage = "\(selectedGroup?.name ?? "") 그룹에서 나왔어요." }
+                Button("그룹 나가기", role: .destructive) {
+                    Task { await leaveSelectedGroup() }
+                }
                 Button("취소", role: .cancel) { }
             } message: {
                 Text("나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
@@ -208,6 +116,116 @@ struct MemberView: View {
             .task(id: selectedGroup?.id) {
                 await loadMembers()
             }
+            .onChange(of: notificationsEnabled) { _, enabled in
+                guard !isSavingNotification, let groupId = selectedGroup?.id else { return }
+                Task { await saveNotification(enabled: enabled, groupId: groupId) }
+            }
+    }
+
+    private var memberHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("멤버").font(MoilTypography.bold(26))
+            Text(selectedGroup?.name ?? "")
+                .font(MoilTypography.regular(13))
+                .foregroundStyle(MoilColor.textSecondary)
+        }
+        .padding(.bottom, 20)
+    }
+
+    private var groupPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(groupStore.groups) { group in
+                    Button(group.name) {
+                        selectedGroupId = group.id
+                        groupStore.selectGroup(group.id)
+                        isAdministratorMode = false
+                    }
+                    .font(MoilTypography.semibold(13))
+                    .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(selectedGroup?.id == group.id ? MoilColor.primary : MoilColor.background)
+                    .clipShape(Capsule())
+                }
+            }
+        }
+        .padding(.bottom, 28)
+    }
+
+    private var memberList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionTitle("구성원").padding(.bottom, 8)
+            VStack(spacing: 0) {
+                ForEach(members.indices, id: \.self) { index in
+                    MemberRow(member: members[index])
+                    if index < members.count - 1 { Divider().padding(.leading, 64) }
+                }
+            }
+            .padding(.vertical, 4)
+            .background(MoilColor.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+        .padding(.bottom, 24)
+    }
+
+    private var inviteCodeCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("초대 코드").font(MoilTypography.semibold(13))
+            HStack {
+                Text(inviteCode).font(MoilTypography.bold(19)).tracking(1)
+                Spacer()
+                Button(copied ? "복사됨" : "복사") { copied = true }
+                    .font(MoilTypography.bold(12)).foregroundStyle(.white)
+                    .padding(.horizontal, 12).frame(height: 34)
+                    .background(MoilColor.primary).clipShape(Capsule())
+            }
+        }
+        .padding(16).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(.bottom, 24)
+    }
+
+    private var groupSettings: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionTitle("그룹 설정").padding(.bottom, 8)
+            VStack(spacing: 0) {
+                Toggle("알림 받기", isOn: $notificationsEnabled)
+                    .padding(14).tint(MoilColor.primary).disabled(isSavingNotification)
+                Divider()
+                Button("그룹 나가기") { isLeavingGroup = true }
+                    .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+            }
+            .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    @ViewBuilder private var administratorSettings: some View {
+        if isAdministratorMode {
+            SectionTitle("관리자 설정").padding(.top, 24).padding(.bottom, 8)
+            VStack(spacing: 0) {
+                AdminSettingRow(title: "그룹 이름 변경") { groupNameDraft = selectedGroup?.name ?? ""; isEditingGroupName = true }
+                Divider()
+                AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
+                Divider()
+                AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
+                Divider()
+                AdminSettingRow(title: "관리자 권한 이전") { newAdministrator = nil; isTransferringAdmin = true }
+            }
+            .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    private var tabBar: some View {
+        MoilTabBar(selected: .members) { tab in
+            if let onTabSelect { onTabSelect(tab); return }
+            switch tab {
+            case .calendar: dismiss()
+            case .members: break
+            case .create: isJoinGroupPresented = true
+            case .profile: isMyPagePresented = true
+            }
+        }
     }
 
     private func loadMembers() async {
@@ -216,6 +234,29 @@ struct MemberView: View {
             remoteMembers = try await sessionStore.service().members(groupId: groupId)
         } catch {
             remoteMembers = []
+        }
+    }
+
+    private func saveNotification(enabled: Bool, groupId: String) async {
+        isSavingNotification = true
+        defer { isSavingNotification = false }
+        do {
+            try await sessionStore.service().setNotification(groupId: groupId, enabled: enabled)
+        } catch {
+            notificationsEnabled.toggle()
+            feedbackMessage = "알림 설정을 저장하지 못했어요."
+        }
+    }
+
+    private func leaveSelectedGroup() async {
+        guard let group = selectedGroup else { return }
+        do {
+            try await sessionStore.service().leaveGroup(groupId: group.id)
+            groupStore.removeGroup(group.id)
+            remoteMembers = []
+            feedbackMessage = "\(group.name) 그룹에서 나왔어요."
+        } catch {
+            feedbackMessage = "그룹을 나가지 못했어요."
         }
     }
 }
