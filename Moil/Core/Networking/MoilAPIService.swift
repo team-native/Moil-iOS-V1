@@ -23,6 +23,10 @@ struct MoilAPIService {
         try await client.request("auth/confirm", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
     }
 
+    func resetPassword(sessionId: String, password: String, confirmation: String) async throws -> MoilTokenResponse {
+        try await client.request("auth/reset-password", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
+    }
+
     func logout() async throws {
         try await client.request("auth/logout", method: "POST", body: EmptyRequest())
     }

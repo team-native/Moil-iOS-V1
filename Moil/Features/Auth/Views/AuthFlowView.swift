@@ -8,6 +8,8 @@ struct AuthFlowView: View {
     @State private var signUpEmail = ""
     @State private var verifyId = ""
     @State private var signUpSessionId = ""
+    @State private var resetEmail = ""
+    @State private var resetSessionId = ""
 
     var body: some View {
         switch route {
@@ -15,7 +17,7 @@ struct AuthFlowView: View {
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
                 set: { route = $0 ? .signUpInfo : .login }
-            ), onLogin: login)
+            ), onLogin: login, onPasswordHelp: { route = .passwordResetEmail })
         case .signUpInfo:
             SignUpInfoView(
                 onBack: { route = .login },
@@ -33,6 +35,12 @@ struct AuthFlowView: View {
             )
         case .passwordSetup:
             PasswordSetupView(onBack: { route = .emailVerification }, onComplete: confirmSignUp)
+        case .passwordResetEmail:
+            PasswordResetEmailView(onBack: { route = .login }, onNext: requestResetCode)
+        case .passwordResetVerification:
+            EmailVerificationView(email: resetEmail, onBack: { route = .passwordResetEmail }, onNext: verifyResetCode)
+        case .passwordResetSetup:
+            PasswordSetupView(onBack: { route = .passwordResetVerification }, actionTitle: "비밀번호 변경", onComplete: resetPassword)
         case .main:
             MoilTabNavigationView(onLogout: logout)
         }
@@ -84,6 +92,33 @@ struct AuthFlowView: View {
         }
     }
 
+    private func requestResetCode(email: String) async -> String? {
+        do {
+            let response = try await sessionStore.service().sendVerificationCode(name: nil, email: email, step: .reset)
+            resetEmail = email
+            verifyId = response.verifyId
+            route = .passwordResetVerification
+            return nil
+        } catch { return error.localizedDescription }
+    }
+
+    private func verifyResetCode(_ code: String) async -> String? {
+        do {
+            let response = try await sessionStore.service().verifyCode(verifyId: verifyId, code: code)
+            resetSessionId = response.sessionId
+            route = .passwordResetSetup
+            return nil
+        } catch { return error.localizedDescription }
+    }
+
+    private func resetPassword(password: String, confirmation: String) async -> String? {
+        do {
+            _ = try await sessionStore.service().resetPassword(sessionId: resetSessionId, password: password, confirmation: confirmation)
+            route = .login
+            return nil
+        } catch { return error.localizedDescription }
+    }
+
     private func logout() {
         Task {
             try? await sessionStore.service().logout()
@@ -99,15 +134,18 @@ private enum AuthRoute {
     case signUpInfo
     case emailVerification
     case passwordSetup
+    case passwordResetEmail
+    case passwordResetVerification
+    case passwordResetSetup
     case main
 }
 
 private struct LoginView: View {
     @Binding var showingSignUp: Bool
     let onLogin: (String, String) async -> String?
+    let onPasswordHelp: () -> Void
     @State private var email = ""
     @State private var password = ""
-    @State private var isPasswordHelpPresented = false
     @State private var isSubmitting = false
     @State private var errorMessage: String?
 
@@ -141,7 +179,7 @@ private struct LoginView: View {
                         AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
                         HStack {
                             Spacer()
-                            Button("비밀번호를 잊으셨나요?") { isPasswordHelpPresented = true }
+                            Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
                                 .font(MoilTypography.regular(13))
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
@@ -187,11 +225,6 @@ private struct LoginView: View {
             .padding(.horizontal, 24)
             .safeAreaPadding(.bottom, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .alert("비밀번호 재설정", isPresented: $isPasswordHelpPresented) {
-            Button("확인", role: .cancel) { }
-        } message: {
-            Text("가입한 이메일 주소로 비밀번호 재설정 안내를 보내드릴게요.")
         }
     }
 }
@@ -282,6 +315,41 @@ private struct SignUpInfoView: View {
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
+        }
+    }
+}
+
+private struct PasswordResetEmailView: View {
+    let onBack: () -> Void
+    let onNext: (String) async -> String?
+    @State private var email = ""
+    @State private var isSubmitting = false
+    @State private var serverError: String?
+
+    var body: some View {
+        ZStack {
+            MoilColor.background.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 10) {
+                    Button(action: onBack) { Image(systemName: "chevron.left").foregroundStyle(MoilColor.textPrimary) }
+                    Text("비밀번호 재설정").font(MoilTypography.bold(26))
+                }
+                .safeAreaPadding(.top, 16)
+                Text("가입한 이메일 주소로 인증번호를 보낼게요.")
+                    .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary).padding(.top, 12)
+                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
+                if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
+                Spacer()
+                Button("인증번호 받기") {
+                    Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
+                }
+                .font(MoilTypography.bold(16)).foregroundStyle(.white)
+                .frame(maxWidth: .infinity).frame(height: 54)
+                .background(email.contains("@") ? MoilColor.primary : MoilColor.primary.opacity(0.78))
+                .clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!email.contains("@") || isSubmitting)
+                .safeAreaPadding(.bottom, 12)
+            }
+            .padding(.horizontal, 24).frame(maxWidth: 402)
         }
     }
 }
@@ -385,6 +453,7 @@ private extension String {
 
 private struct PasswordSetupView: View {
     let onBack: () -> Void
+    var actionTitle = "가입하기"
     let onComplete: (String, String) async -> String?
     @State private var password = ""
     @State private var confirmation = ""
@@ -434,7 +503,7 @@ private struct PasswordSetupView: View {
                         .padding(.top, 8)
                 }
                 Spacer()
-                Button("가입하기") {
+                Button(actionTitle) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)
