@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AuthFlowView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
+    @EnvironmentObject private var groupStore: MoilGroupStore
     @State private var route: AuthRoute = .login
     @State private var signUpName = ""
     @State private var signUpEmail = ""
@@ -41,6 +42,7 @@ struct AuthFlowView: View {
         do {
             let tokens = try await sessionStore.service().login(email: email, password: password)
             sessionStore.save(tokens)
+            try await groupStore.load(using: sessionStore.service())
             route = .main
             return nil
         } catch {
@@ -74,6 +76,7 @@ struct AuthFlowView: View {
         do {
             let tokens = try await sessionStore.service().confirmSignUp(sessionId: signUpSessionId, password: password, confirmation: confirmation)
             sessionStore.save(tokens)
+            try await groupStore.load(using: sessionStore.service())
             route = .main
             return nil
         } catch {
@@ -85,6 +88,7 @@ struct AuthFlowView: View {
         Task {
             try? await sessionStore.service().logout()
             sessionStore.clear()
+            groupStore.reset()
             route = .login
         }
     }
