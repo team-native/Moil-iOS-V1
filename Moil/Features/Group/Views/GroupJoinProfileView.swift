@@ -3,10 +3,12 @@ import SwiftUI
 struct GroupJoinProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     let onComplete: () -> Void
     @State private var nickname = ""
     @State private var selectedColor = MoilAvatarColor.green
     @State private var isAdditionalProfilePresented = false
+    @State private var errorMessage: String?
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     init(onComplete: @escaping () -> Void = {}) { self.onComplete = onComplete }
 
@@ -20,7 +22,7 @@ struct GroupJoinProfileView: View {
                 Text("프로필 설정").font(MoilTypography.bold(26))
             }
             .safeAreaPadding(.top, 16)
-            HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text("우리 가족").font(MoilTypography.bold(14)); Text("구성원 4명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
+            HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text(groupStore.pendingInviteGroupName).font(MoilTypography.bold(14)); Text("구성원 \(groupStore.pendingInviteMemberCount)명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
                 .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
             Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             TextField("닉네임 입력", text: $nickname).font(MoilTypography.regular(15)).padding(14).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
@@ -45,8 +47,15 @@ struct GroupJoinProfileView: View {
             }
             Spacer()
             Button("참여하기") {
-                groupStore.joinGroup(name: "우리 가족", color: selectedColor)
-                onComplete()
+                guard let inviteCode = groupStore.pendingInviteCode else { return }
+                Task {
+                    do {
+                        try await groupStore.join(inviteCode: inviteCode, nickname: nickname, colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
+                        onComplete()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                }
             }
                 .disabled(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
@@ -59,6 +68,11 @@ struct GroupJoinProfileView: View {
             Button("확인", role: .cancel) { }
         } message: {
             Text("새 프로필은 그룹 참여 후에도 추가할 수 있어요.")
+        }
+        .alert("그룹 참여 실패", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("확인", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 }

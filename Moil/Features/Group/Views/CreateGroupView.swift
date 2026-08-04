@@ -3,10 +3,12 @@ import SwiftUI
 struct CreateGroupView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     @State private var name = ""
     @State private var selectedColor = MoilAvatarColor.green
     @State private var didCreateGroup = false
     @State private var isAdditionalProfilePresented = false
+    @State private var errorMessage: String?
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var onClose: (() -> Void)? = nil
     var body: some View {
@@ -50,8 +52,14 @@ struct CreateGroupView: View {
                 .padding(.top, 22)
             Spacer()
             Button("그룹 만들기") {
-                groupStore.createGroup(name: name, color: selectedColor)
-                didCreateGroup = true
+                Task {
+                    do {
+                        try await groupStore.create(name: name, nickname: "나", colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
+                        didCreateGroup = true
+                    } catch {
+                        errorMessage = error.localizedDescription
+                    }
+                }
             }
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
@@ -69,6 +77,11 @@ struct CreateGroupView: View {
             Button("확인", role: .cancel) { }
         } message: {
             Text("새 프로필은 그룹 생성 후에도 추가할 수 있어요.")
+        }
+        .alert("그룹 생성 실패", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("확인", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 

@@ -28,7 +28,8 @@ struct MoilAPIService {
     }
 
     func groups() async throws -> [MoilRemoteGroup] {
-        try await client.request("groups/me", method: "POST", body: EmptyRequest())
+        let response: MoilGroupList = try await client.request("groups/me", method: "POST", body: EmptyRequest())
+        return response.groups
     }
 
     func createGroup(name: String, nickname: String, colorId: String) async throws -> MoilRemoteGroup {
@@ -44,7 +45,8 @@ struct MoilAPIService {
     }
 
     func members(groupId: String) async throws -> [MoilRemoteMember] {
-        try await client.request("groups/\(groupId)/members", method: "GET")
+        let response: MoilMemberList = try await client.request("groups/\(groupId)/members", method: "GET")
+        return response.members
     }
 
     func setNotification(groupId: String, enabled: Bool) async throws {
@@ -52,7 +54,8 @@ struct MoilAPIService {
     }
 
     func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
-        try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
+        let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
+        return response.events
     }
 
     func createEvent(_ request: CreateEventRequest) async throws -> MoilRemoteEvent {
@@ -106,11 +109,49 @@ struct MoilRemoteGroup: Decodable, Identifiable {
     }
 }
 
+private struct MoilGroupList: Decodable {
+    let groups: [MoilRemoteGroup]
+    init(from decoder: Decoder) throws {
+        if var list = try? decoder.unkeyedContainer() {
+            var result: [MoilRemoteGroup] = []
+            while !list.isAtEnd { result.append(try list.decode(MoilRemoteGroup.self)) }
+            groups = result
+            return
+        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let decoded = try? container.decode([MoilRemoteGroup].self, forKey: .groups) {
+            groups = decoded
+        } else {
+            groups = try container.decode([MoilRemoteGroup].self, forKey: .items)
+        }
+    }
+    private enum CodingKeys: String, CodingKey { case groups, items }
+}
+
 struct MoilRemoteMember: Decodable, Identifiable {
     let id: String
     let nickname: String
     let role: String
     let colorId: String?
+}
+
+private struct MoilMemberList: Decodable {
+    let members: [MoilRemoteMember]
+    init(from decoder: Decoder) throws {
+        if var list = try? decoder.unkeyedContainer() {
+            var result: [MoilRemoteMember] = []
+            while !list.isAtEnd { result.append(try list.decode(MoilRemoteMember.self)) }
+            members = result
+            return
+        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let decoded = try? container.decode([MoilRemoteMember].self, forKey: .members) {
+            members = decoded
+        } else {
+            members = try container.decode([MoilRemoteMember].self, forKey: .items)
+        }
+    }
+    private enum CodingKeys: String, CodingKey { case members, items }
 }
 
 struct MoilRemoteEvent: Decodable, Identifiable {
@@ -119,6 +160,25 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let date: String
     let ownerName: String?
     let colorId: String?
+}
+
+private struct MoilEventList: Decodable {
+    let events: [MoilRemoteEvent]
+    init(from decoder: Decoder) throws {
+        if var list = try? decoder.unkeyedContainer() {
+            var result: [MoilRemoteEvent] = []
+            while !list.isAtEnd { result.append(try list.decode(MoilRemoteEvent.self)) }
+            events = result
+            return
+        }
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let decoded = try? container.decode([MoilRemoteEvent].self, forKey: .events) {
+            events = decoded
+        } else {
+            events = try container.decode([MoilRemoteEvent].self, forKey: .items)
+        }
+    }
+    private enum CodingKeys: String, CodingKey { case events, items }
 }
 
 struct CreateEventRequest: Encodable {
