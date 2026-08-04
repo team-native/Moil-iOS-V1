@@ -2,9 +2,12 @@ import SwiftUI
 
 struct MemberView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var showsTabBar = true
-    @State private var selectedGroup = "우리 가족"
+    @State private var selectedGroupId: String?
+    @State private var remoteMembers: [MoilRemoteMember] = []
     @State private var notificationsEnabled = true
     @State private var copied = false
     @State private var isAdministratorMode = false
@@ -20,19 +23,16 @@ struct MemberView: View {
     @State private var isJoinProfilePresented = false
     @State private var isMyPagePresented = false
 
+    private var selectedGroup: MoilGroup? {
+        groupStore.groups.first { $0.id == selectedGroupId } ?? groupStore.selectedGroup
+    }
+
     private var members: [(String, String, Color)] {
-        switch selectedGroup {
-        case "대학 동기":
-            [("나", "관리자", MoilAvatarColor.green), ("지민", "멤버", MoilAvatarColor.purple), ("서연", "멤버", MoilAvatarColor.blue)]
-        case "회사 팀":
-            [("나", "멤버", MoilAvatarColor.green), ("민수", "관리자", MoilAvatarColor.blue), ("하늘", "멤버", MoilAvatarColor.orange)]
-        default:
-            [("아빠", "관리자", MoilAvatarColor.blue), ("엄마", "멤버", MoilAvatarColor.red), ("나", "멤버", MoilAvatarColor.green), ("동생", "멤버", MoilAvatarColor.orange)]
-        }
+        remoteMembers.map { ($0.nickname, $0.role == "OWNER" || $0.role == "ADMIN" ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
     }
 
     private var inviteCode: String {
-        selectedGroup == "대학 동기" ? "FRIEND-9K1M" : "FAM-7X2Q"
+        selectedGroup?.inviteCode ?? ""
     }
 
     var body: some View {
@@ -43,22 +43,23 @@ struct MemberView: View {
                     Text("멤버")
                         .font(MoilTypography.bold(26))
                         .padding(.bottom, 4)
-                    Text(selectedGroup)
+                    Text(selectedGroup?.name ?? "")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
                         .padding(.bottom, 20)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                        ForEach(["우리 가족", "대학 동기", "회사 팀"], id: \.self) { group in
-                            Button(group) {
-                                selectedGroup = group
-                                isAdministratorMode = group == "대학 동기"
+                        ForEach(groupStore.groups) { group in
+                            Button(group.name) {
+                                selectedGroupId = group.id
+                                groupStore.selectGroup(group.id)
+                                isAdministratorMode = false
                             }
                                 .font(MoilTypography.semibold(13))
-                                .foregroundStyle(selectedGroup == group ? .white : MoilColor.textSecondary)
+                                .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
                                 .padding(.horizontal, 14).frame(height: 34)
-                                .background(selectedGroup == group ? MoilColor.primary : MoilColor.background)
+                                .background(selectedGroup?.id == group.id ? MoilColor.primary : MoilColor.background)
                                 .clipShape(Capsule())
                         }
                     }
@@ -107,7 +108,7 @@ struct MemberView: View {
                             .padding(.bottom, 8)
                         VStack(spacing: 0) {
                             AdminSettingRow(title: "그룹 이름 변경") {
-                                groupNameDraft = selectedGroup
+                                groupNameDraft = selectedGroup?.name ?? ""
                                 isEditingGroupName = true
                             }
                             Divider()
@@ -182,7 +183,7 @@ struct MemberView: View {
                     .presentationDragIndicator(.visible)
             }
             .confirmationDialog("그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
-                Button("그룹 나가기", role: .destructive) { feedbackMessage = "\(selectedGroup) 그룹에서 나왔어요." }
+                Button("그룹 나가기", role: .destructive) { feedbackMessage = "\(selectedGroup?.name ?? "") 그룹에서 나왔어요." }
                 Button("취소", role: .cancel) { }
             } message: {
                 Text("나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
@@ -204,6 +205,18 @@ struct MemberView: View {
             .fullScreenCover(isPresented: $isMyPagePresented) {
                 MyPageView()
             }
+            .task(id: selectedGroup?.id) {
+                await loadMembers()
+            }
+    }
+
+    private func loadMembers() async {
+        guard let groupId = selectedGroup?.id else { remoteMembers = []; return }
+        do {
+            remoteMembers = try await sessionStore.service().members(groupId: groupId)
+        } catch {
+            remoteMembers = []
+        }
     }
 }
 
