@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct AuthFlowView: View {
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     @State private var route: AuthRoute = .login
+    @State private var signUpName = ""
     @State private var signUpEmail = ""
+    @State private var verifyId = ""
+    @State private var signUpSessionId = ""
 
     var body: some View {
         switch route {
@@ -10,25 +14,78 @@ struct AuthFlowView: View {
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
                 set: { route = $0 ? .signUpInfo : .login }
-            ), onLogin: { route = .main })
+            ), onLogin: login)
         case .signUpInfo:
             SignUpInfoView(
                 onBack: { route = .login },
-                onNext: { email in
+                onNext: { name, email in
+                    signUpName = name
                     signUpEmail = email
-                    route = .emailVerification
+                    return await requestSignUpCode(name: name, email: email)
                 }
             )
         case .emailVerification:
             EmailVerificationView(
                 email: signUpEmail,
                 onBack: { route = .signUpInfo },
-                onNext: { route = .passwordSetup }
+                onNext: verifySignUpCode
             )
         case .passwordSetup:
-            PasswordSetupView(onBack: { route = .emailVerification }, onComplete: { route = .main })
+            PasswordSetupView(onBack: { route = .emailVerification }, onComplete: confirmSignUp)
         case .main:
-            MoilTabNavigationView(onLogout: { route = .login })
+            MoilTabNavigationView(onLogout: logout)
+        }
+    }
+
+    private func login(email: String, password: String) async -> String? {
+        do {
+            let tokens = try await sessionStore.service().login(email: email, password: password)
+            sessionStore.save(tokens)
+            route = .main
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func requestSignUpCode(name: String, email: String) async -> String? {
+        do {
+            let response = try await sessionStore.service().sendVerificationCode(name: name, email: email, step: .signUp)
+            verifyId = response.verifyId
+            route = .emailVerification
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func verifySignUpCode(_ code: String) async -> String? {
+        do {
+            let response = try await sessionStore.service().verifyCode(verifyId: verifyId, code: code)
+            signUpSessionId = response.sessionId
+            route = .passwordSetup
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func confirmSignUp(password: String, confirmation: String) async -> String? {
+        do {
+            let tokens = try await sessionStore.service().confirmSignUp(sessionId: signUpSessionId, password: password, confirmation: confirmation)
+            sessionStore.save(tokens)
+            route = .main
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func logout() {
+        Task {
+            try? await sessionStore.service().logout()
+            sessionStore.clear()
+            route = .login
         }
     }
 }
@@ -43,13 +100,15 @@ private enum AuthRoute {
 
 private struct LoginView: View {
     @Binding var showingSignUp: Bool
-    let onLogin: () -> Void
+    let onLogin: (String, String) async -> String?
     @State private var email = ""
     @State private var password = ""
     @State private var isPasswordHelpPresented = false
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
 
     private var canSubmit: Bool {
-        (email.contains("@") && password.count >= 8) || (email == "0000" && password == "0000")
+        email.contains("@") && password.count >= 8
     }
 
     var body: some View {
@@ -87,7 +146,13 @@ private struct LoginView: View {
                 .frame(maxHeight: .infinity, alignment: .center)
 
                 VStack(spacing: 14) {
-                        Button("로그인", action: onLogin)
+                        Button("로그인") {
+                            Task {
+                                isSubmitting = true
+                                errorMessage = await onLogin(email, password)
+                                isSubmitting = false
+                            }
+                        }
                             .font(MoilTypography.bold(16))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -95,6 +160,12 @@ private struct LoginView: View {
                             .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .disabled(!canSubmit)
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(MoilTypography.regular(12))
+                                .foregroundStyle(MoilColor.error)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
 
                         Button {
                             showingSignUp = true
@@ -123,12 +194,14 @@ private struct LoginView: View {
 
 private struct SignUpInfoView: View {
     let onBack: () -> Void
-    let onNext: (String) -> Void
+    let onNext: (String, String) async -> String?
     @State private var name = ""
     @State private var email = ""
+    @State private var isSubmitting = false
+    @State private var serverError: String?
 
     private var emailIsValid: Bool {
-        email.isEmpty || email == "0000" || (email.contains("@") && email.contains("."))
+        email.isEmpty || (email.contains("@") && email.contains("."))
     }
 
     private var canProceed: Bool {
@@ -174,7 +247,13 @@ private struct SignUpInfoView: View {
 
                 Spacer()
 
-                Button("다음") { onNext(email) }
+                Button("다음") {
+                    Task {
+                        isSubmitting = true
+                        serverError = await onNext(name, email)
+                        isSubmitting = false
+                    }
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -182,6 +261,9 @@ private struct SignUpInfoView: View {
                     .background(canProceed ? MoilColor.primary : MoilColor.primary.opacity(0.78))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .disabled(!canProceed)
+                if let serverError {
+                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
+                }
 
                 Button(action: onBack) {
                     Text("이미 계정이 있으신가요? ")
@@ -203,11 +285,13 @@ private struct SignUpInfoView: View {
 private struct EmailVerificationView: View {
     let email: String
     let onBack: () -> Void
-    let onNext: () -> Void
+    let onNext: (String) async -> String?
     @State private var code = ""
     @State private var resendMessage = ""
+    @State private var isSubmitting = false
+    @State private var serverError: String?
 
-    private var isComplete: Bool { code.count == 6 || code == "0000" }
+    private var isComplete: Bool { code.count == 6 }
 
     var body: some View {
         ZStack {
@@ -263,7 +347,13 @@ private struct EmailVerificationView: View {
                 }
 
                 Spacer()
-                Button("다음", action: onNext)
+                Button("다음") {
+                    Task {
+                        isSubmitting = true
+                        serverError = await onNext(code)
+                        isSubmitting = false
+                    }
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -272,6 +362,9 @@ private struct EmailVerificationView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .disabled(!isComplete)
                     .safeAreaPadding(.bottom, 12)
+                if let serverError {
+                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
+                }
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
@@ -288,11 +381,13 @@ private extension String {
 
 private struct PasswordSetupView: View {
     let onBack: () -> Void
-    let onComplete: () -> Void
+    let onComplete: (String, String) async -> String?
     @State private var password = ""
     @State private var confirmation = ""
+    @State private var isSubmitting = false
+    @State private var serverError: String?
 
-    private var passwordIsValid: Bool { password.count >= 8 || password == "0000" }
+    private var passwordIsValid: Bool { password.count >= 8 }
     private var passwordsMatch: Bool { !confirmation.isEmpty && password == confirmation }
 
     var body: some View {
@@ -335,7 +430,13 @@ private struct PasswordSetupView: View {
                         .padding(.top, 8)
                 }
                 Spacer()
-                Button("가입하기", action: onComplete)
+                Button("가입하기") {
+                    Task {
+                        isSubmitting = true
+                        serverError = await onComplete(password, confirmation)
+                        isSubmitting = false
+                    }
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -344,6 +445,9 @@ private struct PasswordSetupView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .disabled(!(passwordIsValid && passwordsMatch))
                     .safeAreaPadding(.bottom, 12)
+                if let serverError {
+                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
+                }
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)

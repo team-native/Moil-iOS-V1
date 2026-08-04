@@ -11,6 +11,7 @@ import SwiftUI
 struct MoilApp: App {
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @StateObject private var groupStore = MoilGroupStore()
+    @StateObject private var sessionStore = MoilSessionStore()
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,7 @@ struct MoilApp: App {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environmentObject(groupStore)
+                .environmentObject(sessionStore)
         }
     }
 }
