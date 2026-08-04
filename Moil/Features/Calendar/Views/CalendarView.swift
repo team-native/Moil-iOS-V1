@@ -305,6 +305,15 @@ struct CalendarView: View {
         }
     }
 
+    private func selectEvent(_ event: CalendarEvent) async {
+        do {
+            let remoteEvent = try await sessionStore.service().event(id: event.id)
+            selectedEvent = CalendarEvent(remote: remoteEvent) ?? event
+        } catch {
+            selectedEvent = event
+        }
+    }
+
     private func calendarDay(_ day: Int) -> some View {
         Button {
             scheduleDraftDay = day
@@ -328,7 +337,8 @@ struct CalendarView: View {
         }
         .buttonStyle(.plain)
         .onLongPressGesture {
-            selectedEvent = events(for: day).first
+            guard let event = events(for: day).first else { return }
+            Task { await selectEvent(event) }
         }
     }
 

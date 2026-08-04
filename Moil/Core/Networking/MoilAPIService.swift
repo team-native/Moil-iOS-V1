@@ -94,6 +94,10 @@ struct MoilAPIService {
         try await client.request("events", method: "POST", body: request)
     }
 
+    func event(id: String) async throws -> MoilRemoteEvent {
+        try await client.request("events/\(id)", method: "GET")
+    }
+
     func updateEvent(id: String, request: CreateEventRequest) async throws -> MoilRemoteEvent {
         try await client.request("events/\(id)", method: "PATCH", body: request)
     }
