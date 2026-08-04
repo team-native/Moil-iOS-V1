@@ -52,6 +52,10 @@ struct MoilAPIService {
         try await client.request("groups/join", method: "POST", body: JoinGroupRequest(inviteCode: inviteCode, nickname: nickname, colorId: colorId))
     }
 
+    func groupDetail(groupId: String) async throws -> MoilRemoteGroup {
+        try await client.request("groups/\(groupId)", method: "GET")
+    }
+
     func members(groupId: String) async throws -> [MoilRemoteMember] {
         let response: MoilMemberList = try await client.request("groups/\(groupId)/members", method: "GET")
         return response.members
@@ -63,6 +67,14 @@ struct MoilAPIService {
 
     func leaveGroup(groupId: String) async throws {
         try await client.request("groups/\(groupId)/members/me", method: "DELETE", body: EmptyRequest())
+    }
+
+    func transferAdmin(groupId: String, targetUserId: String) async throws {
+        try await client.request("groups/\(groupId)/transfer-admin", method: "POST", body: TransferAdminRequest(targetUserId: targetUserId))
+    }
+
+    func updateMemberRoles(groupId: String, members: [MemberRoleRequest]) async throws {
+        try await client.request("groups/\(groupId)/members", method: "PATCH", body: MemberRoleUpdateRequest(members: members))
     }
 
     func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
@@ -95,6 +107,13 @@ private struct CreateGroupRequest: Encodable { let name: String; let nickname: S
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
 private struct NotificationRequest: Encodable { let enabled: Bool }
+private struct TransferAdminRequest: Encodable { let targetUserId: String }
+private struct MemberRoleUpdateRequest: Encodable { let members: [MemberRoleRequest] }
+
+struct MemberRoleRequest: Encodable {
+    let userId: String
+    let role: String
+}
 
 struct MoilTokenResponse: Decodable {
     let accessToken: String
