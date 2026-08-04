@@ -27,6 +27,18 @@ final class MoilSessionStore: ObservableObject {
         UserDefaults.standard.set(tokens.refreshToken, forKey: refreshTokenKey)
     }
 
+    func refreshSession() async -> Bool {
+        guard let refreshToken, !refreshToken.isEmpty else { return false }
+        do {
+            let tokens = try await service().refreshToken(refreshToken)
+            save(tokens)
+            return true
+        } catch {
+            clear()
+            return false
+        }
+    }
+
     func clear() {
         accessToken = nil
         refreshToken = nil
