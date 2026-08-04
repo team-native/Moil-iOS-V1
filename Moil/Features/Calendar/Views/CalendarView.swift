@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
@@ -19,8 +20,7 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
-    @State private var scheduledDays: Set<Int> = [5, 9]
-    @State private var savedEvents: [Int: CalendarEvent] = [:]
+    @State private var remoteEvents: [CalendarEvent] = []
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -87,7 +87,7 @@ struct CalendarView: View {
                         VStack(spacing: 0) {
                             ForEach(groupStore.groups) { group in
                                 Button {
-                                    groupStore.selectGroup(group.name)
+                                    groupStore.selectGroup(group.id)
                                     isGroupMenuPresented = false
                                 } label: {
                                     HStack(spacing: 10) {
@@ -183,8 +183,7 @@ struct CalendarView: View {
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
             ScheduleComposerView(day: scheduleDraftDay) { day, title in
-                scheduledDays.insert(day)
-                savedEvents[day] = CalendarEvent(owner: "나", title: title, color: MoilAvatarColor.green)
+                createEvent(day: day, title: title)
             }
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
@@ -237,12 +236,42 @@ struct CalendarView: View {
         .fullScreenCover(isPresented: $isScheduleSearchPresented) {
             ScheduleSearchView()
         }
+        .task(id: "\(groupStore.selectedGroupId ?? "")-\(monthRequestValue)") {
+            await loadEvents()
+        }
     }
 
     private func moveMonth(by value: Int) {
         displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
-        scheduledDays = []
-        savedEvents = [:]
+    }
+
+    private var monthRequestValue: String {
+        displayedMonth.formatted(.dateTime.year().month(.twoDigits))
+    }
+
+    private func loadEvents() async {
+        guard let groupId = groupStore.selectedGroupId else {
+            remoteEvents = []
+            return
+        }
+        do {
+            remoteEvents = try await sessionStore.service().events(groupId: groupId, month: monthRequestValue).compactMap(CalendarEvent.init(remote:))
+        } catch {
+            remoteEvents = []
+        }
+    }
+
+    private func createEvent(day: Int, title: String) {
+        guard let groupId = groupStore.selectedGroupId else { return }
+        var components = calendar.dateComponents([.year, .month], from: displayedMonth)
+        components.day = day
+        let date = calendar.date(from: components)?.formatted(.iso8601.year().month().day()) ?? ""
+        Task {
+            do {
+                _ = try await sessionStore.service().createEvent(CreateEventRequest(groupId: groupId, title: title, date: date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: []))
+                await loadEvents()
+            } catch { }
+        }
     }
 
     private func calendarDay(_ day: Int) -> some View {
@@ -262,9 +291,6 @@ struct CalendarView: View {
                     }
                     .lineLimit(1)
                 }
-                if scheduledDays.contains(day) && events(for: day).isEmpty {
-                    Circle().fill(MoilAvatarColor.green).frame(width: 6, height: 6)
-                }
                 Spacer(minLength: 0)
             }
             .frame(height: dayCellHeight, alignment: .topLeading)
@@ -273,23 +299,26 @@ struct CalendarView: View {
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
-        guard calendar.component(.month, from: displayedMonth) == 7 else { return [] }
-        let baseEvents: [CalendarEvent]
-        switch day {
-        case 5: baseEvents = [CalendarEvent(owner: "엄마", title: "생일", color: MoilAvatarColor.red)]
-        case 9: baseEvents = [CalendarEvent(owner: "아빠", title: "가족 저녁", color: MoilAvatarColor.blue)]
-        case 28: baseEvents = [CalendarEvent(owner: "동생", title: "시험", color: MoilAvatarColor.yellow)]
-        default: baseEvents = []
-        }
-        return baseEvents + (savedEvents[day].map { [$0] } ?? [])
+        remoteEvents.filter { $0.day == day }
     }
 }
 
 private struct CalendarEvent: Identifiable {
+    let id: String
+    let day: Int
     let owner: String
     let title: String
     let color: Color
-    var id: String { "\(owner)-\(title)" }
+
+    init?(remote: MoilRemoteEvent) {
+        let parts = remote.date.split(separator: "-")
+        guard let finalPart = parts.last, let eventDay = Int(finalPart.prefix(2)) else { return nil }
+        id = remote.id
+        day = eventDay
+        owner = remote.ownerName ?? "나"
+        title = remote.title
+        color = MoilAvatarColor.color(for: remote.colorId)
+    }
 }
 
 #Preview("캘린더") {
