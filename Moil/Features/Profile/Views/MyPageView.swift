@@ -3,12 +3,14 @@ import SwiftUI
 struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
     @State private var isMemberPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
+    @State private var isAccountSecurityPresented = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
@@ -57,6 +59,11 @@ struct MyPageView: View {
                     Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
                 }
                 .padding(.bottom, 16)
+                Button("계정 보안") { isAccountSecurityPresented = true }
+                    .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
+                    .padding(.bottom, 16)
                 Button("로그아웃") { isLogoutConfirmationPresented = true }
                     .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
@@ -103,6 +110,12 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
+        .sheet(isPresented: $isAccountSecurityPresented) {
+            AccountSecurityView { email, password, leftData in
+                Task { await deleteAccount(email: email, password: password, leftData: leftData) }
+            }
+            .presentationDetents([.large])
+        }
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
             Button("로그아웃", role: .destructive, action: onLogout)
@@ -110,10 +123,80 @@ struct MyPageView: View {
             Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
         }
     }
+
+    private func deleteAccount(email: String, password: String, leftData: Bool) async {
+        do {
+            try await sessionStore.service().deleteAccount(email: email, password: password, leftData: leftData)
+            sessionStore.clear()
+            groupStore.reset()
+            onLogout()
+        } catch { }
+    }
 }
 
 #Preview("마이페이지") {
     MyPageView()
+}
+
+private struct AccountSecurityView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    @State private var origin = ""
+    @State private var newPassword = ""
+    @State private var confirmation = ""
+    @State private var email = ""
+    @State private var deletionPassword = ""
+    @State private var leftData = false
+    @State private var message: String?
+    let onDelete: (String, String, Bool) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("비밀번호 변경").font(MoilTypography.bold(20))
+                    SecureField("현재 비밀번호", text: $origin).accountField()
+                    SecureField("새 비밀번호", text: $newPassword).accountField()
+                    SecureField("새 비밀번호 확인", text: $confirmation).accountField()
+                    Button("비밀번호 변경") { Task { await changePassword() } }
+                        .accountButton(enabled: newPassword.count >= 8 && newPassword == confirmation)
+                    Divider().padding(.vertical, 16)
+                    Text("회원 탈퇴").font(MoilTypography.bold(20)).foregroundStyle(MoilColor.error)
+                    Text("탈퇴하면 계정에 접근할 수 없어요.").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary)
+                    TextField("이메일", text: $email).accountField()
+                    SecureField("비밀번호", text: $deletionPassword).accountField()
+                    Toggle("그룹 데이터 유지", isOn: $leftData).tint(MoilColor.primary)
+                    Button("회원 탈퇴", role: .destructive) { onDelete(email, deletionPassword, leftData); dismiss() }
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 14))
+                    if let message { Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error) }
+                }
+                .padding(20)
+            }
+            .background(MoilColor.background)
+            .navigationTitle("계정 보안")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기", action: dismiss.callAsFunction) } }
+        }
+    }
+
+    private func changePassword() async {
+        do {
+            try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
+            message = "비밀번호를 변경했어요."
+            origin = ""; newPassword = ""; confirmation = ""
+        } catch { message = "비밀번호를 변경하지 못했어요." }
+    }
+}
+
+private extension View {
+    func accountField() -> some View {
+        padding(.horizontal, 14).frame(height: 50).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    func accountButton(enabled: Bool) -> some View {
+        font(MoilTypography.bold(15)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50)
+            .background(enabled ? MoilColor.primary : MoilColor.primary.opacity(0.7)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!enabled)
+    }
 }
 
 private struct GroupSection<Content: View>: View {
