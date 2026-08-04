@@ -230,6 +230,7 @@ struct MemberView: View {
     private func loadMembers() async {
         guard let groupId = selectedGroup?.id else { remoteMembers = []; return }
         do {
+            try await groupStore.refreshDetail(id: groupId, using: sessionStore.service())
             remoteMembers = try await sessionStore.service().members(groupId: groupId)
             isAdministratorMode = remoteMembers.contains { $0.nickname == "나" && ($0.role == "OWNER" || $0.role == "ADMIN") }
         } catch {
