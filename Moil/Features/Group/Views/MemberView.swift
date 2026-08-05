@@ -63,10 +63,18 @@ struct MemberView: View {
                 .padding(.bottom, 32)
             }
             }
-            if showsTabBar { tabBar }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
+        .moilTabScreenLayout(selected: .members, isTabBarVisible: showsTabBar) { tab in
+            if let onTabSelect { onTabSelect(tab); return }
+            switch tab {
+            case .calendar: dismiss()
+            case .members: break
+            case .create: isJoinGroupPresented = true
+            case .profile: isMyPagePresented = true
+            }
+        }
         .overlay {
             if isEditingGroupName {
                 GroupNameEditor(name: $groupNameDraft) {
@@ -223,18 +231,6 @@ struct MemberView: View {
                 AdminSettingRow(title: "관리자 권한 이전") { newAdministrator = nil; isTransferringAdmin = true }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-        }
-    }
-
-    private var tabBar: some View {
-        MoilTabBar(selected: .members) { tab in
-            if let onTabSelect { onTabSelect(tab); return }
-            switch tab {
-            case .calendar: dismiss()
-            case .members: break
-            case .create: isJoinGroupPresented = true
-            case .profile: isMyPagePresented = true
-            }
         }
     }
 
