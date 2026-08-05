@@ -120,7 +120,8 @@ private struct MoilEmptyRequestBody: Encodable { }
 extension JSONEncoder {
     static let moil: JSONEncoder = {
         let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
+        // The Moil server DTOs use camelCase request keys (for example verifyId and sessionId).
+        encoder.keyEncodingStrategy = .useDefaultKeys
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }()
