@@ -1,7 +1,7 @@
 import Foundation
 
 enum MoilAPIConfiguration {
-    static let baseURL = URL(string: "https://moil.soyuo.kr")!
+    static let baseURL = URL(string: "https://moil.team-native.kr")!
 }
 
 enum MoilAPIError: LocalizedError {
