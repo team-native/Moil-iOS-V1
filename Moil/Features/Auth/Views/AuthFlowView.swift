@@ -3,6 +3,7 @@ import SwiftUI
 struct AuthFlowView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var eventStore: MoilEventStore
     @State private var route: AuthRoute = .login
     @State private var signUpName = ""
     @State private var signUpEmail = ""
@@ -72,6 +73,7 @@ struct AuthFlowView: View {
         } catch {
             sessionStore.clear()
             groupStore.reset()
+            eventStore.reset()
         }
     }
 
@@ -141,6 +143,7 @@ struct AuthFlowView: View {
             try? await sessionStore.service().logout()
             sessionStore.clear()
             groupStore.reset()
+            eventStore.reset()
             route = .login
         }
     }

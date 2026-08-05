@@ -3,6 +3,7 @@ import SwiftUI
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
+    @EnvironmentObject private var eventStore: MoilEventStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
@@ -20,9 +21,14 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
-    @State private var remoteEvents: [CalendarEvent] = []
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
+
+    @MainActor
+    private var remoteEvents: [CalendarEvent] {
+        eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue)
+            .compactMap(CalendarEvent.init(remote:))
+    }
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -280,14 +286,10 @@ struct CalendarView: View {
     }
 
     private func loadEvents() async {
-        guard let groupId = groupStore.selectedGroupId else {
-            remoteEvents = []
-            return
-        }
+        guard let groupId = groupStore.selectedGroupId else { return }
         do {
-            remoteEvents = try await sessionStore.service().events(groupId: groupId, month: monthRequestValue).compactMap(CalendarEvent.init(remote:))
+            try await eventStore.load(groupId: groupId, month: monthRequestValue, using: sessionStore.service())
         } catch {
-            remoteEvents = []
             serverError = error.localizedDescription
         }
     }
