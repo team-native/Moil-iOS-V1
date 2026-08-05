@@ -45,7 +45,7 @@ struct MoilTabNavigationView: View {
         case .calendar:
             CalendarView(onTabSelect: select, onCreateGroup: openCreateGroup, showsTabBar: false)
         case .members:
-            MemberView(onTabSelect: select, showsTabBar: false)
+            MemberView(onTabSelect: select, onCreateGroup: openCreateGroup, showsTabBar: false)
         case .create:
             GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select, showsTabBar: false)
         case .profile:

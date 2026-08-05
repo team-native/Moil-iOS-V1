@@ -5,6 +5,7 @@ struct MemberView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
+    var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
     @State private var selectedGroupId: String?
     @State private var remoteMembers: [MoilRemoteMember] = []
@@ -50,8 +51,14 @@ struct MemberView: View {
         VStack(spacing: 0) {
             if groupStore.groups.isEmpty {
                 EmptyCalendarView(
-                    onJoin: { isJoinGroupPresented = true },
-                    onCreate: { isCreateGroupPresented = true }
+                    onJoin: {
+                        if let onTabSelect { onTabSelect(.create) }
+                        else { isJoinGroupPresented = true }
+                    },
+                    onCreate: {
+                        if let onCreateGroup { onCreateGroup() }
+                        else { isCreateGroupPresented = true }
+                    }
                 )
             } else {
                 ScrollView(showsIndicators: false) {

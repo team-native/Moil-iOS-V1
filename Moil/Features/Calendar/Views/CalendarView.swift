@@ -67,7 +67,10 @@ struct CalendarView: View {
             MoilColor.background
             if groupStore.groups.isEmpty {
                 EmptyCalendarView(
-                    onJoin: { isJoinGroupPresented = true },
+                    onJoin: {
+                        if let onTabSelect { onTabSelect(.create) }
+                        else { isJoinGroupPresented = true }
+                    },
                     onCreate: {
                         if let onCreateGroup { onCreateGroup() }
                         else { isCreateGroupPresented = true }
