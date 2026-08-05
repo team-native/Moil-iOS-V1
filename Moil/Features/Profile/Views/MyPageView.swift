@@ -69,7 +69,9 @@ struct MyPageView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
                     .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
             }
-            .padding(.horizontal, 16).safeAreaPadding(.top, 8).padding(.bottom, 32)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
+            .padding(.bottom, 32)
         }
         .background(MoilColor.background)
         .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar) { tab in

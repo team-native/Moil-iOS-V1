@@ -51,6 +51,11 @@ struct CalendarView: View {
         displayedMonth.formatted(.dateTime.year().locale(Locale(identifier: "ko_KR")))
     }
 
+    /// The empty state paints its own fixed dark background, so the tab bar has to follow it.
+    private var tabBarStyle: MoilTabBarStyle {
+        groupStore.groups.isEmpty ? .dark : .standard
+    }
+
     var body: some View {
         ZStack {
             MoilColor.background
@@ -126,8 +131,8 @@ struct CalendarView: View {
                         .offset(y: 42)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
                 .zIndex(1)
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
@@ -151,7 +156,8 @@ struct CalendarView: View {
                     .foregroundStyle(MoilColor.textPrimary)
                     .padding(.leading, 6)
                 }
-                .padding(16)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.vertical, 16)
                 LazyVGrid(columns: columns, spacing: 9) {
                     ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
                     ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
@@ -163,7 +169,7 @@ struct CalendarView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 Spacer()
             }
         }
@@ -178,7 +184,7 @@ struct CalendarView: View {
                 )
             }
         }
-        .moilTabScreenLayout(selected: .calendar, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .calendar, style: tabBarStyle, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
             } else {

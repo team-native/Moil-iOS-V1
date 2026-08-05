@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Shared spacing so every tab screen starts its content at the same place.
+enum MoilTabScreenMetrics {
+    static let horizontalPadding: CGFloat = 16
+    static let topPadding: CGFloat = 8
+}
+
 /// Keeps the application tab bar in one fixed safe-area position for every tab screen.
 struct MoilTabScreenLayout<Content: View>: View {
     let selected: MoilTab?
