@@ -379,6 +379,7 @@ private struct EmailVerificationView: View {
     @State private var resendMessage = ""
     @State private var isSubmitting = false
     @State private var serverError: String?
+    @FocusState private var isCodeFieldFocused: Bool
 
     private var isComplete: Bool { code.count == 6 }
 
@@ -412,15 +413,21 @@ private struct EmailVerificationView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
-                .overlay {
+                .contentShape(Rectangle())
+                .onTapGesture { isCodeFieldFocused = true }
+                .background {
                     TextField("", text: $code)
                         .keyboardType(.numberPad)
-                        .opacity(0.01)
+                        .textContentType(.oneTimeCode)
+                        .focused($isCodeFieldFocused)
+                        .opacity(0.001)
+                        .frame(width: 1, height: 1)
                 }
-                    .onChange(of: code) { _, value in
-                        code = String(value.filter(\.isNumber).prefix(6))
-                    }
-                    .padding(.top, 16)
+                .onChange(of: code) { _, value in
+                    code = String(value.filter(\.isNumber).prefix(6))
+                }
+                .onAppear { isCodeFieldFocused = true }
+                .padding(.top, 16)
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
                     .font(MoilTypography.semibold(13))
