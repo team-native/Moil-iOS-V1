@@ -374,6 +374,7 @@ private struct EmailVerificationView: View {
     @State private var serverError: String?
     @FocusState private var isCodeFieldFocused: Bool
     @State private var isCaretVisible = true
+    @State private var isEditingCode = true
 
     private var isComplete: Bool { code.count == 6 }
 
@@ -402,11 +403,12 @@ private struct EmailVerificationView: View {
                         ZStack {
                             Text(code.character(at: index))
                                 .font(MoilTypography.bold(19))
-                            if index == code.count && isCodeFieldFocused {
-                                Capsule()
+                            if index == code.count && isEditingCode {
+                                RoundedRectangle(cornerRadius: 1)
                                     .fill(Color.white)
                                     .frame(width: 2, height: 24)
-                                    .opacity(isCaretVisible ? 1 : 0)
+                                    .opacity(isCaretVisible ? 1 : 0.28)
+                                    .accessibilityHidden(true)
                             }
                         }
                             .frame(width: 52, height: 52)
@@ -416,7 +418,10 @@ private struct EmailVerificationView: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .onTapGesture { isCodeFieldFocused = true }
+                .onTapGesture {
+                    isEditingCode = true
+                    isCodeFieldFocused = true
+                }
                 .background {
                     TextField("", text: $code)
                         .keyboardType(.numberPad)
@@ -427,8 +432,10 @@ private struct EmailVerificationView: View {
                 }
                 .onChange(of: code) { _, value in
                     code = String(value.filter(\.isNumber).prefix(6))
+                    isEditingCode = code.count < 6
                 }
                 .onAppear {
+                    isEditingCode = true
                     isCodeFieldFocused = true
                     withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
                         isCaretVisible = false
