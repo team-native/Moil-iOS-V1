@@ -72,23 +72,15 @@ struct MyPageView: View {
             .padding(.horizontal, 16).safeAreaPadding(.top, 8).padding(.bottom, 32)
         }
         .background(MoilColor.background)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsTabBar {
-                MoilTabBar(selected: .profile) { tab in
-                    if let onTabSelect {
-                        onTabSelect(tab)
-                    } else {
-                        switch tab {
-                        case .calendar:
-                            dismiss()
-                        case .members:
-                            isMemberPresented = true
-                        case .create:
-                            isJoinGroupPresented = true
-                        case .profile:
-                            break
-                        }
-                    }
+        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar) { tab in
+            if let onTabSelect {
+                onTabSelect(tab)
+            } else {
+                switch tab {
+                case .calendar: dismiss()
+                case .members: isMemberPresented = true
+                case .create: isJoinGroupPresented = true
+                case .profile: break
                 }
             }
         }

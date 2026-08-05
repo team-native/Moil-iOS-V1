@@ -1,0 +1,38 @@
+import SwiftUI
+
+/// Keeps the application tab bar in one fixed safe-area position for every tab screen.
+struct MoilTabScreenLayout<Content: View>: View {
+    let selected: MoilTab?
+    var style: MoilTabBarStyle = .standard
+    var isTabBarVisible = true
+    let onSelect: (MoilTab) -> Void
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if isTabBarVisible {
+                    MoilTabBar(selected: selected, style: style, onSelect: onSelect)
+                        .transaction { $0.animation = nil }
+                }
+            }
+    }
+}
+
+extension View {
+    func moilTabScreenLayout(
+        selected: MoilTab?,
+        style: MoilTabBarStyle = .standard,
+        isTabBarVisible: Bool = true,
+        onSelect: @escaping (MoilTab) -> Void
+    ) -> some View {
+        MoilTabScreenLayout(
+            selected: selected,
+            style: style,
+            isTabBarVisible: isTabBarVisible,
+            onSelect: onSelect
+        ) {
+            self
+        }
+    }
+}

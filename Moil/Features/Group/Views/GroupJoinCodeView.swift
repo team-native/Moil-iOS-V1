@@ -77,15 +77,11 @@ struct GroupJoinCodeView: View {
             .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsTabBar {
-                MoilTabBar(selected: .create) { tab in
-                    if let onTabSelect {
-                        onTabSelect(tab)
-                    } else if tab != .create {
-                        dismiss()
-                    }
-                }
+        .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
+            if let onTabSelect {
+                onTabSelect(tab)
+            } else if tab != .create {
+                dismiss()
             }
         }
     }

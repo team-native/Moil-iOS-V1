@@ -178,19 +178,15 @@ struct CalendarView: View {
                 )
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsTabBar {
-                MoilTabBar(selected: .calendar) { tab in
-                    if let onTabSelect {
-                        onTabSelect(tab)
-                    } else {
-                        switch tab {
-                        case .calendar: break
-                        case .members: isMemberViewPresented = true
-                        case .create: isJoinGroupPresented = true
-                        case .profile: isMyPagePresented = true
-                        }
-                    }
+        .moilTabScreenLayout(selected: .calendar, isTabBarVisible: showsTabBar) { tab in
+            if let onTabSelect {
+                onTabSelect(tab)
+            } else {
+                switch tab {
+                case .calendar: break
+                case .members: isMemberViewPresented = true
+                case .create: isJoinGroupPresented = true
+                case .profile: isMyPagePresented = true
                 }
             }
         }

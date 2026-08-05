@@ -31,14 +31,11 @@ struct MoilTabNavigationView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isJoiningProfile && !isCreatingGroup {
-                MoilTabBar(selected: selectedTab, onSelect: select)
-                    .transaction { transaction in
-                        transaction.animation = nil
-                    }
-            }
-        }
+        .moilTabScreenLayout(
+            selected: selectedTab,
+            isTabBarVisible: !isJoiningProfile && !isCreatingGroup,
+            onSelect: select
+        )
         .animation(.easeInOut(duration: 0.28), value: isJoiningProfile)
     }
 
