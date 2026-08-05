@@ -40,13 +40,6 @@ struct EmptyCalendarView: View {
         }
         .padding(.horizontal, 32)
         .background(MoilColor.groupDetailBackground.ignoresSafeArea())
-        .preferredColorScheme(.dark)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            MoilTabBar(selected: .calendar, style: .dark) { tab in
-                if tab == .members { onJoin() }
-                if tab == .create { onCreate() }
-            }
-        }
     }
 }
 

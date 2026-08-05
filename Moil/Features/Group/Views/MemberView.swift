@@ -22,6 +22,7 @@ struct MemberView: View {
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
     @State private var isMyPagePresented = false
+    @State private var isCreateGroupPresented = false
     @State private var isSavingNotification = false
 
     private var selectedGroup: MoilGroup? {
@@ -42,7 +43,13 @@ struct MemberView: View {
 
     private var screenContent: some View {
         VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
+            if groupStore.groups.isEmpty {
+                EmptyCalendarView(
+                    onJoin: { isJoinGroupPresented = true },
+                    onCreate: { isCreateGroupPresented = true }
+                )
+            } else {
+                ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     memberHeader
                     groupPicker
@@ -54,6 +61,7 @@ struct MemberView: View {
                 .padding(.horizontal, 16)
                 .safeAreaPadding(.top, 6)
                 .padding(.bottom, 32)
+            }
             }
             if showsTabBar { tabBar }
         }
@@ -111,6 +119,9 @@ struct MemberView: View {
             }
             .fullScreenCover(isPresented: $isMyPagePresented) {
                 MyPageView()
+            }
+            .fullScreenCover(isPresented: $isCreateGroupPresented) {
+                CreateGroupView()
             }
             .task(id: selectedGroup?.id) {
                 await loadMembers()

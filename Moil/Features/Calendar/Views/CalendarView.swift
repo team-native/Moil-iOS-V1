@@ -167,6 +167,17 @@ struct CalendarView: View {
                 Spacer()
             }
         }
+        .overlay {
+            if groupStore.groups.isEmpty {
+                EmptyCalendarView(
+                    onJoin: { isJoinGroupPresented = true },
+                    onCreate: {
+                        if let onCreateGroup { onCreateGroup() }
+                        else { isCreateGroupPresented = true }
+                    }
+                )
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsTabBar {
                 MoilTabBar(selected: .calendar) { tab in
