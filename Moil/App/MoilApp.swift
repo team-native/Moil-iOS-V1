@@ -17,7 +17,6 @@ struct MoilApp: App {
     var body: some Scene {
         WindowGroup {
             AuthFlowView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environmentObject(groupStore)
                 .environmentObject(sessionStore)

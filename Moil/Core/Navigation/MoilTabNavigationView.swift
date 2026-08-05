@@ -30,7 +30,6 @@ struct MoilTabNavigationView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
         .moilTabScreenLayout(
             selected: selectedTab,
             isTabBarVisible: !isJoiningProfile && !isCreatingGroup,
