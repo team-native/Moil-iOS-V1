@@ -301,20 +301,13 @@ private struct SignUpInfoView: View {
 
                 Spacer()
 
-                Button("다음") {
+                MoilPrimaryButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
                         isSubmitting = false
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(canProceed ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .disabled(!canProceed)
                 if let serverError {
                     Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
                 }
@@ -380,6 +373,7 @@ private struct EmailVerificationView: View {
     @State private var isSubmitting = false
     @State private var serverError: String?
     @FocusState private var isCodeFieldFocused: Bool
+    @State private var isCaretVisible = true
 
     private var isComplete: Bool { code.count == 6 }
 
@@ -405,8 +399,16 @@ private struct EmailVerificationView: View {
 
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
-                        Text(code.character(at: index))
-                            .font(MoilTypography.bold(19))
+                        ZStack {
+                            Text(code.character(at: index))
+                                .font(MoilTypography.bold(19))
+                            if index == code.count && isCodeFieldFocused {
+                                Capsule()
+                                    .fill(Color.white)
+                                    .frame(width: 2, height: 24)
+                                    .opacity(isCaretVisible ? 1 : 0)
+                            }
+                        }
                             .frame(width: 52, height: 52)
                             .background(MoilColor.surface)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(index == code.count && !code.isEmpty ? MoilColor.error : .clear, lineWidth: 1) }
@@ -426,7 +428,12 @@ private struct EmailVerificationView: View {
                 .onChange(of: code) { _, value in
                     code = String(value.filter(\.isNumber).prefix(6))
                 }
-                .onAppear { isCodeFieldFocused = true }
+                .onAppear {
+                    isCodeFieldFocused = true
+                    withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                        isCaretVisible = false
+                    }
+                }
                 .padding(.top, 16)
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
@@ -443,20 +450,13 @@ private struct EmailVerificationView: View {
                 }
 
                 Spacer()
-                Button("다음") {
+                MoilPrimaryButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(code)
                         isSubmitting = false
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(isComplete ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .disabled(!isComplete)
                     .safeAreaPadding(.bottom, 12)
                 if let serverError {
                     Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
