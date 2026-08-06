@@ -187,9 +187,10 @@ struct MoilRemoteMember: Decodable, Identifiable {
     let nickname: String
     let role: String
     let colorId: String?
+    let isMe: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case id, userId, memberId, nickname, name, userName, role, groupRole, colorId, profileColor
+        case id, userId, memberId, nickname, name, userName, role, groupRole, colorId, profileColor, isMe
     }
 
     init(from decoder: Decoder) throws {
@@ -198,6 +199,7 @@ struct MoilRemoteMember: Decodable, Identifiable {
         nickname = (try? container.string(for: [.nickname, .name, .userName])) ?? "나"
         role = (try? container.string(for: [.role, .groupRole])) ?? "MEMBER"
         colorId = try? container.string(for: [.colorId, .profileColor])
+        isMe = (try? container.decode(Bool.self, forKey: .isMe)) ?? false
     }
 }
 
@@ -255,7 +257,7 @@ struct CreateEventRequest: Encodable {
     let startTime: String?
     let endTime: String?
     let location: String?
-    let sharedMemberIds: [String]
+    let sharedMemberIds: [Int]
 }
 
 private extension KeyedDecodingContainer {
