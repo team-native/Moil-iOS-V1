@@ -12,14 +12,15 @@ struct MoilApp: App {
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @StateObject private var groupStore = MoilGroupStore()
     @StateObject private var sessionStore = MoilSessionStore()
+    @StateObject private var eventStore = MoilEventStore()
 
     var body: some Scene {
         WindowGroup {
             AuthFlowView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environmentObject(groupStore)
                 .environmentObject(sessionStore)
+                .environmentObject(eventStore)
         }
     }
 }

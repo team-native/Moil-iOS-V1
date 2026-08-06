@@ -30,7 +30,7 @@ struct GroupJoinCodeView: View {
                 Text("그룹 참여").font(MoilTypography.bold(26))
                 Spacer()
             }
-            .safeAreaPadding(.top, 16)
+            .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
             Text("초대 코드를 입력해주세요").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary).padding(.top, 8)
             Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 30).padding(.bottom, 10)
             TextField("FAM-0000", text: $code)
@@ -76,7 +76,8 @@ struct GroupJoinCodeView: View {
             .disabled(code.isEmpty)
             .safeAreaPadding(.bottom, 12)
         }
-        .padding(.horizontal, 24).background(MoilColor.background.ignoresSafeArea())
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+        .background(MoilColor.background.ignoresSafeArea())
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)

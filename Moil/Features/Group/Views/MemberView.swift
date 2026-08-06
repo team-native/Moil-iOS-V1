@@ -5,6 +5,7 @@ struct MemberView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
+    var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
     @State private var selectedGroupId: String?
     @State private var remoteMembers: [MoilRemoteMember] = []
@@ -37,6 +38,11 @@ struct MemberView: View {
         selectedGroup?.inviteCode ?? ""
     }
 
+    /// The empty state paints its own fixed dark background, so the tab bar has to follow it.
+    private var tabBarStyle: MoilTabBarStyle {
+        groupStore.groups.isEmpty ? .dark : .standard
+    }
+
     var body: some View {
         screenContent
     }
@@ -45,8 +51,14 @@ struct MemberView: View {
         VStack(spacing: 0) {
             if groupStore.groups.isEmpty {
                 EmptyCalendarView(
-                    onJoin: { isJoinGroupPresented = true },
-                    onCreate: { isCreateGroupPresented = true }
+                    onJoin: {
+                        if let onTabSelect { onTabSelect(.create) }
+                        else { isJoinGroupPresented = true }
+                    },
+                    onCreate: {
+                        if let onCreateGroup { onCreateGroup() }
+                        else { isCreateGroupPresented = true }
+                    }
                 )
             } else {
                 ScrollView(showsIndicators: false) {
@@ -58,15 +70,15 @@ struct MemberView: View {
                     groupSettings
                     administratorSettings
                 }
-                .padding(.horizontal, 16)
-                .safeAreaPadding(.top, 6)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
                 .padding(.bottom, 32)
             }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
-        .moilTabScreenLayout(selected: .members, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .members, style: tabBarStyle, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect { onTabSelect(tab); return }
             switch tab {
             case .calendar: dismiss()

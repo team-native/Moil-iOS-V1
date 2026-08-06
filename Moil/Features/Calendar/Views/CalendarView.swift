@@ -3,6 +3,7 @@ import SwiftUI
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
+    @EnvironmentObject private var eventStore: MoilEventStore
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
@@ -20,9 +21,14 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
-    @State private var remoteEvents: [CalendarEvent] = []
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
+
+    @MainActor
+    private var remoteEvents: [CalendarEvent] {
+        eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue)
+            .compactMap(CalendarEvent.init(remote:))
+    }
 
     private var daysInMonth: Int {
         calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
@@ -51,134 +57,142 @@ struct CalendarView: View {
         displayedMonth.formatted(.dateTime.year().locale(Locale(identifier: "ko_KR")))
     }
 
+    /// The empty state paints its own fixed dark background, so the tab bar has to follow it.
+    private var tabBarStyle: MoilTabBarStyle {
+        groupStore.groups.isEmpty ? .dark : .standard
+    }
+
     var body: some View {
         ZStack {
             MoilColor.background
-            VStack(spacing: 0) {
-                HStack {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            isGroupMenuPresented.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            HStack(spacing: -7) {
-                                ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
-                                    MoilAvatar(color: color, size: 24)
-                                        .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
-                                }
-                            }
-                            Text(groupStore.selectedGroupName)
-                                .font(MoilTypography.semibold(15))
-                                .foregroundStyle(MoilColor.textPrimary)
-                        }
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(MoilColor.textSecondary)
-                    }
-                    Spacer()
-                    Button { isScheduleSearchPresented = true } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 21, weight: .medium))
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                }
-                .frame(height: 32)
-                .overlay(alignment: .topLeading) {
-                    if isGroupMenuPresented {
-                        VStack(spacing: 0) {
-                            ForEach(groupStore.groups) { group in
-                                Button {
-                                    groupStore.selectGroup(group.id)
-                                    isGroupMenuPresented = false
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        Circle().fill(group.color).frame(width: 8, height: 8)
-                                        Text(group.name).font(MoilTypography.semibold(14))
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 14)
-                                    .frame(height: 46)
-                                }
-                                .foregroundStyle(MoilColor.textPrimary)
-                                if group.id != groupStore.groups.last?.id { Divider() }
-                            }
-                            Divider()
-                            Button {
-                                isGroupMenuPresented = false
-                                if let onCreateGroup {
-                                    onCreateGroup()
-                                } else {
-                                    isCreateGroupPresented = true
-                                }
-                            } label: {
-                                Label("새 그룹 만들기", systemImage: "plus")
-                                    .font(MoilTypography.semibold(14))
-                                    .padding(.horizontal, 14)
-                                    .frame(height: 46)
-                            }
-                            .foregroundStyle(MoilColor.primary)
-                        }
-                        .frame(width: 180)
-                        .background(MoilColor.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
-                        .offset(y: 42)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .zIndex(1)
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(monthTitle).font(MoilTypography.bold(32))
-                        Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
-                    }
-                    Spacer()
-                    Button { moveMonth(by: -1) } label: {
-                        Image(systemName: "chevron.left")
-                        .frame(width: 30, height: 30)
-                        .background(MoilColor.surface)
-                        .clipShape(Circle())
-                    }
-                    .foregroundStyle(MoilColor.textPrimary)
-                    Button { moveMonth(by: 1) } label: {
-                        Image(systemName: "chevron.right")
-                        .frame(width: 30, height: 30)
-                        .background(MoilColor.surface)
-                        .clipShape(Circle())
-                    }
-                    .foregroundStyle(MoilColor.textPrimary)
-                    .padding(.leading, 6)
-                }
-                .padding(16)
-                LazyVGrid(columns: columns, spacing: 9) {
-                    ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
-                    ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
-                        let day = slot - leadingBlankDays + 1
-                        if (1...daysInMonth).contains(day) {
-                            calendarDay(day)
-                        } else {
-                            Color.clear.frame(height: dayCellHeight)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                Spacer()
-            }
-        }
-        .overlay {
             if groupStore.groups.isEmpty {
                 EmptyCalendarView(
-                    onJoin: { isJoinGroupPresented = true },
+                    onJoin: {
+                        if let onTabSelect { onTabSelect(.create) }
+                        else { isJoinGroupPresented = true }
+                    },
                     onCreate: {
                         if let onCreateGroup { onCreateGroup() }
                         else { isCreateGroupPresented = true }
                     }
                 )
+            } else {
+                VStack(spacing: 0) {
+                    HStack {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isGroupMenuPresented.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                HStack(spacing: -7) {
+                                    ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
+                                        MoilAvatar(color: color, size: 24)
+                                            .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
+                                    }
+                                }
+                                Text(groupStore.selectedGroupName)
+                                    .font(MoilTypography.semibold(15))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                            }
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(MoilColor.textSecondary)
+                        }
+                        Spacer()
+                        Button { isScheduleSearchPresented = true } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 21, weight: .medium))
+                                .foregroundStyle(MoilColor.textPrimary)
+                        }
+                    }
+                    .frame(height: 32)
+                    .overlay(alignment: .topLeading) {
+                        if isGroupMenuPresented {
+                            VStack(spacing: 0) {
+                                ForEach(groupStore.groups) { group in
+                                    Button {
+                                        groupStore.selectGroup(group.id)
+                                        isGroupMenuPresented = false
+                                    } label: {
+                                        HStack(spacing: 10) {
+                                            Circle().fill(group.color).frame(width: 8, height: 8)
+                                            Text(group.name).font(MoilTypography.semibold(14))
+                                            Spacer()
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .frame(height: 46)
+                                    }
+                                    .foregroundStyle(MoilColor.textPrimary)
+                                    if group.id != groupStore.groups.last?.id { Divider() }
+                                }
+                                Divider()
+                                Button {
+                                    isGroupMenuPresented = false
+                                    if let onCreateGroup {
+                                        onCreateGroup()
+                                    } else {
+                                        isCreateGroupPresented = true
+                                    }
+                                } label: {
+                                    Label("새 그룹 만들기", systemImage: "plus")
+                                        .font(MoilTypography.semibold(14))
+                                        .padding(.horizontal, 14)
+                                        .frame(height: 46)
+                                }
+                                .foregroundStyle(MoilColor.primary)
+                            }
+                            .frame(width: 180)
+                            .background(MoilColor.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+                            .offset(y: 42)
+                        }
+                    }
+                    .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                    .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
+                    .zIndex(1)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(monthTitle).font(MoilTypography.bold(32))
+                            Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
+                        }
+                        Spacer()
+                        Button { moveMonth(by: -1) } label: {
+                            Image(systemName: "chevron.left")
+                            .frame(width: 30, height: 30)
+                            .background(MoilColor.surface)
+                            .clipShape(Circle())
+                        }
+                        .foregroundStyle(MoilColor.textPrimary)
+                        Button { moveMonth(by: 1) } label: {
+                            Image(systemName: "chevron.right")
+                            .frame(width: 30, height: 30)
+                            .background(MoilColor.surface)
+                            .clipShape(Circle())
+                        }
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .padding(.leading, 6)
+                    }
+                    .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                    .padding(.vertical, 16)
+                    LazyVGrid(columns: columns, spacing: 9) {
+                        ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
+                        ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
+                            let day = slot - leadingBlankDays + 1
+                            if (1...daysInMonth).contains(day) {
+                                calendarDay(day)
+                            } else {
+                                Color.clear.frame(height: dayCellHeight)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                    Spacer()
+                }
             }
         }
-        .moilTabScreenLayout(selected: .calendar, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .calendar, style: tabBarStyle, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
             } else {
@@ -274,14 +288,10 @@ struct CalendarView: View {
     }
 
     private func loadEvents() async {
-        guard let groupId = groupStore.selectedGroupId else {
-            remoteEvents = []
-            return
-        }
+        guard let groupId = groupStore.selectedGroupId else { return }
         do {
-            remoteEvents = try await sessionStore.service().events(groupId: groupId, month: monthRequestValue).compactMap(CalendarEvent.init(remote:))
+            try await eventStore.load(groupId: groupId, month: monthRequestValue, using: sessionStore.service())
         } catch {
-            remoteEvents = []
             serverError = error.localizedDescription
         }
     }
