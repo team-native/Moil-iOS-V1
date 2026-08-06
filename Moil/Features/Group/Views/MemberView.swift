@@ -250,7 +250,7 @@ struct MemberView: View {
         guard let groupId = selectedGroup?.id else { remoteMembers = []; return }
         do {
             try await groupStore.refreshDetail(id: groupId, using: sessionStore.service())
-            remoteMembers = try await sessionStore.service().members(groupId: groupId)
+            remoteMembers = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
             isAdministratorMode = remoteMembers.contains { $0.nickname == "나" && ($0.role == "OWNER" || $0.role == "ADMIN") }
         } catch {
             remoteMembers = []

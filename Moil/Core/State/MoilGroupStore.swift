@@ -29,6 +29,7 @@ final class MoilGroupStore: ObservableObject {
     @Published var pendingInviteGroupName = ""
     @Published var pendingInviteMemberCount = 0
     @Published private(set) var isLoading = false
+    @Published private var membersByGroupId: [String: [MoilRemoteMember]] = [:]
 
     var selectedGroup: MoilGroup? {
         groups.first { $0.id == selectedGroupId } ?? groups.first
@@ -36,10 +37,16 @@ final class MoilGroupStore: ObservableObject {
 
     var selectedGroupName: String { selectedGroup?.name ?? "그룹 선택" }
 
+    func members(for groupId: String?) -> [MoilRemoteMember] {
+        guard let groupId else { return [] }
+        return membersByGroupId[groupId] ?? []
+    }
+
     func load(using service: MoilAPIService) async throws {
         isLoading = true
         defer { isLoading = false }
         groups = try await service.groups().map(MoilGroup.init(remote:))
+        membersByGroupId = membersByGroupId.filter { groupID, _ in groups.contains { $0.id == groupID } }
         if selectedGroupId == nil || !groups.contains(where: { $0.id == selectedGroupId }) {
             selectedGroupId = groups.first?.id
         }
@@ -70,8 +77,15 @@ final class MoilGroupStore: ObservableObject {
         groups[index] = MoilGroup(remote: remoteGroup)
     }
 
+    func loadMembers(groupId: String, using service: MoilAPIService) async throws -> [MoilRemoteMember] {
+        let members = try await service.members(groupId: groupId)
+        membersByGroupId[groupId] = members
+        return members
+    }
+
     func removeGroup(_ id: String) {
         groups.removeAll { $0.id == id }
+        membersByGroupId[id] = nil
         if selectedGroupId == id {
             selectedGroupId = groups.first?.id
         }
@@ -83,6 +97,7 @@ final class MoilGroupStore: ObservableObject {
         pendingInviteCode = nil
         pendingInviteGroupName = ""
         pendingInviteMemberCount = 0
+        membersByGroupId = [:]
     }
 }
 

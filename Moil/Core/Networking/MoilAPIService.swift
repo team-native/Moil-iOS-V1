@@ -187,6 +187,18 @@ struct MoilRemoteMember: Decodable, Identifiable {
     let nickname: String
     let role: String
     let colorId: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, userId, memberId, nickname, name, userName, role, groupRole, colorId, profileColor
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.string(for: [.id, .userId, .memberId])
+        nickname = (try? container.string(for: [.nickname, .name, .userName])) ?? "나"
+        role = (try? container.string(for: [.role, .groupRole])) ?? "MEMBER"
+        colorId = try? container.string(for: [.colorId, .profileColor])
+    }
 }
 
 private struct MoilMemberList: Decodable {
