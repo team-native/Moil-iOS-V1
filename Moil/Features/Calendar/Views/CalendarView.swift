@@ -205,8 +205,8 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView(day: scheduleDraftDay) { day, title in
-                createEvent(day: day, title: title)
+            ScheduleComposerView(day: scheduleDraftDay, members: groupStore.members(for: groupStore.selectedGroupId)) { day, title, memberIDs in
+                createEvent(day: day, title: title, sharedMemberIDs: memberIDs)
             }
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
@@ -306,14 +306,14 @@ struct CalendarView: View {
         }
     }
 
-    private func createEvent(day: Int, title: String) {
+    private func createEvent(day: Int, title: String, sharedMemberIDs: [String]) {
         guard let groupId = groupStore.selectedGroupId else { return }
         var components = calendar.dateComponents([.year, .month], from: displayedMonth)
         components.day = day
         let date = calendar.date(from: components)?.formatted(.iso8601.year().month().day()) ?? ""
         Task {
             do {
-                _ = try await sessionStore.service().createEvent(CreateEventRequest(groupId: groupId, title: title, date: date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: []))
+                _ = try await sessionStore.service().createEvent(CreateEventRequest(groupId: groupId, title: title, date: date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: sharedMemberIDs.compactMap(Int.init)))
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
         }
@@ -408,10 +408,18 @@ private struct CalendarEvent: Identifiable {
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
     let day: Int
-    let onSave: (Int, String) -> Void
+    let members: [MoilRemoteMember]
+    let onSave: (Int, String, [String]) -> Void
     @State private var title = ""
     @State private var allDay = false
-    @State private var selectedMembers: Set<String> = ["아빠", "나"]
+    @State private var selectedMemberIDs: Set<String>
+
+    init(day: Int, members: [MoilRemoteMember], onSave: @escaping (Int, String, [String]) -> Void) {
+        self.day = day
+        self.members = members
+        self.onSave = onSave
+        _selectedMemberIDs = State(initialValue: Set(members.filter(\.isMe).map(\.id)))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -422,7 +430,7 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day, title.isEmpty ? "새 일정" : title)
+                    onSave(day, title.isEmpty ? "새 일정" : title, Array(selectedMemberIDs))
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
@@ -453,14 +461,15 @@ private struct ScheduleComposerView: View {
                     .font(MoilTypography.semibold(13))
                     .foregroundStyle(MoilColor.textSecondary)
                 HStack(spacing: 14) {
-                    ForEach([("아빠", MoilAvatarColor.blue), ("엄마", MoilAvatarColor.red), ("나", MoilAvatarColor.green), ("동생", MoilAvatarColor.orange)], id: \.0) { member in
-                        Button { toggle(member.0) } label: {
+                    ForEach(members) { member in
+                        Button { toggle(member.id) } label: {
                             VStack(spacing: 6) {
-                                MoilAvatar(color: member.1, size: 44)
-                                    .overlay { Circle().stroke(selectedMembers.contains(member.0) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
-                                Text(member.0).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
+                                MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
+                                    .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
+                                Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
                             }
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -471,8 +480,8 @@ private struct ScheduleComposerView: View {
         .background(MoilColor.surface)
     }
 
-    private func toggle(_ member: String) {
-        if selectedMembers.contains(member) { selectedMembers.remove(member) } else { selectedMembers.insert(member) }
+    private func toggle(_ memberID: String) {
+        if selectedMemberIDs.contains(memberID) { selectedMemberIDs.remove(memberID) } else { selectedMemberIDs.insert(memberID) }
     }
 }
 
