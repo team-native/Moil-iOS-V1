@@ -15,13 +15,15 @@ struct MoilTabScreenLayout<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        content
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if isTabBarVisible {
+        if isTabBarVisible {
+            content
+                .safeAreaInset(edge: .bottom, spacing: 0) {
                     MoilTabBar(selected: selected, style: style, onSelect: onSelect)
                         .transaction { $0.animation = nil }
                 }
-            }
+        } else {
+            content
+        }
     }
 }
 
