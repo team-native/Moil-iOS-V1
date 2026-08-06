@@ -86,8 +86,8 @@ struct CalendarView: View {
                         } label: {
                             HStack(spacing: 8) {
                                 HStack(spacing: -7) {
-                                    ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in
-                                        MoilAvatar(color: color, size: 24)
+                                    ForEach(groupStore.members(for: groupStore.selectedGroupId).prefix(4)) { member in
+                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 24)
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
                                 }
@@ -274,7 +274,17 @@ struct CalendarView: View {
             Text(serverError ?? "")
         }
         .task(id: "\(groupStore.selectedGroupId ?? "")-\(monthRequestValue)") {
+            await loadMemberProfiles()
             await loadEvents()
+        }
+    }
+
+    private func loadMemberProfiles() async {
+        guard let groupId = groupStore.selectedGroupId else { return }
+        do {
+            _ = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
+        } catch {
+            serverError = error.localizedDescription
         }
     }
 
