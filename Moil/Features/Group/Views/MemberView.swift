@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MemberView: View {
     @Environment(\.dismiss) private var dismiss
@@ -9,6 +10,7 @@ struct MemberView: View {
     var showsTabBar = true
     @State private var selectedGroupId: String?
     @State private var remoteMembers: [MoilRemoteMember] = []
+    @State private var loadedMembersGroupID: String?
     @State private var notificationsEnabled = true
     @State private var copied = false
     @State private var isAdministratorMode = false
@@ -31,7 +33,10 @@ struct MemberView: View {
     }
 
     private var members: [(String, String, Color)] {
-        remoteMembers.map { ($0.nickname, $0.role == "OWNER" || $0.role == "ADMIN" ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
+        let currentMembers = loadedMembersGroupID == selectedGroup?.id
+            ? remoteMembers
+            : groupStore.members(for: selectedGroup?.id)
+        return currentMembers.map { ($0.nickname, $0.role.uppercased() == "OWNER" || $0.role.uppercased() == "ADMIN" ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
     }
 
     private var inviteCode: String {
@@ -205,7 +210,10 @@ struct MemberView: View {
             HStack {
                 Text(inviteCode).font(MoilTypography.bold(19)).tracking(1)
                 Spacer()
-                Button(copied ? "복사됨" : "복사") { copied = true }
+                Button(copied ? "복사됨" : "복사") {
+                    UIPasteboard.general.string = inviteCode
+                    copied = true
+                }
                     .font(MoilTypography.bold(12)).foregroundStyle(.white)
                     .padding(.horizontal, 12).frame(height: 34)
                     .background(MoilColor.primary).clipShape(Capsule())
@@ -249,11 +257,14 @@ struct MemberView: View {
     private func loadMembers() async {
         guard let groupId = selectedGroup?.id else { remoteMembers = []; return }
         do {
-            try await groupStore.refreshDetail(id: groupId, using: sessionStore.service())
             remoteMembers = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
-            isAdministratorMode = remoteMembers.contains { $0.nickname == "나" && ($0.role == "OWNER" || $0.role == "ADMIN") }
+            loadedMembersGroupID = groupId
+            isAdministratorMode = remoteMembers.contains {
+                $0.nickname == "나" && ["OWNER", "ADMIN"].contains($0.role.uppercased())
+            }
         } catch {
-            remoteMembers = []
+            remoteMembers = groupStore.members(for: groupId)
+            loadedMembersGroupID = groupId
         }
     }
 
