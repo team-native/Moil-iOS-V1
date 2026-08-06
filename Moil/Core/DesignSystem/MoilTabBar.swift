@@ -20,14 +20,14 @@ enum MoilTabBarStyle {
 
     var unselectedColor: Color {
         switch self {
-        case .standard: MoilColor.textTertiary
+        case .standard: MoilColor.textSecondary
         case .dark: MoilColor.groupDetailTextSecondary
         }
     }
 
     var dividerColor: Color {
         switch self {
-        case .standard: Color(.separator)
+        case .standard: MoilColor.textTertiary.opacity(0.35)
         case .dark: MoilColor.groupDetailSeparator
         }
     }
