@@ -4,7 +4,7 @@ struct AuthFlowView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
-    @State private var route: AuthRoute = .login
+    @State private var route: AuthRoute = .restoring
     @State private var signUpName = ""
     @State private var signUpEmail = ""
     @State private var verifyId = ""
@@ -16,6 +16,12 @@ struct AuthFlowView: View {
     var body: some View {
         Group {
         switch route {
+        case .restoring:
+            ZStack {
+                MoilColor.background.ignoresSafeArea()
+                ProgressView()
+                    .tint(MoilColor.primary)
+            }
         case .login:
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
@@ -66,7 +72,10 @@ struct AuthFlowView: View {
     private func restoreSession() async {
         guard !hasRestoredSession else { return }
         hasRestoredSession = true
-        guard await sessionStore.refreshSession() else { return }
+        guard await sessionStore.refreshSession() else {
+            route = .login
+            return
+        }
         do {
             try await groupStore.load(using: sessionStore.service())
             route = .main
@@ -74,6 +83,7 @@ struct AuthFlowView: View {
             sessionStore.clear()
             groupStore.reset()
             eventStore.reset()
+            route = .login
         }
     }
 
@@ -150,6 +160,7 @@ struct AuthFlowView: View {
 }
 
 private enum AuthRoute {
+    case restoring
     case login
     case signUpInfo
     case emailVerification
