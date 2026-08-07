@@ -62,8 +62,13 @@ final class MoilGroupStore: ObservableObject {
     func join(inviteCode: String, nickname: String, colorId: String, using service: MoilAPIService) async throws {
         let group = try await service.joinGroup(inviteCode: inviteCode, nickname: nickname, colorId: colorId)
         let localGroup = MoilGroup(remote: group)
+        try await load(using: service)
         if !groups.contains(where: { $0.id == localGroup.id }) { groups.append(localGroup) }
         selectedGroupId = localGroup.id
+        _ = try? await loadMembers(groupId: localGroup.id, using: service)
+        pendingInviteCode = nil
+        pendingInviteGroupName = ""
+        pendingInviteMemberCount = 0
     }
 
     func selectGroup(_ id: String) {
