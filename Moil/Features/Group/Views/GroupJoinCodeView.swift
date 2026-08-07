@@ -41,7 +41,7 @@ struct GroupJoinCodeView: View {
                 .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay { RoundedRectangle(cornerRadius: 14).stroke(error == nil ? Color.clear : MoilColor.error, lineWidth: 1) }
                 .onChange(of: code) { _, value in
-                    let normalized = String(value.uppercased().prefix(8))
+                    let normalized = String(value.uppercased().prefix(64))
                     if normalized != value { code = normalized }
                     error = nil
                     isVerified = false
@@ -58,8 +58,9 @@ struct GroupJoinCodeView: View {
                     Task {
                         isVerifying = true
                         do {
-                            let verification = try await sessionStore.service().verifyInviteCode(code)
-                            groupStore.pendingInviteCode = code
+                            let inviteCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let verification = try await sessionStore.service().verifyInviteCode(inviteCode)
+                            groupStore.pendingInviteCode = inviteCode
                             groupStore.pendingInviteGroupName = verification.groupName
                             groupStore.pendingInviteMemberCount = verification.memberCount
                             isVerified = true
@@ -73,7 +74,7 @@ struct GroupJoinCodeView: View {
             .font(MoilTypography.bold(16)).foregroundStyle(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
             .background(code.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
-            .disabled(code.isEmpty)
+            .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isVerifying)
             .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
