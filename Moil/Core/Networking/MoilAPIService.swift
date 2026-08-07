@@ -145,6 +145,18 @@ struct MoilVerificationSession: Decodable {
 struct MoilInviteVerification: Decodable {
     let groupName: String
     let memberCount: Int
+
+    private enum CodingKeys: String, CodingKey { case groupName, name, memberCount }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let legacyGroupName = try? container.decode(String.self, forKey: .groupName) {
+            groupName = legacyGroupName
+        } else {
+            groupName = try container.decode(String.self, forKey: .name)
+        }
+        memberCount = (try? container.decode(Int.self, forKey: .memberCount)) ?? 0
+    }
 }
 
 struct MoilRemoteGroup: Decodable, Identifiable {
