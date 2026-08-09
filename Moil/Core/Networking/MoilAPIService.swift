@@ -12,7 +12,20 @@ struct MoilAPIService {
     }
 
     func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
-        try await client.request("auth/refresh", method: "POST", body: RefreshTokenRequest(refreshToken: refreshToken))
+        let request = RefreshTokenRequest(refreshToken: refreshToken)
+        do {
+            // 최신 명세의 Bearer 인증 방식을 우선 적용합니다.
+            return try await client.request("auth/refresh", method: "POST", body: request)
+        } catch let error as MoilAPIError where error.isAuthenticationFailure {
+            // 액세스 토큰이 이미 만료된 환경에서도 리프레시 토큰만으로 재발급을
+            // 허용하는 서버와 호환하기 위한 보조 경로입니다.
+            return try await client.request(
+                "auth/refresh",
+                method: "POST",
+                body: request,
+                requiresAuthentication: false
+            )
+        }
     }
 
     func sendVerificationCode(name: String?, email: String, step: VerificationStep) async throws -> MoilVerificationResponse {
@@ -77,7 +90,11 @@ struct MoilAPIService {
         try await client.request("groups/\(groupId)/members/me", method: "DELETE", body: EmptyRequest())
     }
 
-    func transferAdmin(groupId: String, targetUserId: String) async throws {
+    func renameGroup(groupId: String, name: String) async throws {
+        try await client.request("groups/\(groupId)", method: "PATCH", body: RenameGroupRequest(name: name))
+    }
+
+    func transferAdmin(groupId: String, targetUserId: Int) async throws {
         try await client.request("groups/\(groupId)/transfer-admin", method: "POST", body: TransferAdminRequest(targetUserId: targetUserId))
     }
 
@@ -85,8 +102,8 @@ struct MoilAPIService {
         try await client.request("groups/\(groupId)/members", method: "PATCH", body: MemberRoleUpdateRequest(members: members))
     }
 
-    func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
-        let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
+    func events(groupId: String, month: Int) async throws -> [MoilRemoteEvent] {
+        let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: String(month))])
         return response.events
     }
 
@@ -99,7 +116,7 @@ struct MoilAPIService {
         try await client.request("events/\(id)", method: "GET")
     }
 
-    func updateEvent(id: String, request: CreateEventRequest) async throws {
+    func updateEvent(id: String, request: UpdateEventRequest) async throws {
         try await client.request("events/\(id)", method: "PATCH", body: request)
     }
 
@@ -128,17 +145,28 @@ private struct CreateGroupRequest: Encodable { let name: String; let nickname: S
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
 private struct NotificationRequest: Encodable { let enabled: Bool }
-private struct TransferAdminRequest: Encodable { let targetUserId: String }
+private struct RenameGroupRequest: Encodable { let name: String }
+private struct TransferAdminRequest: Encodable { let targetUserId: Int }
 private struct MemberRoleUpdateRequest: Encodable { let members: [MemberRoleRequest] }
 
 struct MemberRoleRequest: Encodable {
-    let userId: String
+    let userId: Int
     let role: String
 }
 
 struct MoilTokenResponse: Decodable {
     let accessToken: String
     let refreshToken: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case accessToken, refreshToken
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accessToken = try container.decode(String.self, forKey: .accessToken)
+        refreshToken = try container.decodeIfPresent(String.self, forKey: .refreshToken)
+    }
 }
 
 struct MoilVerificationResponse: Decodable {
@@ -252,9 +280,14 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let date: String
     let ownerName: String?
     let colorId: String?
+    let isAllDay: Bool
+    let startTime: String?
+    let endTime: String?
+    let location: String?
+    let members: [MoilEventMember]
 
     private enum CodingKeys: String, CodingKey {
-        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers
+        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location
     }
 
     init(from decoder: Decoder) throws {
@@ -263,7 +296,7 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         title = try container.decode(String.self, forKey: .title)
         date = try container.decode(String.self, forKey: .date)
 
-        let members = (try? container.decode([MoilEventMember].self, forKey: .members))
+        members = (try? container.decode([MoilEventMember].self, forKey: .members))
             ?? (try? container.decode([MoilEventMember].self, forKey: .sharedMembers))
             ?? []
         ownerName = (try? container.decode(String.self, forKey: .ownerName))
@@ -272,17 +305,23 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         colorId = (try? container.decode(String.self, forKey: .colorId))
             ?? (try? container.decode(String.self, forKey: .profileColor))
             ?? members.first?.colorId
+        isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay)) ?? true
+        startTime = try? container.decode(String.self, forKey: .startTime)
+        endTime = try? container.decode(String.self, forKey: .endTime)
+        location = try? container.decode(String.self, forKey: .location)
     }
 }
 
-private struct MoilEventMember: Decodable {
+struct MoilEventMember: Decodable {
+    let id: String?
     let nickname: String?
     let colorId: String?
 
-    private enum CodingKeys: String, CodingKey { case nickname, name, colorId, profileColor }
+    private enum CodingKeys: String, CodingKey { case id, userId, memberId, nickname, name, colorId, profileColor }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? container.string(for: [.id, .userId, .memberId]))
         nickname = (try? container.decode(String.self, forKey: .nickname))
             ?? (try? container.decode(String.self, forKey: .name))
         colorId = (try? container.decode(String.self, forKey: .colorId))
@@ -311,6 +350,16 @@ private struct MoilEventList: Decodable {
 
 struct CreateEventRequest: Encodable {
     let groupId: Int
+    let title: String
+    let date: String
+    let isAllDay: Bool
+    let startTime: String?
+    let endTime: String?
+    let location: String?
+    let sharedMemberIds: [Int]
+}
+
+struct UpdateEventRequest: Encodable {
     let title: String
     let date: String
     let isAllDay: Bool
