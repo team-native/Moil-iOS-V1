@@ -245,6 +245,42 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let date: String
     let ownerName: String?
     let colorId: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.string(for: [.id, .eventId])
+        title = try container.decode(String.self, forKey: .title)
+        date = try container.decode(String.self, forKey: .date)
+
+        let members = (try? container.decode([MoilEventMember].self, forKey: .members))
+            ?? (try? container.decode([MoilEventMember].self, forKey: .sharedMembers))
+            ?? []
+        ownerName = (try? container.decode(String.self, forKey: .ownerName))
+            ?? (try? container.decode(String.self, forKey: .nickname))
+            ?? members.first?.nickname
+        colorId = (try? container.decode(String.self, forKey: .colorId))
+            ?? (try? container.decode(String.self, forKey: .profileColor))
+            ?? members.first?.colorId
+    }
+}
+
+private struct MoilEventMember: Decodable {
+    let nickname: String?
+    let colorId: String?
+
+    private enum CodingKeys: String, CodingKey { case nickname, name, colorId, profileColor }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        nickname = (try? container.decode(String.self, forKey: .nickname))
+            ?? (try? container.decode(String.self, forKey: .name))
+        colorId = (try? container.decode(String.self, forKey: .colorId))
+            ?? (try? container.decode(String.self, forKey: .profileColor))
+    }
 }
 
 private struct MoilEventList: Decodable {
