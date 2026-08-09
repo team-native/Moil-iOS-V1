@@ -114,7 +114,13 @@ private struct MoilServerError: Decodable {
     private enum CodingKeys: String, CodingKey { case message }
 }
 
-struct MoilEmptyResponse: Decodable { }
+/// Endpoints such as logout, event update, and event deletion return
+/// `"data": null`.  A custom decoder deliberately accepts that null value.
+struct MoilEmptyResponse: Decodable {
+    init() { }
+
+    init(from decoder: Decoder) throws { }
+}
 private struct MoilEmptyRequestBody: Encodable { }
 
 extension JSONEncoder {
