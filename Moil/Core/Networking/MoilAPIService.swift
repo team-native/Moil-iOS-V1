@@ -102,8 +102,8 @@ struct MoilAPIService {
         try await client.request("groups/\(groupId)/members", method: "PATCH", body: MemberRoleUpdateRequest(members: members))
     }
 
-    func events(groupId: String, month: Int) async throws -> [MoilRemoteEvent] {
-        let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: String(month))])
+    func events(groupId: String, month: String) async throws -> [MoilRemoteEvent] {
+        let response: MoilEventList = try await client.request("groups/\(groupId)/events", method: "GET", queryItems: [URLQueryItem(name: "month", value: month)])
         return response.events
     }
 

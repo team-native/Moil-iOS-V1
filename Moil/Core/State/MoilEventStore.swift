@@ -18,8 +18,7 @@ final class MoilEventStore: ObservableObject {
     }
 
     func load(groupId: String, month: String, using service: MoilAPIService) async throws {
-        let monthNumber = Int(month.split(separator: "-").last ?? "") ?? 0
-        monthlyEvents[key(groupId, month)] = try await service.events(groupId: groupId, month: monthNumber)
+        monthlyEvents[key(groupId, month)] = try await service.events(groupId: groupId, month: month)
     }
 
     func invalidate(groupId: String) {
