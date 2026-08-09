@@ -205,8 +205,8 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView(day: scheduleDraftDay, members: groupStore.members(for: groupStore.selectedGroupId)) { day, title, memberIDs in
-                createEvent(day: day, title: title, sharedMemberIDs: memberIDs)
+            ScheduleComposerView(day: scheduleDraftDay, members: groupStore.members(for: groupStore.selectedGroupId)) { day, title, isAllDay, memberIDs in
+                createEvent(day: day, title: title, isAllDay: isAllDay, sharedMemberIDs: memberIDs)
             }
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
@@ -306,25 +306,42 @@ struct CalendarView: View {
         }
     }
 
-    private func createEvent(day: Int, title: String, sharedMemberIDs: [String]) {
-        guard let groupId = groupStore.selectedGroupId else { return }
+    private func createEvent(day: Int, title: String, isAllDay: Bool, sharedMemberIDs: [String]) {
+        guard let groupId = groupStore.selectedGroupId, let groupID = Int(groupId) else {
+            serverError = "그룹 정보를 불러오지 못했어요."
+            return
+        }
+        guard !sharedMemberIDs.isEmpty else {
+            serverError = "일정을 공유할 구성원을 1명 이상 선택해주세요."
+            return
+        }
         var components = calendar.dateComponents([.year, .month], from: displayedMonth)
         components.day = day
         let date = calendar.date(from: components)?.formatted(.iso8601.year().month().day()) ?? ""
         Task {
             do {
-                _ = try await sessionStore.service().createEvent(CreateEventRequest(groupId: groupId, title: title, date: date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: sharedMemberIDs.compactMap(Int.init)))
+                _ = try await sessionStore.service().createEvent(CreateEventRequest(
+                    groupId: groupID,
+                    title: title,
+                    date: date,
+                    isAllDay: isAllDay,
+                    startTime: isAllDay ? nil : "09:00",
+                    endTime: isAllDay ? nil : "10:00",
+                    location: nil,
+                    sharedMemberIds: sharedMemberIDs.compactMap(Int.init)
+                ))
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
         }
     }
 
     private func updateEvent(_ event: CalendarEvent, title: String) {
-        guard let groupId = groupStore.selectedGroupId else { return }
+        guard let groupId = groupStore.selectedGroupId, let groupID = Int(groupId) else { return }
+        let sharedMemberIDs = groupStore.members(for: groupId).filter(\.isMe).compactMap { Int($0.id) }
         Task {
             do {
-                let request = CreateEventRequest(groupId: groupId, title: title, date: event.date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: [])
-                _ = try await sessionStore.service().updateEvent(id: event.id, request: request)
+                let request = CreateEventRequest(groupId: groupID, title: title, date: event.date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: sharedMemberIDs)
+                try await sessionStore.service().updateEvent(id: event.id, request: request)
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
         }
@@ -409,16 +426,17 @@ private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
     let day: Int
     let members: [MoilRemoteMember]
-    let onSave: (Int, String, [String]) -> Void
+    let onSave: (Int, String, Bool, [String]) -> Void
     @State private var title = ""
     @State private var allDay = false
     @State private var selectedMemberIDs: Set<String>
 
-    init(day: Int, members: [MoilRemoteMember], onSave: @escaping (Int, String, [String]) -> Void) {
+    init(day: Int, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
         self.day = day
         self.members = members
         self.onSave = onSave
-        _selectedMemberIDs = State(initialValue: Set(members.filter(\.isMe).map(\.id)))
+        let currentUser = members.filter(\.isMe).map(\.id)
+        _selectedMemberIDs = State(initialValue: Set(currentUser.isEmpty ? members.prefix(1).map(\.id) : currentUser))
     }
 
     var body: some View {
@@ -430,11 +448,12 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day, title.isEmpty ? "새 일정" : title, Array(selectedMemberIDs))
+                    onSave(day, title.isEmpty ? "새 일정" : title, allDay, Array(selectedMemberIDs))
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(MoilColor.primary)
+                    .disabled(selectedMemberIDs.isEmpty)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 16)

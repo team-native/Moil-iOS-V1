@@ -12,7 +12,7 @@ struct MoilAPIService {
     }
 
     func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
-        try await client.request("auth/refresh", method: "POST", body: RefreshTokenRequest(refreshToken: refreshToken), requiresAuthentication: false)
+        try await client.request("auth/refresh", method: "POST", body: RefreshTokenRequest(refreshToken: refreshToken))
     }
 
     func sendVerificationCode(name: String?, email: String, step: VerificationStep) async throws -> MoilVerificationResponse {
@@ -90,15 +90,16 @@ struct MoilAPIService {
         return response.events
     }
 
-    func createEvent(_ request: CreateEventRequest) async throws -> MoilRemoteEvent {
-        try await client.request("events", method: "POST", body: request)
+    func createEvent(_ request: CreateEventRequest) async throws -> String {
+        let response: MoilCreatedEvent = try await client.request("events", method: "POST", body: request)
+        return response.eventId
     }
 
     func event(id: String) async throws -> MoilRemoteEvent {
         try await client.request("events/\(id)", method: "GET")
     }
 
-    func updateEvent(id: String, request: CreateEventRequest) async throws -> MoilRemoteEvent {
+    func updateEvent(id: String, request: CreateEventRequest) async throws {
         try await client.request("events/\(id)", method: "PATCH", body: request)
     }
 
@@ -111,7 +112,13 @@ enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET"
 
 private struct EmptyRequest: Encodable { }
 private struct LoginRequest: Encodable { let email: String; let password: String }
-private struct RefreshTokenRequest: Encodable { let refreshToken: String }
+private struct RefreshTokenRequest: Encodable {
+    let refreshToken: String
+
+    private enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
 private struct SendCodeRequest: Encodable { let name: String?; let email: String; let step: VerificationStep }
 private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: String }
 private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }
@@ -303,7 +310,7 @@ private struct MoilEventList: Decodable {
 }
 
 struct CreateEventRequest: Encodable {
-    let groupId: String
+    let groupId: Int
     let title: String
     let date: String
     let isAllDay: Bool
@@ -311,6 +318,17 @@ struct CreateEventRequest: Encodable {
     let endTime: String?
     let location: String?
     let sharedMemberIds: [Int]
+}
+
+private struct MoilCreatedEvent: Decodable {
+    let eventId: String
+
+    private enum CodingKeys: String, CodingKey { case eventId, id }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventId = try container.string(for: [.eventId, .id])
+    }
 }
 
 private extension KeyedDecodingContainer {
