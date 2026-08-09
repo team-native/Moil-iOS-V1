@@ -8,6 +8,7 @@ struct GroupJoinProfileView: View {
     @State private var nickname = ""
     @State private var selectedColor = MoilAvatarColor.green
     @State private var isAdditionalProfilePresented = false
+    @State private var isJoining = false
     @State private var errorMessage: String?
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     init(onComplete: @escaping () -> Void = {}) { self.onComplete = onComplete }
@@ -26,6 +27,15 @@ struct GroupJoinProfileView: View {
                 .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
             Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             TextField("닉네임 입력", text: $nickname).font(MoilTypography.regular(15)).padding(14).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
+                .onChange(of: nickname) { _, value in
+                    if value.count > 10 { nickname = String(value.prefix(10)) }
+                }
+            if !nickname.isEmpty && !isValidNickname {
+                Text("닉네임은 1자 이상 10자 이하로 입력해주세요.")
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.error)
+                    .padding(.top, 6)
+            }
             Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
@@ -49,17 +59,19 @@ struct GroupJoinProfileView: View {
             Button("참여하기") {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }
                 Task {
+                    isJoining = true
+                    defer { isJoining = false }
                     do {
-                        try await groupStore.join(inviteCode: inviteCode, nickname: nickname, colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
+                        try await groupStore.join(inviteCode: inviteCode, nickname: trimmedNickname, colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
                         onComplete()
                     } catch {
                         errorMessage = error.localizedDescription
                     }
                 }
             }
-                .disabled(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!isValidNickname || isJoining)
                 .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
+                .background(!isValidNickname || isJoining ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
                 .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
@@ -74,6 +86,14 @@ struct GroupJoinProfileView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+    }
+
+    private var trimmedNickname: String {
+        nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isValidNickname: Bool {
+        (1...10).contains(trimmedNickname.count)
     }
 }
 private struct AvatarStack: View {

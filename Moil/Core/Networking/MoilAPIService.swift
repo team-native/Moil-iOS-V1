@@ -143,19 +143,23 @@ struct MoilVerificationSession: Decodable {
 }
 
 struct MoilInviteVerification: Decodable {
+    let groupId: String
     let groupName: String
     let memberCount: Int
+    let inviteCode: String
 
-    private enum CodingKeys: String, CodingKey { case groupName, name, memberCount }
+    private enum CodingKeys: String, CodingKey { case groupId, id, groupName, name, memberCount, inviteCode }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        groupId = try container.string(for: [.groupId, .id])
         if let legacyGroupName = try? container.decode(String.self, forKey: .groupName) {
             groupName = legacyGroupName
         } else {
             groupName = try container.decode(String.self, forKey: .name)
         }
         memberCount = (try? container.decode(Int.self, forKey: .memberCount)) ?? 0
+        inviteCode = try container.decode(String.self, forKey: .inviteCode)
     }
 }
 
@@ -165,12 +169,13 @@ struct MoilRemoteGroup: Decodable, Identifiable {
     let colorId: String?
     let inviteCode: String?
 
-    private enum CodingKeys: String, CodingKey { case id, groupId, name, groupName, colorId, inviteCode }
+    private enum CodingKeys: String, CodingKey { case id, groupId, name, groupName, colorId, myColor, inviteCode }
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.string(for: [.id, .groupId])
         name = try container.string(for: [.name, .groupName])
-        colorId = try? container.decode(String.self, forKey: .colorId)
+        colorId = (try? container.decode(String.self, forKey: .colorId))
+            ?? (try? container.decode(String.self, forKey: .myColor))
         inviteCode = try? container.decode(String.self, forKey: .inviteCode)
     }
 }
