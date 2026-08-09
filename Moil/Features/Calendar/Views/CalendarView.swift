@@ -316,13 +316,13 @@ struct CalendarView: View {
             serverError = "일정을 공유할 구성원을 1명 이상 선택해주세요."
             return
         }
-        var components = calendar.dateComponents([.year, .month], from: displayedMonth)
-        components.day = day
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = calendar
-        formatter.dateFormat = "yyyy-MM-dd"
-        let date = calendar.date(from: components).map(formatter.string(from:)) ?? ""
+        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
+        guard let year = components.year, let month = components.month else {
+            serverError = "일정 날짜를 만들지 못했어요."
+            return
+        }
+        // 날짜만 있는 API 값은 Date(시간대)를 거치지 않아야 KST에서 전날로 밀리지 않습니다.
+        let date = MoilCalendarDate.string(year: year, month: month, day: day)
         Task {
             do {
                 _ = try await sessionStore.service().createEvent(CreateEventRequest(
@@ -426,19 +426,88 @@ private struct CalendarEvent: Identifiable {
     let memberIDs: [Int]
 
     init?(remote: MoilRemoteEvent) {
-        let parts = remote.date.split(separator: "-")
-        guard let finalPart = parts.last, let eventDay = Int(finalPart.prefix(2)) else { return nil }
+        guard let normalizedDate = MoilCalendarDate.normalizedString(from: remote.date),
+              let eventDay = MoilCalendarDate.day(from: normalizedDate) else { return nil }
         id = remote.id
         day = eventDay
         owner = remote.ownerName ?? "나"
         title = remote.title
-        date = remote.date
+        date = normalizedDate
         color = MoilAvatarColor.color(for: remote.colorId)
         isAllDay = remote.isAllDay
         startTime = remote.startTime
         endTime = remote.endTime
         location = remote.location
         memberIDs = remote.members.compactMap { $0.id.flatMap(Int.init) }
+    }
+}
+
+/// API의 `yyyy-MM-dd` 값과 ISO-8601 날짜 시간을 모두 로컬 달력 날짜로 정규화합니다.
+/// 서버가 UTC 날짜 시간을 반환해도 화면과 다음 수정 요청에서 하루가 밀리지 않게 합니다.
+private enum MoilCalendarDate {
+    private static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    static func string(year: Int, month: Int, day: Int) -> String {
+        String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    static func normalizedString(from value: String) -> String? {
+        if let dateOnly = dateOnlyComponents(from: value) {
+            return string(year: dateOnly.year, month: dateOnly.month, day: dateOnly.day)
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = formatter.date(from: value) ?? {
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: value)
+        }() ?? localDate(from: value)
+        guard let date else { return nil }
+
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        guard let year = components.year, let month = components.month, let day = components.day else { return nil }
+        return string(year: year, month: month, day: day)
+    }
+
+    static func day(from date: String) -> Int? {
+        dateOnlyComponents(from: date)?.day
+    }
+
+    private static func dateOnlyComponents(from value: String) -> (year: Int, month: Int, day: Int)? {
+        let parts = value.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 3,
+              parts[0].count == 4,
+              parts[1].count == 2,
+              parts[2].count == 2,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]),
+              (1...12).contains(month),
+              (1...31).contains(day) else { return nil }
+        return (year, month, day)
+    }
+
+    private static func localDate(from value: String) -> Date? {
+        let formats = ["yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd'T'HH:mm:ss"]
+
+        for format in formats {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.timeZone = .autoupdatingCurrent
+            formatter.dateFormat = format
+
+            if let date = formatter.date(from: value) {
+                return date
+            }
+        }
+
+        return nil
     }
 }
 
