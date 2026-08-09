@@ -80,10 +80,15 @@ struct AuthFlowView: View {
             try await groupStore.load(using: sessionStore.service())
             route = .main
         } catch {
-            sessionStore.clear()
-            groupStore.reset()
-            eventStore.reset()
-            route = .login
+            if let apiError = error as? MoilAPIError, apiError.isAuthenticationFailure {
+                sessionStore.clear()
+                groupStore.reset()
+                eventStore.reset()
+                route = .login
+            } else {
+                // 자동 로그인 직후 일시적인 통신 실패는 로그인 해제로 취급하지 않습니다.
+                route = .main
+            }
         }
     }
 

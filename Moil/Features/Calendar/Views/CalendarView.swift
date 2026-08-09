@@ -311,13 +311,18 @@ struct CalendarView: View {
             serverError = "그룹 정보를 불러오지 못했어요."
             return
         }
-        guard !sharedMemberIDs.isEmpty else {
+        let memberIDs = sharedMemberIDs.compactMap(Int.init)
+        guard !memberIDs.isEmpty else {
             serverError = "일정을 공유할 구성원을 1명 이상 선택해주세요."
             return
         }
         var components = calendar.dateComponents([.year, .month], from: displayedMonth)
         components.day = day
-        let date = calendar.date(from: components)?.formatted(.iso8601.year().month().day()) ?? ""
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = calendar
+        formatter.dateFormat = "yyyy-MM-dd"
+        let date = calendar.date(from: components).map(formatter.string(from:)) ?? ""
         Task {
             do {
                 _ = try await sessionStore.service().createEvent(CreateEventRequest(
@@ -328,7 +333,7 @@ struct CalendarView: View {
                     startTime: isAllDay ? nil : "09:00",
                     endTime: isAllDay ? nil : "10:00",
                     location: nil,
-                    sharedMemberIds: sharedMemberIDs.compactMap(Int.init)
+                    sharedMemberIds: memberIDs
                 ))
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
@@ -336,11 +341,20 @@ struct CalendarView: View {
     }
 
     private func updateEvent(_ event: CalendarEvent, title: String) {
-        guard let groupId = groupStore.selectedGroupId, let groupID = Int(groupId) else { return }
-        let sharedMemberIDs = groupStore.members(for: groupId).filter(\.isMe).compactMap { Int($0.id) }
+        guard let groupId = groupStore.selectedGroupId else { return }
+        let currentUserIDs = groupStore.members(for: groupId).filter(\.isMe).compactMap { Int($0.id) }
+        let sharedMemberIDs = event.memberIDs.isEmpty ? currentUserIDs : event.memberIDs
         Task {
             do {
-                let request = CreateEventRequest(groupId: groupID, title: title, date: event.date, isAllDay: true, startTime: nil, endTime: nil, location: nil, sharedMemberIds: sharedMemberIDs)
+                let request = UpdateEventRequest(
+                    title: title,
+                    date: event.date,
+                    isAllDay: event.isAllDay,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    location: event.location,
+                    sharedMemberIds: sharedMemberIDs
+                )
                 try await sessionStore.service().updateEvent(id: event.id, request: request)
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
@@ -405,6 +419,11 @@ private struct CalendarEvent: Identifiable {
     let title: String
     let date: String
     let color: Color
+    let isAllDay: Bool
+    let startTime: String?
+    let endTime: String?
+    let location: String?
+    let memberIDs: [Int]
 
     init?(remote: MoilRemoteEvent) {
         let parts = remote.date.split(separator: "-")
@@ -415,6 +434,11 @@ private struct CalendarEvent: Identifiable {
         title = remote.title
         date = remote.date
         color = MoilAvatarColor.color(for: remote.colorId)
+        isAllDay = remote.isAllDay
+        startTime = remote.startTime
+        endTime = remote.endTime
+        location = remote.location
+        memberIDs = remote.members.compactMap { $0.id.flatMap(Int.init) }
     }
 }
 

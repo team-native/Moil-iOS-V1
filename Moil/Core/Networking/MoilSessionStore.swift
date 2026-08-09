@@ -21,10 +21,19 @@ final class MoilSessionStore: ObservableObject {
     }
 
     func save(_ tokens: MoilTokenResponse) {
+        // 일부 토큰 재발급 응답은 refreshToken을 다시 보내지 않습니다.
+        // 그 경우 기존 refresh token을 유지해야 다음 앱 실행에서도 자동 로그인이 가능합니다.
+        let retainedRefreshToken = tokens.refreshToken?.isEmpty == false
+            ? tokens.refreshToken
+            : refreshToken
         accessToken = tokens.accessToken
-        refreshToken = tokens.refreshToken
+        refreshToken = retainedRefreshToken
         UserDefaults.standard.set(tokens.accessToken, forKey: accessTokenKey)
-        UserDefaults.standard.set(tokens.refreshToken, forKey: refreshTokenKey)
+        if let retainedRefreshToken {
+            UserDefaults.standard.set(retainedRefreshToken, forKey: refreshTokenKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: refreshTokenKey)
+        }
     }
 
     func refreshSession() async -> Bool {
@@ -34,8 +43,13 @@ final class MoilSessionStore: ObservableObject {
             save(tokens)
             return true
         } catch {
-            clear()
-            return false
+            if let apiError = error as? MoilAPIError, apiError.isAuthenticationFailure {
+                clear()
+                return false
+            }
+
+            // 일시적인 네트워크/응답 오류로 저장된 로그인 정보를 지우지 않습니다.
+            return isAuthenticated
         }
     }
 

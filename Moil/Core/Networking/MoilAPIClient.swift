@@ -21,6 +21,13 @@ enum MoilAPIError: LocalizedError {
     }
 }
 
+extension MoilAPIError {
+    var isAuthenticationFailure: Bool {
+        guard case let .server(_, statusCode) = self else { return false }
+        return statusCode == 401 || statusCode == 403
+    }
+}
+
 struct MoilAPIClient {
     let session: URLSession
     let tokenProvider: () -> String?

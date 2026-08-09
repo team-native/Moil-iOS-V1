@@ -260,7 +260,7 @@ struct MemberView: View {
             remoteMembers = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
             loadedMembersGroupID = groupId
             isAdministratorMode = remoteMembers.contains {
-                $0.nickname == "나" && ["OWNER", "ADMIN"].contains($0.role.uppercased())
+                $0.isMe && ["OWNER", "ADMIN"].contains($0.role.uppercased())
             }
         } catch {
             remoteMembers = groupStore.members(for: groupId)
@@ -295,8 +295,9 @@ struct MemberView: View {
         guard let groupId = selectedGroup?.id,
               let nickname = newAdministrator,
               let target = remoteMembers.first(where: { $0.nickname == nickname }) else { return }
+        guard let targetUserId = Int(target.id) else { return }
         do {
-            try await sessionStore.service().transferAdmin(groupId: groupId, targetUserId: target.id)
+            try await sessionStore.service().transferAdmin(groupId: groupId, targetUserId: targetUserId)
             isTransferringAdmin = false
             feedbackMessage = "\(target.nickname)에게 관리자 권한을 이전했어요."
             await loadMembers()
@@ -494,7 +495,10 @@ private struct PermissionEditorView: View {
                 if member.id != members.last?.id { Divider().padding(.horizontal, 20) }
             }
             Button("완료") {
-                onSave(members.map { MemberRoleRequest(userId: $0.id, role: administrators.contains($0.id) ? "ADMIN" : "MEMBER") })
+                onSave(members.compactMap { member in
+                    guard let userId = Int(member.id) else { return nil }
+                    return MemberRoleRequest(userId: userId, role: administrators.contains(member.id) ? "admin" : "member")
+                })
             }
                 .font(MoilTypography.bold(14)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
