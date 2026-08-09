@@ -60,7 +60,7 @@ struct GroupJoinCodeView: View {
                         do {
                             let inviteCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
                             let verification = try await sessionStore.service().verifyInviteCode(inviteCode)
-                            groupStore.pendingInviteCode = inviteCode
+                            groupStore.pendingInviteCode = verification.inviteCode
                             groupStore.pendingInviteGroupName = verification.groupName
                             groupStore.pendingInviteMemberCount = verification.memberCount
                             isVerified = true
