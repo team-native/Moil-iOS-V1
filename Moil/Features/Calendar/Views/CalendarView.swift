@@ -773,12 +773,8 @@ private struct ScheduleSearchView: View {
                 }
             }
             .background(MoilColor.background.ignoresSafeArea())
+            .navigationTitle("일정 검색")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("일정 검색").font(MoilTypography.bold(17)).foregroundStyle(MoilColor.textPrimary)
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: dismiss.callAsFunction) {
