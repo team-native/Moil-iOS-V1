@@ -18,8 +18,9 @@ struct GroupJoinCodeView: View {
         self.showsTabBar = showsTabBar
     }
 
+    /// 탭으로 들어온 경우에는 탭바로 이동하므로 뒤로 가기를 두지 않습니다.
     private var backAction: (() -> Void)? {
-        guard showsTabBar else { return nil }
+        guard onTabSelect == nil else { return nil }
         return { dismiss() }
     }
 

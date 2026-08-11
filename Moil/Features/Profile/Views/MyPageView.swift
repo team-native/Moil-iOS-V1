@@ -74,7 +74,7 @@ struct MyPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
-        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar && accountRoute == nil) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
             } else {
@@ -93,13 +93,13 @@ struct MyPageView: View {
             }
         }
         .fullScreenCover(isPresented: $isMemberPresented) {
-            MemberView()
+            MemberView(showsTabBar: false)
         }
         .fullScreenCover(isPresented: $isJoinGroupPresented) {
-            GroupJoinCodeView {
+            GroupJoinCodeView(onNext: {
                 isJoinGroupPresented = false
                 isJoinProfilePresented = true
-            }
+            }, showsTabBar: false)
         }
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }

@@ -132,16 +132,16 @@ struct MemberView: View {
                 Text(feedbackMessage ?? "")
             }
             .fullScreenCover(isPresented: $isJoinGroupPresented) {
-                GroupJoinCodeView {
+                GroupJoinCodeView(onNext: {
                     isJoinGroupPresented = false
                     isJoinProfilePresented = true
-                }
+                }, showsTabBar: false)
             }
             .fullScreenCover(isPresented: $isJoinProfilePresented) {
                 GroupJoinProfileView { isJoinProfilePresented = false }
             }
             .fullScreenCover(isPresented: $isMyPagePresented) {
-                MyPageView()
+                MyPageView(showsTabBar: false)
             }
             .fullScreenCover(isPresented: $isCreateGroupPresented) {
                 CreateGroupView()
