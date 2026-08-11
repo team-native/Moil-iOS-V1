@@ -54,11 +54,6 @@ struct CalendarView: View {
         displayedMonth.formatted(.dateTime.year().locale(Locale(identifier: "ko_KR")))
     }
 
-    /// The empty state paints its own fixed dark background, so the tab bar has to follow it.
-    private var tabBarStyle: MoilTabBarStyle {
-        groupStore.groups.isEmpty ? .dark : .standard
-    }
-
     var body: some View {
         ZStack {
             MoilColor.background
@@ -197,7 +192,7 @@ struct CalendarView: View {
                 }
             }
         }
-        .moilTabScreenLayout(selected: .calendar, style: tabBarStyle, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .calendar, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
             } else {

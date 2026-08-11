@@ -56,11 +56,6 @@ struct MemberView: View {
         selectedGroup?.inviteCode ?? ""
     }
 
-    /// The empty state paints its own fixed dark background, so the tab bar has to follow it.
-    private var tabBarStyle: MoilTabBarStyle {
-        groupStore.groups.isEmpty ? .dark : .standard
-    }
-
     var body: some View {
         screenContent
     }
@@ -95,7 +90,7 @@ struct MemberView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
-        .moilTabScreenLayout(selected: .members, style: tabBarStyle, isTabBarVisible: showsTabBar) { tab in
+        .moilTabScreenLayout(selected: .members, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect { onTabSelect(tab); return }
             switch tab {
             case .calendar: dismiss()
