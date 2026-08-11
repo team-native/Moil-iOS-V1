@@ -6,18 +6,26 @@ struct MoilGroup: Identifiable {
     var name: String
     var colorId: String?
     var inviteCode: String?
+    var myRole: String?
 
     var color: Color { MoilAvatarColor.color(for: colorId) }
 
-    init(id: String, name: String, colorId: String? = nil, inviteCode: String? = nil) {
+    /// 멤버 응답을 기다리지 않고 관리자 영역을 그릴 수 있도록 그룹 응답의 역할을 그대로 씁니다.
+    var isAdministrator: Bool {
+        guard let myRole else { return false }
+        return ["OWNER", "ADMIN"].contains(myRole.uppercased())
+    }
+
+    init(id: String, name: String, colorId: String? = nil, inviteCode: String? = nil, myRole: String? = nil) {
         self.id = id
         self.name = name
         self.colorId = colorId
         self.inviteCode = inviteCode
+        self.myRole = myRole
     }
 
     init(remote: MoilRemoteGroup) {
-        self.init(id: remote.id, name: remote.name, colorId: remote.colorId, inviteCode: remote.inviteCode)
+        self.init(id: remote.id, name: remote.name, colorId: remote.colorId, inviteCode: remote.inviteCode, myRole: remote.myRole)
     }
 }
 
