@@ -253,7 +253,7 @@ private struct AccountDeletionView: View {
                     if message == nil { dismiss() }
                 }
             }
-                .accountButton(enabled: !isDeleting, color: MoilColor.error)
+                .accountButton(enabled: !isDeleting)
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 12)
         }
