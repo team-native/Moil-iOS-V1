@@ -229,7 +229,7 @@ struct CalendarView: View {
             .presentationDetents([.height(300)])
             .presentationDragIndicator(.visible)
         }
-        .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView() }
+        .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView(showsTabBar: false) }
         .fullScreenCover(isPresented: $isMyPagePresented, onDismiss: {
             guard shouldOpenCreateGroupAfterProfile else { return }
             shouldOpenCreateGroupAfterProfile = false
@@ -250,10 +250,10 @@ struct CalendarView: View {
         }
         .fullScreenCover(isPresented: $isCreateGroupPresented) { CreateGroupView() }
         .fullScreenCover(isPresented: $isJoinGroupPresented) {
-            GroupJoinCodeView {
+            GroupJoinCodeView(onNext: {
                 isJoinGroupPresented = false
                 isJoinProfilePresented = true
-            }
+            }, showsTabBar: false)
         }
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
