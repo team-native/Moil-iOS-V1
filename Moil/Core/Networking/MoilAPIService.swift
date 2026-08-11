@@ -51,11 +51,11 @@ struct MoilAPIService {
     }
 
     func logout() async throws {
-        try await client.request("auth/logout", method: "POST", body: EmptyRequest())
+        let _: MoilEmptyResponse = try await client.request("auth/logout", method: "POST")
     }
 
     func groups() async throws -> [MoilRemoteGroup] {
-        let response: MoilGroupList = try await client.request("groups/me", method: "POST", body: EmptyRequest())
+        let response: MoilGroupList = try await client.request("groups/me", method: "POST")
         return response.groups
     }
 
@@ -85,7 +85,7 @@ struct MoilAPIService {
     }
 
     func leaveGroup(groupId: String) async throws {
-        try await client.request("groups/\(groupId)/members/me", method: "DELETE", body: EmptyRequest())
+        let _: MoilEmptyResponse = try await client.request("groups/\(groupId)/members/me", method: "DELETE")
     }
 
     func renameGroup(groupId: String, name: String) async throws {
@@ -119,13 +119,12 @@ struct MoilAPIService {
     }
 
     func deleteEvent(id: String) async throws {
-        try await client.request("events/\(id)", method: "DELETE", body: EmptyRequest())
+        let _: MoilEmptyResponse = try await client.request("events/\(id)", method: "DELETE")
     }
 }
 
 enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET" }
 
-private struct EmptyRequest: Encodable { }
 private struct LoginRequest: Encodable { let email: String; let password: String }
 private struct RefreshTokenRequest: Encodable {
     let refreshToken: String
