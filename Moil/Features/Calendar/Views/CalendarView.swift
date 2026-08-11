@@ -401,7 +401,7 @@ struct CalendarView: View {
             scheduleDraftDay = day
             isScheduleComposerPresented = true
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .center, spacing: 4) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
@@ -410,7 +410,7 @@ struct CalendarView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .top)
         }
         .buttonStyle(.plain)
         .onLongPressGesture {
@@ -422,14 +422,14 @@ struct CalendarView: View {
     private func eventChip(_ event: CalendarEvent) -> some View {
         Text(event.shortTitle)
             .font(MoilTypography.regular(10))
-            .foregroundStyle(event.color)
+            .foregroundStyle(.white)
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(event.color.opacity(0.22))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .background(event.color.opacity(0.85))
+            .clipShape(RoundedRectangle(cornerRadius: 5))
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
