@@ -401,7 +401,7 @@ struct CalendarView: View {
             scheduleDraftDay = day
             isScheduleComposerPresented = true
         } label: {
-            VStack(alignment: .center, spacing: 4) {
+            VStack(alignment: .center, spacing: 2) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
@@ -426,10 +426,10 @@ struct CalendarView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.75)
             .padding(.horizontal, 4)
-            .padding(.vertical, 3)
+            .padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .center)
             .background(event.color.opacity(0.85))
-            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 
     private func events(for day: Int) -> [CalendarEvent] {
