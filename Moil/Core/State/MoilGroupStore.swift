@@ -50,6 +50,9 @@ final class MoilGroupStore: ObservableObject {
         if selectedGroupId == nil || !groups.contains(where: { $0.id == selectedGroupId }) {
             selectedGroupId = groups.first?.id
         }
+        if let selectedGroupId {
+            _ = try? await loadMembers(groupId: selectedGroupId, using: service)
+        }
     }
 
     func create(name: String, nickname: String, colorId: String, using service: MoilAPIService) async throws {
@@ -57,6 +60,7 @@ final class MoilGroupStore: ObservableObject {
         let localGroup = MoilGroup(remote: group)
         groups.append(localGroup)
         selectedGroupId = localGroup.id
+        _ = try? await loadMembers(groupId: localGroup.id, using: service)
     }
 
     func join(inviteCode: String, nickname: String, colorId: String, using service: MoilAPIService) async throws {
@@ -80,12 +84,23 @@ final class MoilGroupStore: ObservableObject {
         let remoteGroup = try await service.groupDetail(groupId: id)
         guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
         groups[index] = MoilGroup(remote: remoteGroup)
+        if let members = remoteGroup.members {
+            membersByGroupId[id] = members
+        }
     }
 
     func loadMembers(groupId: String, using service: MoilAPIService) async throws -> [MoilRemoteMember] {
         let members = try await service.members(groupId: groupId)
         membersByGroupId[groupId] = members
         return members
+    }
+
+    func renameGroup(id: String, name: String, using service: MoilAPIService) async throws {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        try await service.renameGroup(groupId: id, name: trimmedName)
+        guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+        groups[index].name = trimmedName
     }
 
     func removeGroup(_ id: String) {
@@ -127,7 +142,7 @@ extension MoilAvatarColor {
         if color == yellow { return "YELLOW" }
         if color == purple { return "VIOLET" }
         if color == pink { return "MAGENTA" }
-        if color == orange { return "YELLOW" }
+        if color == orange { return "ORANGE" }
         return "GREEN"
     }
 }
