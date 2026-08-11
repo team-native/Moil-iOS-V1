@@ -565,6 +565,14 @@ private struct ScheduleComposerView: View {
         _selectedMemberIDs = State(initialValue: Set(currentUser.isEmpty ? members.prefix(1).map(\.id) : currentUser))
     }
 
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSave: Bool {
+        !trimmedTitle.isEmpty && !selectedMemberIDs.isEmpty
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -574,12 +582,12 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day, title.isEmpty ? "새 일정" : title, allDay, Array(selectedMemberIDs))
+                    onSave(day, trimmedTitle, allDay, Array(selectedMemberIDs))
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-                    .disabled(selectedMemberIDs.isEmpty)
+                    .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
+                    .disabled(!canSave)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
@@ -644,6 +652,10 @@ private struct EventEditorView: View {
         _title = State(initialValue: event.title)
     }
 
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
@@ -659,10 +671,12 @@ private struct EventEditorView: View {
                 Button("삭제", role: .destructive) { onDelete(); dismiss() }
                     .frame(maxWidth: .infinity).frame(height: 48)
                     .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 12))
-                Button("저장") { onSave(title.isEmpty ? event.title : title); dismiss() }
+                Button("저장") { onSave(trimmedTitle); dismiss() }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity).frame(height: 48)
-                    .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(trimmedTitle.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .disabled(trimmedTitle.isEmpty)
             }
         }
         .padding(20)
