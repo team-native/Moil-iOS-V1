@@ -186,8 +186,6 @@ private struct PasswordChangeView: View {
                     SecureField("현재 비밀번호", text: $origin).accountField()
                     SecureField("새 비밀번호", text: $newPassword).accountField()
                     SecureField("새 비밀번호 확인", text: $confirmation).accountField()
-                    Button("비밀번호 변경") { Task { await changePassword() } }
-                        .accountButton(enabled: canSubmit)
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
@@ -195,6 +193,12 @@ private struct PasswordChangeView: View {
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button("비밀번호 변경") { Task { await changePassword() } }
+                .accountButton(enabled: canSubmit)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
@@ -232,15 +236,6 @@ private struct AccountDeletionView: View {
                         .font(MoilTypography.regular(15))
                         .tint(MoilColor.primary)
                         .padding(.vertical, 2)
-                    Button("회원 탈퇴") {
-                        Task {
-                            isDeleting = true
-                            message = await onDelete(email, password, leftData)
-                            isDeleting = false
-                            if message == nil { dismiss() }
-                        }
-                    }
-                        .accountButton(enabled: !isDeleting, color: MoilColor.error)
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
@@ -248,6 +243,19 @@ private struct AccountDeletionView: View {
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button("회원 탈퇴") {
+                Task {
+                    isDeleting = true
+                    message = await onDelete(email, password, leftData)
+                    isDeleting = false
+                    if message == nil { dismiss() }
+                }
+            }
+                .accountButton(enabled: !isDeleting, color: MoilColor.error)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
