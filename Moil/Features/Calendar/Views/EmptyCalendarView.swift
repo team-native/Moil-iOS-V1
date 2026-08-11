@@ -12,11 +12,11 @@ struct EmptyCalendarView: View {
                 .frame(width: 84, height: 98)
             Text("아직 속한 그룹이 없어요")
                 .font(MoilTypography.bold(19))
-                .foregroundStyle(MoilColor.groupDetailTextPrimary)
+                .foregroundStyle(MoilColor.textPrimary)
                 .padding(.top, 16)
             Text("초대 코드로 그룹에 참여하거나\n새 그룹을 만들어보세요")
                 .font(MoilTypography.regular(14))
-                .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                .foregroundStyle(MoilColor.textSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
                 .padding(.top, 6)
@@ -30,15 +30,15 @@ struct EmptyCalendarView: View {
                 .padding(.top, 24)
             Button("새 그룹 만들기", action: onCreate)
                 .font(MoilTypography.bold(16))
-                .foregroundStyle(MoilColor.groupDetailTextPrimary)
+                .foregroundStyle(MoilColor.textPrimary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .overlay { RoundedRectangle(cornerRadius: 14).stroke(MoilColor.groupDetailSeparator, lineWidth: 1) }
+                .overlay { RoundedRectangle(cornerRadius: 14).stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
                 .padding(.top, 10)
             Spacer(minLength: 24)
         }
         .padding(.horizontal, 32)
-        .background(MoilColor.groupDetailBackground.ignoresSafeArea())
+        .background(MoilColor.background.ignoresSafeArea())
     }
 }
 
