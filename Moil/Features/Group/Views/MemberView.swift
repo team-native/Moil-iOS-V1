@@ -167,7 +167,7 @@ struct MemberView: View {
                     .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
                     .padding(.horizontal, 14)
                     .frame(height: 34)
-                    .background(selectedGroup?.id == group.id ? MoilColor.primary : MoilColor.background)
+                    .background(selectedGroup?.id == group.id ? MoilColor.primary : MoilColor.surface)
                     .clipShape(Capsule())
                 }
             }
