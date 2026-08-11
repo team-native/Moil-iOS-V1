@@ -10,7 +10,8 @@ struct MyPageView: View {
     @State private var isMemberPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
-    @State private var isAccountSecurityPresented = false
+    @State private var isPasswordChangePresented = false
+    @State private var isAccountDeletionPresented = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
@@ -59,11 +60,12 @@ struct MyPageView: View {
                     Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
                 }
                 .padding(.bottom, 16)
-                Button("계정 보안") { isAccountSecurityPresented = true }
-                    .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
-                    .padding(.bottom, 16)
+                GroupSection(title: "계정 보안") {
+                    AccountMenuRow(title: "비밀번호 변경") { isPasswordChangePresented = true }
+                    Divider()
+                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { isAccountDeletionPresented = true }
+                }
+                .padding(.bottom, 16)
                 Button("로그아웃") { isLogoutConfirmationPresented = true }
                     .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity).padding(.vertical, 16)
@@ -104,8 +106,12 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
-        .sheet(isPresented: $isAccountSecurityPresented) {
-            AccountSecurityView { email, password, leftData in
+        .sheet(isPresented: $isPasswordChangePresented) {
+            PasswordChangeView()
+                .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isAccountDeletionPresented) {
+            AccountDeletionView { email, password, leftData in
                 await deleteAccount(email: email, password: password, leftData: leftData)
             }
             .presentationDetents([.large])
@@ -133,51 +139,60 @@ struct MyPageView: View {
     MyPageView()
 }
 
-private struct AccountSecurityView: View {
+private struct AccountMenuRow: View {
+    let title: String
+    var isDestructive = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(MoilTypography.semibold(15))
+                    .foregroundStyle(isDestructive ? MoilColor.error : MoilColor.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(MoilColor.textTertiary)
+            }
+            .padding(16)
+        }
+    }
+}
+
+private struct PasswordChangeView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @State private var origin = ""
     @State private var newPassword = ""
     @State private var confirmation = ""
-    @State private var email = ""
-    @State private var deletionPassword = ""
-    @State private var leftData = false
     @State private var message: String?
-    let onDelete: (String, String, Bool) async -> String?
-    @State private var isDeleting = false
+
+    private var canSubmit: Bool {
+        !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("비밀번호 변경").font(MoilTypography.bold(20))
+                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
                     SecureField("현재 비밀번호", text: $origin).accountField()
                     SecureField("새 비밀번호", text: $newPassword).accountField()
                     SecureField("새 비밀번호 확인", text: $confirmation).accountField()
                     Button("비밀번호 변경") { Task { await changePassword() } }
-                        .accountButton(enabled: newPassword.count >= 8 && newPassword == confirmation)
-                    Divider().padding(.vertical, 16)
-                    Text("회원 탈퇴").font(MoilTypography.bold(20)).foregroundStyle(MoilColor.error)
-                    Text("탈퇴하면 계정에 접근할 수 없어요.").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary)
-                    TextField("이메일", text: $email).accountField()
-                    SecureField("비밀번호", text: $deletionPassword).accountField()
-                    Toggle("그룹 데이터 유지", isOn: $leftData).tint(MoilColor.primary)
-                    Button("회원 탈퇴", role: .destructive) {
-                        Task {
-                            isDeleting = true
-                            message = await onDelete(email, deletionPassword, leftData)
-                            isDeleting = false
-                            if message == nil { dismiss() }
-                        }
+                        .accountButton(enabled: canSubmit)
+                    if let message {
+                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                        .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(isDeleting)
-                    if let message { Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error) }
                 }
                 .padding(20)
             }
             .background(MoilColor.background)
-            .navigationTitle("계정 보안")
+            .navigationTitle("비밀번호 변경")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기", action: dismiss.callAsFunction) } }
         }
     }
@@ -185,9 +200,58 @@ private struct AccountSecurityView: View {
     private func changePassword() async {
         do {
             try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
-            message = "비밀번호를 변경했어요."
             origin = ""; newPassword = ""; confirmation = ""
+            dismiss()
         } catch { message = "비밀번호를 변경하지 못했어요." }
+    }
+}
+
+private struct AccountDeletionView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var email = ""
+    @State private var password = ""
+    @State private var leftData = false
+    @State private var message: String?
+    @State private var isDeleting = false
+    let onDelete: (String, String, Bool) async -> String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("탈퇴하면 계정에 접근할 수 없어요.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
+                    TextField("이메일", text: $email).accountField()
+                    SecureField("비밀번호", text: $password).accountField()
+                    Toggle("그룹 데이터 유지", isOn: $leftData)
+                        .font(MoilTypography.regular(15))
+                        .tint(MoilColor.primary)
+                        .padding(.vertical, 2)
+                    Button("회원 탈퇴", role: .destructive) {
+                        Task {
+                            isDeleting = true
+                            message = await onDelete(email, password, leftData)
+                            isDeleting = false
+                            if message == nil { dismiss() }
+                        }
+                    }
+                        .font(MoilTypography.bold(15))
+                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .background(MoilColor.error.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .disabled(isDeleting)
+                    if let message {
+                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
+                    }
+                }
+                .padding(20)
+            }
+            .background(MoilColor.background)
+            .navigationTitle("회원 탈퇴")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기", action: dismiss.callAsFunction) } }
+        }
     }
 }
 
