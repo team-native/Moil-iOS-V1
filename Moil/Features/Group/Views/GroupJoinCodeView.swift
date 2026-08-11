@@ -18,20 +18,15 @@ struct GroupJoinCodeView: View {
         self.showsTabBar = showsTabBar
     }
 
+    private var backAction: (() -> Void)? {
+        guard showsTabBar else { return nil }
+        return { dismiss() }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                if showsTabBar {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
-                    }
-                }
-                Text("그룹 참여").font(MoilTypography.bold(26))
-                Spacer()
-            }
-            .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
-            Text("초대 코드를 입력해주세요").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary).padding(.top, 8)
+            MoilScreenHeader(title: "그룹 참여", subtitle: "초대 코드를 입력해주세요", onBack: backAction)
+            VStack(alignment: .leading, spacing: 0) {
             Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 30).padding(.bottom, 10)
             TextField("FAM-0000", text: $code)
                 .textInputAutocapitalization(.characters)
@@ -76,8 +71,9 @@ struct GroupJoinCodeView: View {
             .background(code.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
             .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isVerifying)
             .safeAreaPadding(.bottom, 12)
+            }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
-        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .background(MoilColor.background.ignoresSafeArea())
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {

@@ -79,9 +79,9 @@ struct MemberView: View {
                     }
                 )
             } else {
+                MoilScreenHeader(title: "멤버", subtitle: selectedGroup?.name)
                 ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    memberHeader
                     groupPicker
                     memberList
                     inviteCodeCard
@@ -89,7 +89,6 @@ struct MemberView: View {
                     administratorSettings
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
                 .padding(.bottom, 32)
             }
             }
@@ -159,16 +158,6 @@ struct MemberView: View {
                 guard !isSavingNotification, let groupId = selectedGroup?.id else { return }
                 Task { await saveNotification(enabled: enabled, groupId: groupId) }
             }
-    }
-
-    private var memberHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("멤버").font(MoilTypography.bold(26))
-            Text(selectedGroup?.name ?? "")
-                .font(MoilTypography.regular(13))
-                .foregroundStyle(MoilColor.textSecondary)
-        }
-        .padding(.bottom, 20)
     }
 
     private var groupPicker: some View {
