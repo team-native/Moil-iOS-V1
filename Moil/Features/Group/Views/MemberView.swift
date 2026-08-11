@@ -95,8 +95,7 @@ struct MemberView: View {
         .overlay {
             if isEditingGroupName {
                 GroupNameEditor(name: $groupNameDraft) {
-                    feedbackMessage = "그룹 이름 변경은 서버 연동 준비 중입니다."
-                    isEditingGroupName = false
+                    Task { await renameSelectedGroup() }
                 } onCancel: {
                     isEditingGroupName = false
                 }
@@ -116,7 +115,7 @@ struct MemberView: View {
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $isSharingInvite) {
-                InviteShareView()
+                InviteShareView(inviteCode: inviteCode)
                     .presentationDetents([.height(250)])
                     .presentationDragIndicator(.visible)
             }
@@ -274,7 +273,7 @@ struct MemberView: View {
         do {
             try await sessionStore.service().setNotification(groupId: groupId, enabled: enabled)
         } catch {
-            notificationsEnabled.toggle()
+            notificationsEnabled = !enabled
             feedbackMessage = "알림 설정을 저장하지 못했어요."
         }
     }
@@ -316,6 +315,22 @@ struct MemberView: View {
             feedbackMessage = "멤버 권한을 변경하지 못했어요."
         }
     }
+
+    private func renameSelectedGroup() async {
+        guard let groupId = selectedGroup?.id else { return }
+        let name = groupNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            feedbackMessage = "그룹 이름을 입력해주세요."
+            return
+        }
+        do {
+            try await groupStore.renameGroup(id: groupId, name: name, using: sessionStore.service())
+            isEditingGroupName = false
+            feedbackMessage = "그룹 이름을 변경했어요."
+        } catch {
+            feedbackMessage = "그룹 이름을 변경하지 못했어요."
+        }
+    }
 }
 
 #Preview("멤버 관리") {
@@ -325,6 +340,7 @@ struct MemberView: View {
 private struct InviteShareView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
+    let inviteCode: String
     var body: some View {
         VStack(spacing: 20) {
             Text("초대 링크 공유").font(MoilTypography.bold(18)).padding(.top, 12)
@@ -332,7 +348,10 @@ private struct InviteShareView: View {
                 .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
             HStack(spacing: 24) {
                 ForEach([("메시지", "message.fill"), ("카카오톡", "bubble.left.and.bubble.right.fill"), ("링크 복사", "doc.on.doc")], id: \.0) { item in
-                    Button { copied = item.0 == "링크 복사" } label: {
+                    Button {
+                        UIPasteboard.general.string = inviteCode
+                        copied = true
+                    } label: {
                         VStack(spacing: 8) {
                             Circle().fill(MoilColor.primary.opacity(0.12)).frame(width: 52, height: 52)
                                 .overlay { Image(systemName: item.1).foregroundStyle(MoilColor.primary) }
@@ -399,7 +418,7 @@ private struct AdministratorTransferEditor: View {
     let onCancel: () -> Void
 
     private var eligibleCandidates: [MoilRemoteMember] {
-        candidates.filter { $0.nickname != "나" }
+        candidates.filter { !$0.isMe }
     }
 
     var body: some View {
@@ -468,7 +487,7 @@ private struct PermissionEditorView: View {
     init(members: [MoilRemoteMember], onSave: @escaping ([MemberRoleRequest]) -> Void) {
         self.members = members
         self.onSave = onSave
-        _administrators = State(initialValue: Set(members.filter { $0.role == "OWNER" || $0.role == "ADMIN" }.map(\.id)))
+        _administrators = State(initialValue: Set(members.filter { ["OWNER", "ADMIN"].contains($0.role.uppercased()) }.map(\.id)))
     }
 
     var body: some View {

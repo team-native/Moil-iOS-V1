@@ -201,8 +201,11 @@ struct MoilRemoteGroup: Decodable, Identifiable {
     let name: String
     let colorId: String?
     let inviteCode: String?
+    let memberCount: Int?
+    let myRole: String?
+    let members: [MoilRemoteMember]?
 
-    private enum CodingKeys: String, CodingKey { case id, groupId, name, groupName, colorId, myColor, inviteCode }
+    private enum CodingKeys: String, CodingKey { case id, groupId, name, groupName, colorId, myColor, inviteCode, memberCount, myRole, members }
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.string(for: [.id, .groupId])
@@ -210,6 +213,9 @@ struct MoilRemoteGroup: Decodable, Identifiable {
         colorId = (try? container.decode(String.self, forKey: .colorId))
             ?? (try? container.decode(String.self, forKey: .myColor))
         inviteCode = try? container.decode(String.self, forKey: .inviteCode)
+        memberCount = try? container.decode(Int.self, forKey: .memberCount)
+        myRole = try? container.decode(String.self, forKey: .myRole)
+        members = try? container.decode([MoilRemoteMember].self, forKey: .members)
     }
 }
 
