@@ -198,8 +198,7 @@ struct MemberView: View {
                 Text(inviteCode).font(MoilTypography.bold(19)).tracking(1)
                 Spacer()
                 Button(copied ? "복사됨" : "복사") {
-                    UIPasteboard.general.string = inviteCode
-                    copied = true
+                    copyInviteCode()
                 }
                     .font(MoilTypography.bold(12)).foregroundStyle(.white)
                     .padding(.horizontal, 12).frame(height: 34)
@@ -252,6 +251,18 @@ struct MemberView: View {
                 AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
+        }
+    }
+
+    /// 복사 뒤에는 다시 복사할 수 있다는 걸 알 수 있도록 잠시 뒤 원래 문구로 되돌립니다.
+    private func copyInviteCode() {
+        guard !inviteCode.isEmpty else { return }
+        UIPasteboard.general.string = inviteCode
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
         }
     }
 
@@ -342,6 +353,17 @@ private struct InviteShareView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
     let inviteCode: String
+
+    private func copyInviteLink() {
+        UIPasteboard.general.string = inviteCode
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
+        }
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             Text("초대 링크 공유").font(MoilTypography.bold(18)).padding(.top, 12)
@@ -350,8 +372,7 @@ private struct InviteShareView: View {
             HStack(spacing: 24) {
                 ForEach([("메시지", "message.fill"), ("카카오톡", "bubble.left.and.bubble.right.fill"), ("링크 복사", "doc.on.doc")], id: \.0) { item in
                     Button {
-                        UIPasteboard.general.string = inviteCode
-                        copied = true
+                        copyInviteLink()
                     } label: {
                         VStack(spacing: 8) {
                             Circle().fill(MoilColor.primary.opacity(0.12)).frame(width: 52, height: 52)
