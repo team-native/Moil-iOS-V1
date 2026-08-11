@@ -178,13 +178,11 @@ private struct PasswordChangeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            MoilScreenHeader(
-                title: "비밀번호 변경",
-                subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다."
-            )
-            ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
+                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
                     SecureField("현재 비밀번호", text: $origin).accountField()
                     SecureField("새 비밀번호", text: $newPassword).accountField()
                     SecureField("새 비밀번호 확인", text: $confirmation).accountField()
@@ -195,12 +193,17 @@ private struct PasswordChangeView: View {
                     }
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("비밀번호 변경").font(MoilTypography.bold(17)).foregroundStyle(MoilColor.textPrimary)
+            }
+        }
     }
 
     private func changePassword() async {
@@ -222,13 +225,11 @@ private struct AccountDeletionView: View {
     let onDelete: (String, String, Bool) async -> String?
 
     var body: some View {
-        VStack(spacing: 0) {
-            MoilScreenHeader(
-                title: "회원 탈퇴",
-                subtitle: "탈퇴하면 계정에 접근할 수 없어요."
-            )
-            ScrollView(showsIndicators: false) {
+        ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
+                    Text("탈퇴하면 계정에 접근할 수 없어요.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
                     TextField("이메일", text: $email).accountField()
                     SecureField("비밀번호", text: $password).accountField()
                     Toggle("그룹 데이터 유지", isOn: $leftData)
@@ -253,12 +254,17 @@ private struct AccountDeletionView: View {
                     }
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("회원 탈퇴").font(MoilTypography.bold(17)).foregroundStyle(MoilColor.textPrimary)
+            }
+        }
     }
 }
 
