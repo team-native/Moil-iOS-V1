@@ -24,10 +24,14 @@ struct CalendarView: View {
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
 
+    /// 날짜 칸마다 전체 목록을 다시 변환하지 않도록 한 번만 묶어 둡니다.
     @MainActor
-    private var remoteEvents: [CalendarEvent] {
-        eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue)
-            .compactMap(CalendarEvent.init(remote:))
+    private var eventsByDay: [Int: [CalendarEvent]] {
+        Dictionary(
+            grouping: eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue)
+                .compactMap(CalendarEvent.init(remote:)),
+            by: \.day
+        )
     }
 
     private var daysInMonth: Int {
@@ -176,11 +180,12 @@ struct CalendarView: View {
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.bottom, 9)
                     ScrollView(showsIndicators: false) {
+                        let dayEvents = eventsByDay
                         LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
                                 let day = slot - leadingBlankDays + 1
                                 if (1...daysInMonth).contains(day) {
-                                    calendarDay(day)
+                                    calendarDay(day, events: dayEvents[day] ?? [])
                                 } else {
                                     Color.clear.frame(minHeight: dayCellMinHeight)
                                 }
@@ -393,7 +398,7 @@ struct CalendarView: View {
         }
     }
 
-    private func calendarDay(_ day: Int) -> some View {
+    private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
             scheduleDraftDay = day
             isScheduleComposerPresented = true
@@ -402,7 +407,7 @@ struct CalendarView: View {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
-                ForEach(events(for: day)) { event in
+                ForEach(events) { event in
                     eventChip(event)
                 }
                 Spacer(minLength: 0)
@@ -411,7 +416,7 @@ struct CalendarView: View {
         }
         .buttonStyle(.plain)
         .onLongPressGesture {
-            guard let event = events(for: day).first else { return }
+            guard let event = events.first else { return }
             Task { await selectEvent(event) }
         }
     }
@@ -429,9 +434,6 @@ struct CalendarView: View {
             .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 
-    private func events(for day: Int) -> [CalendarEvent] {
-        remoteEvents.filter { $0.day == day }
-    }
 }
 
 private struct CalendarEvent: Identifiable {
