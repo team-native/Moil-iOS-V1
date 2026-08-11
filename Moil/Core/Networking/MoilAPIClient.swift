@@ -31,10 +31,16 @@ extension MoilAPIError {
 struct MoilAPIClient {
     let session: URLSession
     let tokenProvider: () -> String?
+    let tokenRefresher: (() async -> Bool)?
 
-    init(session: URLSession = .shared, tokenProvider: @escaping () -> String? = { nil }) {
+    init(
+        session: URLSession = .shared,
+        tokenProvider: @escaping () -> String? = { nil },
+        tokenRefresher: (() async -> Bool)? = nil
+    ) {
         self.session = session
         self.tokenProvider = tokenProvider
+        self.tokenRefresher = tokenRefresher
     }
 
     func request<Response: Decodable, Body: Encodable>(
@@ -43,6 +49,33 @@ struct MoilAPIClient {
         body: Body? = nil,
         queryItems: [URLQueryItem] = [],
         requiresAuthentication: Bool = true
+    ) async throws -> Response {
+        do {
+            return try await requestOnce(
+                path,
+                method: method,
+                body: body,
+                queryItems: queryItems,
+                requiresAuthentication: requiresAuthentication
+            )
+        } catch let error as MoilAPIError where requiresAuthentication && error.isAuthenticationFailure {
+            guard let tokenRefresher, await tokenRefresher() else { throw error }
+            return try await requestOnce(
+                path,
+                method: method,
+                body: body,
+                queryItems: queryItems,
+                requiresAuthentication: requiresAuthentication
+            )
+        }
+    }
+
+    private func requestOnce<Response: Decodable, Body: Encodable>(
+        _ path: String,
+        method: String,
+        body: Body?,
+        queryItems: [URLQueryItem],
+        requiresAuthentication: Bool
     ) async throws -> Response {
         var components = URLComponents(url: MoilAPIConfiguration.baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = queryItems.isEmpty ? nil : queryItems
@@ -61,6 +94,9 @@ struct MoilAPIClient {
 
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else { throw MoilAPIError.invalidResponse }
+#if DEBUG
+        print("[MoilAPI] \(method) /\(path) → \(httpResponse.statusCode)")
+#endif
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = (try? JSONDecoder.moil.decode(MoilServerError.self, from: data).message) ?? "요청에 실패했어요."
             throw MoilAPIError.server(message: message, statusCode: httpResponse.statusCode)
@@ -69,8 +105,20 @@ struct MoilAPIClient {
             return MoilEmptyResponse() as! Response
         }
         do {
-            return try JSONDecoder.moil.decode(MoilAPIEnvelope<Response>.self, from: data).data
+            let envelope = try JSONDecoder.moil.decode(MoilAPIEnvelope<Response>.self, from: data)
+            guard envelope.success else {
+                throw MoilAPIError.server(
+                    message: envelope.message ?? "요청에 실패했어요.",
+                    statusCode: envelope.status ?? httpResponse.statusCode
+                )
+            }
+            if let value = envelope.data { return value }
+            if Response.self == MoilEmptyResponse.self {
+                return MoilEmptyResponse() as! Response
+            }
+            throw MoilAPIError.decoding
         } catch {
+            if error is MoilAPIError { throw error }
             do {
                 return try JSONDecoder.moil.decode(Response.self, from: data)
             } catch {
@@ -99,14 +147,19 @@ struct MoilAPIClient {
 }
 
 private struct MoilAPIEnvelope<Value: Decodable>: Decodable {
-    let data: Value
+    let success: Bool
+    let status: Int?
+    let message: String?
+    let data: Value?
 
-    private enum CodingKeys: String, CodingKey { case data }
+    private enum CodingKeys: String, CodingKey { case success, status, message, data }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        guard container.contains(.data) else { throw MoilAPIError.decoding }
-        data = try container.decode(Value.self, forKey: .data)
+        success = (try? container.decode(Bool.self, forKey: .success)) ?? true
+        status = try? container.decode(Int.self, forKey: .status)
+        message = try? container.decode(String.self, forKey: .message)
+        data = try container.decodeIfPresent(Value.self, forKey: .data)
     }
 }
 

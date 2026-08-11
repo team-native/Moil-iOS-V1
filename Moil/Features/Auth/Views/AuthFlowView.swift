@@ -72,11 +72,14 @@ struct AuthFlowView: View {
     private func restoreSession() async {
         guard !hasRestoredSession else { return }
         hasRestoredSession = true
-        guard await sessionStore.refreshSession() else {
+        guard sessionStore.hasStoredSession else {
             route = .login
             return
         }
+
         do {
+            // 저장된 access token을 먼저 사용합니다. 요청이 401/403이면 공통 API 계층이
+            // refresh token으로 한 번 재발급한 뒤 같은 요청을 재시도합니다.
             try await groupStore.load(using: sessionStore.service())
             route = .main
         } catch {

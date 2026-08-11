@@ -3,8 +3,11 @@ import Foundation
 struct MoilAPIService {
     private let client: MoilAPIClient
 
-    init(tokenProvider: @escaping () -> String? = { nil }) {
-        client = MoilAPIClient(tokenProvider: tokenProvider)
+    init(
+        tokenProvider: @escaping () -> String? = { nil },
+        tokenRefresher: (() async -> Bool)? = nil
+    ) {
+        client = MoilAPIClient(tokenProvider: tokenProvider, tokenRefresher: tokenRefresher)
     }
 
     func login(email: String, password: String) async throws -> MoilTokenResponse {
@@ -13,19 +16,14 @@ struct MoilAPIService {
 
     func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
         let request = RefreshTokenRequest(refreshToken: refreshToken)
-        do {
-            // 최신 명세의 Bearer 인증 방식을 우선 적용합니다.
-            return try await client.request("auth/refresh", method: "POST", body: request)
-        } catch let error as MoilAPIError where error.isAuthenticationFailure {
-            // 액세스 토큰이 이미 만료된 환경에서도 리프레시 토큰만으로 재발급을
-            // 허용하는 서버와 호환하기 위한 보조 경로입니다.
-            return try await client.request(
-                "auth/refresh",
-                method: "POST",
-                body: request,
-                requiresAuthentication: false
-            )
-        }
+        // 만료된 access token을 실어 보내면 재발급 자체가 실패할 수 있으므로,
+        // 명세의 refresh_token body만 사용합니다.
+        return try await client.request(
+            "auth/refresh",
+            method: "POST",
+            body: request,
+            requiresAuthentication: false
+        )
     }
 
     func sendVerificationCode(name: String?, email: String, step: VerificationStep) async throws -> MoilVerificationResponse {
@@ -40,7 +38,7 @@ struct MoilAPIService {
         try await client.request("auth/confirm", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
     }
 
-    func resetPassword(sessionId: String, password: String, confirmation: String) async throws -> MoilTokenResponse {
+    func resetPassword(sessionId: String, password: String, confirmation: String) async throws {
         try await client.request("auth/reset-password", method: "POST", body: PasswordConfirmationRequest(sessionId: sessionId, password: password, pwd: confirmation), requiresAuthentication: false)
     }
 
