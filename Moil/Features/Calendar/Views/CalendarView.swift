@@ -205,7 +205,11 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView(day: scheduleDraftDay, members: groupStore.members(for: groupStore.selectedGroupId)) { day, title, isAllDay, memberIDs in
+            ScheduleComposerView(
+                day: scheduleDraftDay,
+                dateTitle: scheduleDraftDateTitle,
+                members: groupStore.members(for: groupStore.selectedGroupId)
+            ) { day, title, isAllDay, memberIDs in
                 createEvent(day: day, title: title, isAllDay: isAllDay, sharedMemberIDs: memberIDs)
             }
                 .presentationDetents([.height(463)])
@@ -295,6 +299,11 @@ struct CalendarView: View {
     private var monthRequestValue: String {
         let components = calendar.dateComponents([.year, .month], from: displayedMonth)
         return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+    }
+
+    private var scheduleDraftDateTitle: String {
+        let components = calendar.dateComponents([.month], from: displayedMonth)
+        return "\(components.month ?? 1)월 \(scheduleDraftDay)일"
     }
 
     private func loadEvents() async {
@@ -479,7 +488,10 @@ private enum MoilCalendarDate {
     }
 
     private static func dateOnlyComponents(from value: String) -> (year: Int, month: Int, day: Int)? {
-        let parts = value.split(separator: "-", omittingEmptySubsequences: false)
+        // 서버가 `yyyy-MM-dd` 또는 `yyyy-MM-ddTHH:mm:ssZ`를 반환해도
+        // 원문 날짜를 우선 사용해 UTC 변환으로 전날로 밀리는 일을 막습니다.
+        let datePrefix = String(value.prefix(10))
+        let parts = datePrefix.split(separator: "-", omittingEmptySubsequences: false)
         guard parts.count == 3,
               parts[0].count == 4,
               parts[1].count == 2,
@@ -518,14 +530,16 @@ private enum MoilCalendarDate {
 private struct ScheduleComposerView: View {
     @Environment(\.dismiss) private var dismiss
     let day: Int
+    let dateTitle: String
     let members: [MoilRemoteMember]
     let onSave: (Int, String, Bool, [String]) -> Void
     @State private var title = ""
     @State private var allDay = false
     @State private var selectedMemberIDs: Set<String>
 
-    init(day: Int, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
+    init(day: Int, dateTitle: String, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
         self.day = day
+        self.dateTitle = dateTitle
         self.members = members
         self.onSave = onSave
         let currentUser = members.filter(\.isMe).map(\.id)
@@ -557,7 +571,7 @@ private struct ScheduleComposerView: View {
                 .frame(height: 58)
                 .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
 
-            ScheduleRow(title: "날짜", value: "7월 \(day)일")
+            ScheduleRow(title: "날짜", value: dateTitle)
             HStack {
                 Text("하루 종일").font(MoilTypography.regular(15))
                 Spacer()
