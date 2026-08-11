@@ -151,22 +151,24 @@ struct CalendarView: View {
                     .zIndex(1)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(monthTitle).font(MoilTypography.bold(32))
+                            Text(monthTitle).font(MoilTypography.heavy(32))
                             Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
                         }
                         Spacer()
                         Button { moveMonth(by: -1) } label: {
                             Image(systemName: "chevron.left")
                             .frame(width: 30, height: 30)
-                            .background(MoilColor.surface)
+                            .background(MoilColor.background)
                             .clipShape(Circle())
+                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         Button { moveMonth(by: 1) } label: {
                             Image(systemName: "chevron.right")
                             .frame(width: 30, height: 30)
-                            .background(MoilColor.surface)
+                            .background(MoilColor.background)
                             .clipShape(Circle())
+                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         .padding(.leading, 6)
