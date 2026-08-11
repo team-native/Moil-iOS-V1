@@ -219,6 +219,11 @@ private struct LoginView: View {
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
                     }
+
+                    SocialLoginRow { provider in
+                        errorMessage = "\(provider) 로그인은 준비 중이에요."
+                    }
+                    .padding(.top, 44)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
 
@@ -582,19 +587,86 @@ private struct AuthTextField: View {
     @Binding var text: String
     var isSecure = false
     var contentType: UITextContentType?
+    @State private var isRevealed = false
 
     var body: some View {
-        Group {
+        HStack(spacing: 10) {
+            Group {
+                if isSecure && !isRevealed {
+                    SecureField(title, text: $text)
+                } else {
+                    TextField(title, text: $text)
+                }
+            }
+            .textContentType(contentType)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+
             if isSecure {
-                SecureField(title, text: $text)
-            } else {
-                TextField(title, text: $text)
+                Button { isRevealed.toggle() } label: {
+                    Image(systemName: isRevealed ? "eye" : "eye.slash")
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(MoilColor.textTertiary)
+                }
+                .accessibilityLabel(isRevealed ? "비밀번호 숨기기" : "비밀번호 표시")
             }
         }
-        .textContentType(contentType)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
         .moilField()
+    }
+}
+
+/// 피그마 로그인 화면의 간편 로그인 영역입니다. 연동 전까지는 안내만 띄웁니다.
+private struct SocialLoginRow: View {
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        VStack(spacing: 22) {
+            HStack(spacing: 12) {
+                dividerLine
+                Text("간편 로그인")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .fixedSize()
+                dividerLine
+            }
+            HStack(spacing: 46) {
+                socialButton("구글", image: "SocialGoogle", size: 34)
+                socialButton("애플", image: "SocialApple", size: 32)
+                kakaoButton
+            }
+        }
+    }
+
+    private var dividerLine: some View {
+        Rectangle()
+            .fill(MoilColor.textTertiary.opacity(0.34))
+            .frame(height: 1)
+    }
+
+    private func socialButton(_ name: String, image: String, size: CGFloat) -> some View {
+        Button { onSelect(name) } label: {
+            Image(image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .frame(width: 38, height: 38)
+        }
+        .accessibilityLabel("\(name)로 로그인")
+    }
+
+    private var kakaoButton: some View {
+        Button { onSelect("카카오") } label: {
+            Circle()
+                .fill(Color(red: 1.0, green: 0.898, blue: 0.0))
+                .frame(width: 38, height: 38)
+                .overlay {
+                    Image("SocialKakao")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 20.7)
+                }
+        }
+        .accessibilityLabel("카카오로 로그인")
     }
 }
 
