@@ -55,6 +55,7 @@ final class MoilGroupStore: ObservableObject {
         defer { isLoading = false }
         groups = try await service.groups().map(MoilGroup.init(remote:))
         membersByGroupId = membersByGroupId.filter { groupID, _ in groups.contains { $0.id == groupID } }
+        for (groupID, members) in membersByGroupId { applyMyColor(groupId: groupID, members: members) }
         if selectedGroupId == nil || !groups.contains(where: { $0.id == selectedGroupId }) {
             selectedGroupId = groups.first?.id
         }
@@ -94,13 +95,23 @@ final class MoilGroupStore: ObservableObject {
         groups[index] = MoilGroup(remote: remoteGroup)
         if let members = remoteGroup.members {
             membersByGroupId[id] = members
+            applyMyColor(groupId: id, members: members)
         }
     }
 
     func loadMembers(groupId: String, using service: MoilAPIService) async throws -> [MoilRemoteMember] {
         let members = try await service.members(groupId: groupId)
         membersByGroupId[groupId] = members
+        applyMyColor(groupId: groupId, members: members)
         return members
+    }
+
+    /// 그룹 응답에 색상이 없으면 그 그룹에서 내가 고른 색을 그룹 색으로 씁니다.
+    private func applyMyColor(groupId: String, members: [MoilRemoteMember]) {
+        guard let index = groups.firstIndex(where: { $0.id == groupId }),
+              groups[index].colorId?.isEmpty ?? true,
+              let myColorId = members.first(where: \.isMe)?.colorId else { return }
+        groups[index].colorId = myColorId
     }
 
     func renameGroup(id: String, name: String, using service: MoilAPIService) async throws {
