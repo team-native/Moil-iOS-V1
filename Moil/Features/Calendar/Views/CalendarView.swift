@@ -44,7 +44,7 @@ struct CalendarView: View {
     private let calendarRowCount = 6
 
     /// 일정이 많은 날은 이 높이보다 커지고, 늘어난 만큼 달력이 세로로 스크롤됩니다.
-    private let dayCellMinHeight: CGFloat = 58
+    private let dayCellMinHeight: CGFloat = 76
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
@@ -181,7 +181,7 @@ struct CalendarView: View {
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.bottom, 9)
                     ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: columns, spacing: 9) {
+                        LazyVGrid(columns: columns, spacing: 16) {
                             ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
                                 let day = slot - leadingBlankDays + 1
                                 if (1...daysInMonth).contains(day) {
