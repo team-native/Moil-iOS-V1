@@ -61,11 +61,11 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
-                    AccountMenuRow(title: "비밀번호 변경") { isPasswordChangePresented = true }
+                    AccountMenuRow(title: "비밀번호 변경") { present(&isPasswordChangePresented) }
                     Divider()
                     AccountMenuRow(title: "로그아웃") { isLogoutConfirmationPresented = true }
                     Divider()
-                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { isAccountDeletionPresented = true }
+                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { present(&isAccountDeletionPresented) }
                 }
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
@@ -120,6 +120,13 @@ struct MyPageView: View {
         }
     }
 
+    /// 탭 전환과 동작을 맞추기 위해 계정 화면은 모션 없이 바로 띄웁니다.
+    private func present(_ flag: inout Bool) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { flag = true }
+    }
+
     private func deleteAccount(email: String, password: String, leftData: Bool) async -> String? {
         do {
             try await sessionStore.service().deleteAccount(email: email, password: password, leftData: leftData)
@@ -168,12 +175,18 @@ private struct PasswordChangeView: View {
         !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation
     }
 
+    private func dismissWithoutAnimation() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { dismiss() }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             MoilScreenHeader(
                 title: "비밀번호 변경",
                 subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.",
-                onBack: dismiss.callAsFunction
+                onBack: dismissWithoutAnimation
             )
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -212,12 +225,18 @@ private struct AccountDeletionView: View {
     @State private var isDeleting = false
     let onDelete: (String, String, Bool) async -> String?
 
+    private func dismissWithoutAnimation() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { dismiss() }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             MoilScreenHeader(
                 title: "회원 탈퇴",
                 subtitle: "탈퇴하면 계정에 접근할 수 없어요.",
-                onBack: dismiss.callAsFunction
+                onBack: dismissWithoutAnimation
             )
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
