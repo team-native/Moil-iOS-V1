@@ -12,17 +12,8 @@ struct CreateGroupView: View {
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var onClose: (() -> Void)? = nil
     var body: some View {
+        NavigationStack {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                Button(action: close) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary)
-                        .frame(width: 32, height: 32)
-                }
-                Text("새 그룹 만들기").font(MoilTypography.bold(22))
-            }
-            .safeAreaPadding(.top, 16)
             Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
             TextField("예: 우리 가족", text: $name)
                 .font(MoilTypography.regular(15))
@@ -67,7 +58,20 @@ struct CreateGroupView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
+        .safeAreaPadding(.top, 12)
         .background(MoilColor.background.ignoresSafeArea())
+        .navigationTitle("새 그룹 만들기")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: close) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(MoilColor.textPrimary)
+                }
+            }
+        }
+        }
         .alert("그룹을 만들었어요", isPresented: $didCreateGroup) {
             Button("확인", action: close)
         } message: {
