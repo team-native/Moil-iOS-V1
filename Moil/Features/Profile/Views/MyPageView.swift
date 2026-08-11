@@ -10,8 +10,7 @@ struct MyPageView: View {
     @State private var isMemberPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
-    @State private var isPasswordChangePresented = false
-    @State private var isAccountDeletionPresented = false
+    @State private var accountRoute: AccountRoute?
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
@@ -26,6 +25,7 @@ struct MyPageView: View {
         self.showsTabBar = showsTabBar
     }
     var body: some View {
+        NavigationStack {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
@@ -61,11 +61,11 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
-                    AccountMenuRow(title: "비밀번호 변경") { present(&isPasswordChangePresented) }
+                    AccountMenuRow(title: "비밀번호 변경") { accountRoute = .passwordChange }
                     Divider()
                     AccountMenuRow(title: "로그아웃") { isLogoutConfirmationPresented = true }
                     Divider()
-                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { present(&isAccountDeletionPresented) }
+                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { accountRoute = .accountDeletion }
                 }
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
@@ -104,27 +104,24 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
-        .fullScreenCover(isPresented: $isPasswordChangePresented) {
-            PasswordChangeView()
-        }
-        .fullScreenCover(isPresented: $isAccountDeletionPresented) {
-            AccountDeletionView { email, password, leftData in
-                await deleteAccount(email: email, password: password, leftData: leftData)
+        .navigationDestination(item: $accountRoute) { route in
+            switch route {
+            case .passwordChange:
+                PasswordChangeView()
+            case .accountDeletion:
+                AccountDeletionView { email, password, leftData in
+                    await deleteAccount(email: email, password: password, leftData: leftData)
+                }
             }
         }
+        .toolbar(.hidden, for: .navigationBar)
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
             Button("로그아웃", role: .destructive, action: onLogout)
         } message: {
             Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
         }
-    }
-
-    /// 탭 전환과 동작을 맞추기 위해 계정 화면은 모션 없이 바로 띄웁니다.
-    private func present(_ flag: inout Bool) {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) { flag = true }
+        }
     }
 
     private func deleteAccount(email: String, password: String, leftData: Bool) async -> String? {
@@ -140,6 +137,11 @@ struct MyPageView: View {
 
 #Preview("마이페이지") {
     MyPageView()
+}
+
+private enum AccountRoute: Hashable {
+    case passwordChange
+    case accountDeletion
 }
 
 private struct AccountMenuRow: View {
@@ -175,18 +177,11 @@ private struct PasswordChangeView: View {
         !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation
     }
 
-    private func dismissWithoutAnimation() {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) { dismiss() }
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             MoilScreenHeader(
                 title: "비밀번호 변경",
-                subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.",
-                onBack: dismissWithoutAnimation
+                subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다."
             )
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -205,6 +200,7 @@ private struct PasswordChangeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func changePassword() async {
@@ -225,18 +221,11 @@ private struct AccountDeletionView: View {
     @State private var isDeleting = false
     let onDelete: (String, String, Bool) async -> String?
 
-    private func dismissWithoutAnimation() {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) { dismiss() }
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             MoilScreenHeader(
                 title: "회원 탈퇴",
-                subtitle: "탈퇴하면 계정에 접근할 수 없어요.",
-                onBack: dismissWithoutAnimation
+                subtitle: "탈퇴하면 계정에 접근할 수 없어요."
             )
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -269,6 +258,7 @@ private struct AccountDeletionView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
