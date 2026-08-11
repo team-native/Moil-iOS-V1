@@ -8,6 +8,7 @@ final class MoilSessionStore: ObservableObject {
 
     private let accessTokenKey = "moilAccessToken"
     private let refreshTokenKey = "moilRefreshToken"
+    private var refreshTask: Task<Bool, Never>?
 
     init() {
         accessToken = UserDefaults.standard.string(forKey: accessTokenKey)
@@ -15,9 +16,18 @@ final class MoilSessionStore: ObservableObject {
     }
 
     var isAuthenticated: Bool { accessToken?.isEmpty == false }
+    var hasStoredSession: Bool {
+        accessToken?.isEmpty == false || refreshToken?.isEmpty == false
+    }
 
     func service() -> MoilAPIService {
-        MoilAPIService { [weak self] in self?.accessToken }
+        MoilAPIService(
+            tokenProvider: { [weak self] in self?.accessToken },
+            tokenRefresher: { [weak self] in
+                guard let self else { return false }
+                return await self.refreshSession()
+            }
+        )
     }
 
     func save(_ tokens: MoilTokenResponse) {
@@ -37,20 +47,28 @@ final class MoilSessionStore: ObservableObject {
     }
 
     func refreshSession() async -> Bool {
-        guard let refreshToken, !refreshToken.isEmpty else { return false }
-        do {
-            let tokens = try await service().refreshToken(refreshToken)
-            save(tokens)
-            return true
-        } catch {
-            if let apiError = error as? MoilAPIError, apiError.isAuthenticationFailure {
-                clear()
-                return false
-            }
+        if let refreshTask { return await refreshTask.value }
 
-            // 일시적인 네트워크/응답 오류로 저장된 로그인 정보를 지우지 않습니다.
-            return isAuthenticated
+        let task = Task { [weak self] in
+            guard let self, let refreshToken = self.refreshToken, !refreshToken.isEmpty else { return false }
+            do {
+                let tokens = try await self.service().refreshToken(refreshToken)
+                self.save(tokens)
+                return true
+            } catch {
+                if let apiError = error as? MoilAPIError, apiError.isAuthenticationFailure {
+                    self.clear()
+                    return false
+                }
+
+                // 네트워크 장애일 때는 저장된 access token을 유지해 오프라인 진입을 막지 않습니다.
+                return self.isAuthenticated
+            }
         }
+        refreshTask = task
+        let didRefresh = await task.value
+        refreshTask = nil
+        return didRefresh
     }
 
     func clear() {
