@@ -590,7 +590,8 @@ private struct ScheduleComposerView: View {
                     .disabled(!canSave)
             }
             .padding(.horizontal, 18)
-            .padding(.vertical, 16)
+            .padding(.top, 34)
+            .padding(.bottom, 18)
 
             TextField("일정 제목", text: $title)
                 .font(MoilTypography.semibold(21))
@@ -609,7 +610,7 @@ private struct ScheduleComposerView: View {
             ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
             ScheduleRow(title: "위치", value: "추가", secondary: true)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 18) {
                 Text("누구와 공유할까요")
                     .font(MoilTypography.semibold(13))
                     .foregroundStyle(MoilColor.textSecondary)
