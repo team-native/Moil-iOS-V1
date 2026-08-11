@@ -403,7 +403,7 @@ struct CalendarView: View {
             scheduleDraftDay = day
             isScheduleComposerPresented = true
         } label: {
-            VStack(alignment: .center, spacing: 5) {
+            VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
