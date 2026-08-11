@@ -266,7 +266,7 @@ private struct AccountDeletionView: View {
 
 private extension View {
     func accountField() -> some View {
-        padding(.horizontal, 14).frame(height: 50).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
+        moilField()
     }
 
     func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {

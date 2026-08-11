@@ -598,11 +598,7 @@ private struct AuthTextField: View {
         .textContentType(contentType)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
-        .font(MoilTypography.regular(15))
-        .padding(.horizontal, 16)
-        .frame(height: 53)
-        .background(MoilColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .moilField()
     }
 }
 

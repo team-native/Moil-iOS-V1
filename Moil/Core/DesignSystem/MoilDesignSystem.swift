@@ -43,3 +43,20 @@ enum MoilTypography {
         .custom("Pretendard-Bold", size: size).weight(.black)
     }
 }
+
+/// 앱의 모든 입력 칸이 같은 여백과 모서리를 쓰도록 맞춰 주는 스타일입니다.
+struct MoilFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(MoilTypography.regular(15))
+            .padding(16)
+            .background(MoilColor.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+extension View {
+    func moilField() -> some View {
+        modifier(MoilFieldStyle())
+    }
+}

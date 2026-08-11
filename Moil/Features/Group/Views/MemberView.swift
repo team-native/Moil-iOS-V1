@@ -402,11 +402,7 @@ private struct GroupNameEditor: View {
                 Text("그룹 이름 변경")
                     .font(MoilTypography.bold(18))
                 TextField("그룹 이름", text: $name)
-                    .font(MoilTypography.regular(15))
-                    .padding(.horizontal, 14)
-                    .frame(height: 48)
-                    .background(MoilColor.background)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .moilField()
                 HStack(spacing: 8) {
                     Button("취소", action: onCancel)
                         .font(MoilTypography.semibold(14))
