@@ -26,8 +26,6 @@ struct MyPageView: View {
         self.showsTabBar = showsTabBar
     }
     var body: some View {
-        VStack(spacing: 0) {
-        MoilScreenHeader(title: "마이페이지")
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
@@ -71,8 +69,8 @@ struct MyPageView: View {
                 }
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, MoilTabScreenMetrics.titleTopPadding)
             .padding(.bottom, 32)
-        }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
