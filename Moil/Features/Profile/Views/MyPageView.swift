@@ -26,6 +26,8 @@ struct MyPageView: View {
         self.showsTabBar = showsTabBar
     }
     var body: some View {
+        VStack(spacing: 0) {
+        MoilScreenHeader(title: "마이페이지")
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
@@ -72,9 +74,10 @@ struct MyPageView: View {
                     .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-            .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
             .padding(.bottom, 32)
         }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
         .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
@@ -106,15 +109,13 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
-        .sheet(isPresented: $isPasswordChangePresented) {
+        .fullScreenCover(isPresented: $isPasswordChangePresented) {
             PasswordChangeView()
-                .presentationDetents([.large])
         }
-        .sheet(isPresented: $isAccountDeletionPresented) {
+        .fullScreenCover(isPresented: $isAccountDeletionPresented) {
             AccountDeletionView { email, password, leftData in
                 await deleteAccount(email: email, password: password, leftData: leftData)
             }
-            .presentationDetents([.large])
         }
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
@@ -173,12 +174,14 @@ private struct PasswordChangeView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        VStack(spacing: 0) {
+            MoilScreenHeader(
+                title: "비밀번호 변경",
+                subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.",
+                onBack: dismiss.callAsFunction
+            )
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
                     SecureField("현재 비밀번호", text: $origin).accountField()
                     SecureField("새 비밀번호", text: $newPassword).accountField()
                     SecureField("새 비밀번호 확인", text: $confirmation).accountField()
@@ -188,13 +191,12 @@ private struct PasswordChangeView: View {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 32)
             }
-            .background(MoilColor.background)
-            .navigationTitle("비밀번호 변경")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기", action: dismiss.callAsFunction) } }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background.ignoresSafeArea())
     }
 
     private func changePassword() async {
@@ -216,12 +218,14 @@ private struct AccountDeletionView: View {
     let onDelete: (String, String, Bool) async -> String?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        VStack(spacing: 0) {
+            MoilScreenHeader(
+                title: "회원 탈퇴",
+                subtitle: "탈퇴하면 계정에 접근할 수 없어요.",
+                onBack: dismiss.callAsFunction
+            )
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("탈퇴하면 계정에 접근할 수 없어요.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
                     TextField("이메일", text: $email).accountField()
                     SecureField("비밀번호", text: $password).accountField()
                     Toggle("그룹 데이터 유지", isOn: $leftData)
@@ -245,13 +249,12 @@ private struct AccountDeletionView: View {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 32)
             }
-            .background(MoilColor.background)
-            .navigationTitle("회원 탈퇴")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기", action: dismiss.callAsFunction) } }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background.ignoresSafeArea())
     }
 }
 
