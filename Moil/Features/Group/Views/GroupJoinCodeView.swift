@@ -27,7 +27,7 @@ struct GroupJoinCodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             MoilScreenHeader(title: "그룹 참여", subtitle: "초대 코드를 입력해주세요", onBack: backAction)
             VStack(alignment: .leading, spacing: 0) {
-            Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 30).padding(.bottom, 10)
+            Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.bottom, 10)
             TextField("FAM-0000", text: $code)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
