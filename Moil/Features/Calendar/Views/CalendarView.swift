@@ -270,7 +270,10 @@ struct CalendarView: View {
             )
         }
         .fullScreenCover(isPresented: $isScheduleSearchPresented) {
-            ScheduleSearchView()
+            ScheduleSearchView(
+                groupId: groupStore.selectedGroupId,
+                month: monthRequestValue
+            )
         }
         .alert("서버 오류", isPresented: Binding(get: { serverError != nil }, set: { if !$0 { serverError = nil } })) {
             Button("확인", role: .cancel) { serverError = nil }
@@ -669,16 +672,23 @@ private struct ScheduleRow: View {
 
 private struct ScheduleSearchView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var eventStore: MoilEventStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    let groupId: String?
+    let month: String
     @State private var query = ""
+    @State private var errorMessage: String?
 
-    private let events: [(day: String, owner: String, title: String, color: Color)] = [
-        ("7월 5일", "엄마", "생일", MoilAvatarColor.red),
-        ("7월 9일", "아빠", "가족 저녁", MoilAvatarColor.blue),
-        ("7월 28일", "동생", "시험", MoilAvatarColor.yellow)
-    ]
+    private var events: [CalendarEvent] {
+        eventStore.events(groupId: groupId, month: month).compactMap(CalendarEvent.init(remote:))
+    }
 
-    private var filteredEvents: [(day: String, owner: String, title: String, color: Color)] {
-        query.isEmpty ? events : events.filter { $0.title.localizedCaseInsensitiveContains(query) || $0.owner.localizedCaseInsensitiveContains(query) }
+    private var filteredEvents: [CalendarEvent] {
+        guard !query.isEmpty else { return events }
+        return events.filter {
+            $0.title.localizedCaseInsensitiveContains(query) ||
+            $0.owner.localizedCaseInsensitiveContains(query)
+        }
     }
 
     var body: some View {
@@ -709,12 +719,12 @@ private struct ScheduleSearchView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
-                            ForEach(filteredEvents, id: \.title) { event in
+                            ForEach(filteredEvents) { event in
                                 HStack(spacing: 12) {
                                     Circle().fill(event.color).frame(width: 10, height: 10)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(event.title).font(MoilTypography.semibold(16))
-                                        Text("\(event.day) · \(event.owner)")
+                                        Text("\(event.date) · \(event.owner)")
                                             .font(MoilTypography.regular(13))
                                             .foregroundStyle(MoilColor.textSecondary)
                                     }
@@ -743,6 +753,19 @@ private struct ScheduleSearchView: View {
                     }
                 }
             }
+        }
+        .task(id: "\(groupId ?? "")-\(month)") {
+            guard let groupId else { return }
+            do {
+                try await eventStore.load(groupId: groupId, month: month, using: sessionStore.service())
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+        .alert("서버 오류", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("확인", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
         }
     }
 }
