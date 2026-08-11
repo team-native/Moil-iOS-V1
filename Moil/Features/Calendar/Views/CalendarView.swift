@@ -430,7 +430,7 @@ struct CalendarView: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .center)
-            .background(event.color.opacity(0.85))
+            .background(event.color.opacity(0.62))
             .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 
