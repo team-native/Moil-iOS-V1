@@ -17,11 +17,7 @@ struct AuthFlowView: View {
         Group {
         switch route {
         case .restoring:
-            ZStack {
-                MoilColor.background.ignoresSafeArea()
-                ProgressView()
-                    .tint(MoilColor.primary)
-            }
+            MoilLaunchView()
         case .login:
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
