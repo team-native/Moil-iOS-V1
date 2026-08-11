@@ -40,14 +40,11 @@ struct CalendarView: View {
         return (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
     }
 
-    private var calendarRowCount: Int {
-        let occupiedCells = leadingBlankDays + daysInMonth
-        return max(5, Int(ceil(Double(occupiedCells) / 7)))
-    }
+    /// 월이 바뀌어도 기본 레이아웃이 같도록 항상 여섯 줄을 그립니다.
+    private let calendarRowCount = 6
 
-    private var dayCellHeight: CGFloat {
-        calendarRowCount == 6 ? 88 : 104
-    }
+    /// 일정이 많은 날은 이 높이보다 커지고, 늘어난 만큼 달력이 세로로 스크롤됩니다.
+    private let dayCellMinHeight: CGFloat = 88
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
@@ -176,19 +173,25 @@ struct CalendarView: View {
                     }
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.vertical, 16)
-                    LazyVGrid(columns: columns, spacing: 9) {
+                    LazyVGrid(columns: columns, spacing: 0) {
                         ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
-                        ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
-                            let day = slot - leadingBlankDays + 1
-                            if (1...daysInMonth).contains(day) {
-                                calendarDay(day)
-                            } else {
-                                Color.clear.frame(height: dayCellHeight)
-                            }
-                        }
                     }
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                    Spacer()
+                    .padding(.bottom, 9)
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(columns: columns, spacing: 9) {
+                            ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
+                                let day = slot - leadingBlankDays + 1
+                                if (1...daysInMonth).contains(day) {
+                                    calendarDay(day)
+                                } else {
+                                    Color.clear.frame(minHeight: dayCellMinHeight)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                        .padding(.bottom, 16)
+                    }
                 }
             }
         }
@@ -403,16 +406,11 @@ struct CalendarView: View {
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
                 ForEach(events(for: day)) { event in
-                    HStack(spacing: 3) {
-                        Circle().fill(event.color).frame(width: 6, height: 6)
-                        Text(event.owner).font(MoilTypography.regular(10))
-                        Text(event.title).font(MoilTypography.regular(10))
-                    }
-                    .lineLimit(1)
+                    eventChip(event)
                 }
                 Spacer(minLength: 0)
             }
-            .frame(height: dayCellHeight, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .topLeading)
         }
         .buttonStyle(.plain)
         .onLongPressGesture {
@@ -421,12 +419,28 @@ struct CalendarView: View {
         }
     }
 
+    private func eventChip(_ event: CalendarEvent) -> some View {
+        Text(event.shortTitle)
+            .font(MoilTypography.regular(10))
+            .foregroundStyle(event.color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(event.color.opacity(0.22))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
     private func events(for day: Int) -> [CalendarEvent] {
         remoteEvents.filter { $0.day == day }
     }
 }
 
 private struct CalendarEvent: Identifiable {
+    /// 좁은 날짜 칸에서 말줄임표가 생기지 않도록 공백 포함 앞 여섯 글자만 씁니다.
+    var shortTitle: String { String(title.prefix(6)) }
+
     let id: String
     let day: Int
     let owner: String
