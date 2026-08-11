@@ -18,7 +18,7 @@ struct MoilScreenHeader: View {
                     }
                 }
                 Text(title)
-                    .font(MoilTypography.bold(30))
+                    .font(MoilTypography.heavy(30))
                     .foregroundStyle(MoilColor.textPrimary)
                 Spacer(minLength: 0)
             }

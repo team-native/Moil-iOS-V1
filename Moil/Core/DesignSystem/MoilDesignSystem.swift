@@ -37,4 +37,9 @@ enum MoilTypography {
     static func bold(_ size: CGFloat) -> Font {
         .custom("Pretendard-Bold", size: size)
     }
+
+    /// 번들에는 Bold가 가장 굵어, 그보다 굵게 보여야 하는 큰 제목에만 굵기를 더 올려 씁니다.
+    static func heavy(_ size: CGFloat) -> Font {
+        .custom("Pretendard-Bold", size: size).weight(.black)
+    }
 }
