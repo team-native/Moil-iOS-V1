@@ -291,6 +291,7 @@ struct CalendarView: View {
         do {
             _ = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
         } catch {
+            guard !error.isRequestCancellation else { return }
             serverError = error.localizedDescription
         }
     }
@@ -314,6 +315,7 @@ struct CalendarView: View {
         do {
             try await eventStore.load(groupId: groupId, month: monthRequestValue, using: sessionStore.service())
         } catch {
+            guard !error.isRequestCancellation else { return }
             serverError = error.localizedDescription
         }
     }
@@ -759,6 +761,7 @@ private struct ScheduleSearchView: View {
             do {
                 try await eventStore.load(groupId: groupId, month: month, using: sessionStore.service())
             } catch {
+                guard !error.isRequestCancellation else { return }
                 errorMessage = error.localizedDescription
             }
         }

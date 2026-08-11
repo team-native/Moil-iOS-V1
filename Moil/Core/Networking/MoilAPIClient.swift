@@ -28,6 +28,16 @@ extension MoilAPIError {
     }
 }
 
+extension Error {
+    /// `.task(id:)`가 다시 실행되거나 화면이 사라지면서 요청이 취소된 경우입니다.
+    /// 사용자가 만든 상황이 아니므로 오류로 보여주지 않습니다.
+    var isRequestCancellation: Bool {
+        if self is CancellationError { return true }
+        if let urlError = self as? URLError { return urlError.code == .cancelled }
+        return false
+    }
+}
+
 struct MoilAPIClient {
     let session: URLSession
     let tokenProvider: () -> String?
