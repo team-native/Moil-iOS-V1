@@ -48,7 +48,7 @@ struct CalendarView: View {
     private let calendarRowCount = 6
 
     /// 일정이 많은 날은 이 높이보다 커지고, 늘어난 만큼 달력이 세로로 스크롤됩니다.
-    private let dayCellMinHeight: CGFloat = 76
+    private let dayCellMinHeight: CGFloat = 92
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
@@ -403,7 +403,7 @@ struct CalendarView: View {
             scheduleDraftDay = day
             isScheduleComposerPresented = true
         } label: {
-            VStack(alignment: .center, spacing: 2) {
+            VStack(alignment: .center, spacing: 5) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
                     .frame(width: 32, height: 32, alignment: .center)
@@ -430,7 +430,7 @@ struct CalendarView: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .center)
-            .background(event.color.opacity(0.62))
+            .background(event.color.opacity(0.45))
             .clipShape(RoundedRectangle(cornerRadius: 3))
     }
 
