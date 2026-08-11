@@ -160,7 +160,7 @@ struct CalendarView: View {
                             .frame(width: 30, height: 30)
                             .background(MoilColor.background)
                             .clipShape(Circle())
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: 1) }
+                            .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         Button { moveMonth(by: 1) } label: {
@@ -168,7 +168,7 @@ struct CalendarView: View {
                             .frame(width: 30, height: 30)
                             .background(MoilColor.background)
                             .clipShape(Circle())
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: 1) }
+                            .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         .padding(.leading, 6)
