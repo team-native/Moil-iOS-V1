@@ -5,6 +5,8 @@ struct MoilTabNavigationView: View {
     @State private var selectedTab: MoilTab = .calendar
     @State private var isJoiningProfile = false
     @State private var isCreatingGroup = false
+    /// 마이페이지에서 계정 화면으로 들어가면 탭바를 숨겨야 하므로 상위에서 상태를 들고 있습니다.
+    @State private var isAccountPagePresented = false
 
     var body: some View {
         ZStack {
@@ -25,7 +27,7 @@ struct MoilTabNavigationView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .moilTabScreenLayout(
             selected: selectedTab,
-            isTabBarVisible: !isJoiningProfile && !isCreatingGroup,
+            isTabBarVisible: !isJoiningProfile && !isCreatingGroup && !isAccountPagePresented,
             onSelect: select
         )
     }
@@ -40,7 +42,13 @@ struct MoilTabNavigationView: View {
         case .create:
             GroupJoinCodeView(onNext: openJoinProfile, onTabSelect: select, showsTabBar: false)
         case .profile:
-            MyPageView(onCreateGroup: openCreateGroup, onLogout: onLogout, onTabSelect: select, showsTabBar: false)
+            MyPageView(
+                onCreateGroup: openCreateGroup,
+                onLogout: onLogout,
+                onTabSelect: select,
+                showsTabBar: false,
+                isAccountPagePresented: $isAccountPagePresented
+            )
         }
     }
 

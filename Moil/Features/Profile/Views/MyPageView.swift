@@ -16,13 +16,23 @@ struct MyPageView: View {
     let onLogout: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
     let showsTabBar: Bool
+    /// 탭 안에서 열릴 때는 상위 네비게이션이 탭바를 그리므로 진입 여부를 알려 줍니다.
+    @Binding var isAccountPagePresented: Bool
 
-    init(onCreateGroup: @escaping () -> Void = {}, onLeaveGroup: @escaping () -> Void = {}, onLogout: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
+    init(
+        onCreateGroup: @escaping () -> Void = {},
+        onLeaveGroup: @escaping () -> Void = {},
+        onLogout: @escaping () -> Void = {},
+        onTabSelect: ((MoilTab) -> Void)? = nil,
+        showsTabBar: Bool = true,
+        isAccountPagePresented: Binding<Bool> = .constant(false)
+    ) {
         self.onCreateGroup = onCreateGroup
         self.onLeaveGroup = onLeaveGroup
         self.onLogout = onLogout
         self.onTabSelect = onTabSelect
         self.showsTabBar = showsTabBar
+        self._isAccountPagePresented = isAccountPagePresented
     }
     var body: some View {
         NavigationStack {
@@ -120,6 +130,9 @@ struct MyPageView: View {
             Button("로그아웃", role: .destructive, action: onLogout)
         } message: {
             Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
+        }
+        .onChange(of: accountRoute) { _, route in
+            isAccountPagePresented = route != nil
         }
         }
     }
