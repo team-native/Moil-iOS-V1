@@ -198,12 +198,8 @@ private struct PasswordChangeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .navigationTitle("비밀번호 변경")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("비밀번호 변경").font(MoilTypography.bold(17)).foregroundStyle(MoilColor.textPrimary)
-            }
-        }
     }
 
     private func changePassword() async {
@@ -255,12 +251,8 @@ private struct AccountDeletionView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .navigationTitle("회원 탈퇴")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("회원 탈퇴").font(MoilTypography.bold(17)).foregroundStyle(MoilColor.textPrimary)
-            }
-        }
     }
 }
 
