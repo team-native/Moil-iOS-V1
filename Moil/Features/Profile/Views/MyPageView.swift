@@ -65,13 +65,10 @@ struct MyPageView: View {
                 GroupSection(title: "계정 보안") {
                     AccountMenuRow(title: "비밀번호 변경") { isPasswordChangePresented = true }
                     Divider()
+                    AccountMenuRow(title: "로그아웃") { isLogoutConfirmationPresented = true }
+                    Divider()
                     AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { isAccountDeletionPresented = true }
                 }
-                .padding(.bottom, 16)
-                Button("로그아웃") { isLogoutConfirmationPresented = true }
-                    .font(MoilTypography.semibold(15)).foregroundStyle(MoilColor.error)
-                    .frame(maxWidth: .infinity).padding(.vertical, 16)
-                    .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18))
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .padding(.bottom, 32)
