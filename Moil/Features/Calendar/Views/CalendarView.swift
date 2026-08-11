@@ -44,7 +44,7 @@ struct CalendarView: View {
     private let calendarRowCount = 6
 
     /// 일정이 많은 날은 이 높이보다 커지고, 늘어난 만큼 달력이 세로로 스크롤됩니다.
-    private let dayCellMinHeight: CGFloat = 88
+    private let dayCellMinHeight: CGFloat = 58
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
