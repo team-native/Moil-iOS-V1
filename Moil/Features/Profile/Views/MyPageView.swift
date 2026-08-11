@@ -236,7 +236,7 @@ private struct AccountDeletionView: View {
                         .font(MoilTypography.regular(15))
                         .tint(MoilColor.primary)
                         .padding(.vertical, 2)
-                    Button("회원 탈퇴", role: .destructive) {
+                    Button("회원 탈퇴") {
                         Task {
                             isDeleting = true
                             message = await onDelete(email, password, leftData)
@@ -244,11 +244,7 @@ private struct AccountDeletionView: View {
                             if message == nil { dismiss() }
                         }
                     }
-                        .font(MoilTypography.bold(15))
-                        .frame(maxWidth: .infinity).frame(height: 50)
-                        .background(MoilColor.error.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .disabled(isDeleting)
+                        .accountButton(enabled: !isDeleting, color: MoilColor.error)
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
@@ -273,9 +269,9 @@ private extension View {
         padding(.horizontal, 14).frame(height: 50).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    func accountButton(enabled: Bool) -> some View {
+    func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {
         font(MoilTypography.bold(15)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50)
-            .background(enabled ? MoilColor.primary : MoilColor.primary.opacity(0.7)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!enabled)
+            .background(enabled ? color : color.opacity(0.7)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!enabled)
     }
 }
 
