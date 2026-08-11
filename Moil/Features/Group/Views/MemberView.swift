@@ -13,7 +13,6 @@ struct MemberView: View {
     @State private var loadedMembersGroupID: String?
     @State private var notificationsEnabled = true
     @State private var copied = false
-    @State private var isAdministratorMode = false
     @State private var isEditingGroupName = false
     @State private var isEditingPermissions = false
     @State private var isSharingInvite = false
@@ -32,11 +31,25 @@ struct MemberView: View {
         groupStore.groups.first { $0.id == selectedGroupId } ?? groupStore.selectedGroup
     }
 
+    private var currentMembers: [MoilRemoteMember] {
+        let loaded = loadedMembersGroupID == selectedGroup?.id ? remoteMembers : []
+        return loaded.isEmpty ? groupStore.members(for: selectedGroup?.id) : loaded
+    }
+
     private var members: [(String, String, Color)] {
-        let currentMembers = loadedMembersGroupID == selectedGroup?.id
-            ? remoteMembers
-            : groupStore.members(for: selectedGroup?.id)
-        return currentMembers.map { ($0.nickname, $0.role.uppercased() == "OWNER" || $0.role.uppercased() == "ADMIN" ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
+        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
+    }
+
+    /// 그룹 응답의 역할을 먼저 쓰고, 멤버 응답이 도착하면 그쪽으로 확정합니다.
+    private var isAdministratorMode: Bool {
+        if currentMembers.contains(where: { $0.isMe }) {
+            return currentMembers.contains { $0.isMe && isAdministrator($0) }
+        }
+        return selectedGroup?.isAdministrator ?? false
+    }
+
+    private func isAdministrator(_ member: MoilRemoteMember) -> Bool {
+        ["OWNER", "ADMIN"].contains(member.role.uppercased())
     }
 
     private var inviteCode: String {
@@ -100,7 +113,7 @@ struct MemberView: View {
                     isEditingGroupName = false
                 }
             } else if isTransferringAdmin {
-                AdministratorTransferEditor(selection: $newAdministrator, candidates: remoteMembers) {
+                AdministratorTransferEditor(selection: $newAdministrator, candidates: currentMembers) {
                     Task { await transferAdministrator() }
                 } onCancel: {
                     isTransferringAdmin = false
@@ -108,7 +121,7 @@ struct MemberView: View {
             }
         }
             .sheet(isPresented: $isEditingPermissions) {
-                PermissionEditorView(members: remoteMembers) { updatedRoles in
+                PermissionEditorView(members: currentMembers) { updatedRoles in
                     Task { await updateRoles(updatedRoles) }
                 }
                     .presentationDetents([.height(327)])
@@ -118,14 +131,6 @@ struct MemberView: View {
                 InviteShareView(inviteCode: inviteCode)
                     .presentationDetents([.height(250)])
                     .presentationDragIndicator(.visible)
-            }
-            .confirmationDialog("그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
-                Button("그룹 나가기", role: .destructive) {
-                    Task { await leaveSelectedGroup() }
-                }
-                Button("취소", role: .cancel) { }
-            } message: {
-                Text("나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
@@ -173,7 +178,6 @@ struct MemberView: View {
                     Button(group.name) {
                         selectedGroupId = group.id
                         groupStore.selectGroup(group.id)
-                        isAdministratorMode = false
                     }
                     .font(MoilTypography.semibold(13))
                     .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
@@ -232,6 +236,22 @@ struct MemberView: View {
                 Button("그룹 나가기") { isLeavingGroup = true }
                     .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+                    .popover(isPresented: $isLeavingGroup, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
+                        LeaveGroupConfirmation(
+                            isAdministrator: isAdministratorMode,
+                            onLeave: {
+                                isLeavingGroup = false
+                                Task { await leaveSelectedGroup() }
+                            },
+                            onTransfer: {
+                                isLeavingGroup = false
+                                newAdministrator = nil
+                                isTransferringAdmin = true
+                            },
+                            onCancel: { isLeavingGroup = false }
+                        )
+                        .presentationCompactAdaptation(.popover)
+                    }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
         }
@@ -246,8 +266,6 @@ struct MemberView: View {
                 AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                 Divider()
                 AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
-                Divider()
-                AdminSettingRow(title: "관리자 권한 이전") { newAdministrator = nil; isTransferringAdmin = true }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
         }
@@ -258,10 +276,9 @@ struct MemberView: View {
         do {
             remoteMembers = try await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
             loadedMembersGroupID = groupId
-            isAdministratorMode = remoteMembers.contains {
-                $0.isMe && ["OWNER", "ADMIN"].contains($0.role.uppercased())
-            }
         } catch {
+            // 요청이 취소된 경우에는 이미 보여주고 있는 구성원을 그대로 둡니다.
+            guard !error.isRequestCancellation else { return }
             remoteMembers = groupStore.members(for: groupId)
             loadedMembersGroupID = groupId
         }
@@ -293,7 +310,7 @@ struct MemberView: View {
     private func transferAdministrator() async {
         guard let groupId = selectedGroup?.id,
               let nickname = newAdministrator,
-              let target = remoteMembers.first(where: { $0.nickname == nickname }) else { return }
+              let target = currentMembers.first(where: { $0.nickname == nickname }) else { return }
         guard let targetUserId = Int(target.id) else { return }
         do {
             try await sessionStore.service().transferAdmin(groupId: groupId, targetUserId: targetUserId)
@@ -478,6 +495,52 @@ private struct AdministratorTransferEditor: View {
     }
 }
 
+private struct LeaveGroupConfirmation: View {
+    let isAdministrator: Bool
+    let onLeave: () -> Void
+    let onTransfer: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(isAdministrator ? "관리자는 바로 나갈 수 없어요" : "그룹을 나갈까요?")
+                .font(MoilTypography.bold(16))
+            Text(isAdministrator
+                 ? "다른 멤버에게 관리자 권한을 넘긴 뒤에 나갈 수 있어요."
+                 : "나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
+                .font(MoilTypography.regular(13))
+                .foregroundStyle(MoilColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+
+            if isAdministrator {
+                Button("관리자 권한 이전", action: onTransfer)
+                    .font(MoilTypography.semibold(14))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .background(MoilColor.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.top, 16)
+            } else {
+                Button("그룹 나가기", action: onLeave)
+                    .font(MoilTypography.semibold(14))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .background(MoilColor.error)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.top, 16)
+            }
+            Button("취소", action: onCancel)
+                .font(MoilTypography.semibold(14))
+                .foregroundStyle(MoilColor.textSecondary)
+                .frame(maxWidth: .infinity).frame(height: 40)
+        }
+        .padding(18)
+        .frame(width: 260)
+        .background(MoilColor.surface)
+    }
+}
+
 private struct PermissionEditorView: View {
     @Environment(\.dismiss) private var dismiss
     let members: [MoilRemoteMember]
@@ -492,12 +555,18 @@ private struct PermissionEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("멤버 권한 설정").font(MoilTypography.bold(17)).padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 14)
+            Text("멤버 권한 설정")
+                .font(MoilTypography.bold(17))
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 14)
             ForEach(members) { member in
-                HStack(spacing: 10) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 30)
-                    Text(member.nickname).font(MoilTypography.semibold(14))
-                    Spacer()
+                HStack(spacing: 12) {
+                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 34)
+                    Text(member.nickname)
+                        .font(MoilTypography.semibold(15))
+                        .lineLimit(1)
+                    Spacer(minLength: 12)
                     Picker("권한", selection: Binding(get: { administrators.contains(member.id) }, set: { enabled in
                         if enabled {
                             administrators.insert(member.id)
@@ -508,10 +577,12 @@ private struct PermissionEditorView: View {
                         Text("멤버").tag(false)
                         Text("관리자").tag(true)
                     }
-                    .pickerStyle(.segmented).frame(width: 132)
+                    .pickerStyle(.segmented)
+                    .frame(width: 132)
                 }
-                .padding(.horizontal, 20).frame(height: 52)
-                if member.id != members.last?.id { Divider().padding(.horizontal, 20) }
+                .padding(.horizontal, 20)
+                .frame(height: 56)
+                if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
             }
             Button("완료") {
                 onSave(members.compactMap { member in
