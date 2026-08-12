@@ -12,8 +12,9 @@ struct CreateGroupView: View {
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var onClose: (() -> Void)? = nil
     var body: some View {
-        NavigationStack {
         VStack(alignment: .leading, spacing: 0) {
+            MoilInlineHeader(title: "새 그룹 만들기", onBack: close)
+            VStack(alignment: .leading, spacing: 0) {
             MoilFormStack {
                 MoilValidatedField(label: "그룹 이름") {
                     MoilTextField(placeholder: "예: 우리 가족", text: $name)
@@ -42,22 +43,12 @@ struct CreateGroupView: View {
                 }
             }
                 .safeAreaPadding(.bottom, 12)
-        }
-        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-        .safeAreaPadding(.top, 12)
-        .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("새 그룹 만들기")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(action: close) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
             }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, 12)
         }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(MoilColor.background.ignoresSafeArea())
         .alert("그룹을 만들었어요", isPresented: $didCreateGroup) {
             Button("확인", action: close)
         } message: {

@@ -15,14 +15,8 @@ struct GroupJoinProfileView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
-                }
-                Text("프로필 설정").font(MoilTypography.bold(26))
-            }
-            .safeAreaPadding(.top, 16)
+            MoilInlineHeader(title: "프로필 설정", onBack: dismiss.callAsFunction)
+            VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text(groupStore.pendingInviteGroupName).font(MoilTypography.bold(14)); Text("구성원 \(groupStore.pendingInviteMemberCount)명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
                 .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
             MoilFormStack {
@@ -63,8 +57,10 @@ struct GroupJoinProfileView: View {
                 }
             }
             .safeAreaPadding(.bottom, 12)
+            }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
-        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(MoilColor.background.ignoresSafeArea())
         .moilLoading(isJoining)
         .alert("프로필 추가", isPresented: $isAdditionalProfilePresented) {

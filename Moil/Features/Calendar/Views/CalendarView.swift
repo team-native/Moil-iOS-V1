@@ -718,7 +718,8 @@ private struct ScheduleSearchView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            MoilInlineHeader(title: "일정 검색", onBack: dismiss.callAsFunction)
             VStack(spacing: 0) {
                 MoilTextField(placeholder: "일정 검색", text: $query)
                     .overlay(alignment: .trailing) {
@@ -764,18 +765,9 @@ private struct ScheduleSearchView: View {
                     }
                 }
             }
-            .background(MoilColor.background.ignoresSafeArea())
-            .navigationTitle("일정 검색")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "chevron.left")
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                }
-            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(MoilColor.background.ignoresSafeArea())
         .task(id: "\(groupId ?? "")-\(month)") {
             guard let groupId else { return }
             do {

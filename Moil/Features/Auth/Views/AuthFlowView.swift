@@ -193,6 +193,8 @@ private struct LoginView: View {
     @State private var password = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+    /// 소셜 로그인 안내처럼 입력 칸과 상관없는 문구입니다.
+    @State private var noticeMessage: String?
 
     private var canSubmit: Bool {
         email.contains("@") && password.count >= 8
@@ -232,10 +234,15 @@ private struct LoginView: View {
                 MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress)
                     // 피그마: 이메일 칸 아래 12
                     .padding(.bottom, 12)
+                    .onChange(of: email) { _, _ in errorMessage = nil }
 
-                MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                    // 피그마: 비밀번호 블록 63, 칸 53
-                    .padding(.bottom, 10)
+                // 로그인 실패 문구는 다른 화면과 같이 입력 칸 바로 밑에 둡니다.
+                MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                    MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                }
+                // 피그마: 비밀번호 블록 63, 칸 53
+                .padding(.bottom, 10)
+                .onChange(of: password) { _, _ in errorMessage = nil }
 
                 HStack {
                     Spacer(minLength: 0)
@@ -249,15 +256,15 @@ private struct LoginView: View {
                 Spacer(minLength: 0)
 
                 SocialLoginRow { provider in
-                    errorMessage = "\(provider) 로그인은 준비 중이에요."
+                    noticeMessage = "\(provider) 로그인은 준비 중이에요."
                 }
                 // 피그마: 아이콘 아래 52에서 하단 블록 시작
                 .padding(.bottom, 52)
 
-                if let errorMessage {
-                    Text(errorMessage)
+                if let noticeMessage {
+                    Text(noticeMessage)
                         .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.error)
+                        .foregroundStyle(MoilColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, 8)
                 }
