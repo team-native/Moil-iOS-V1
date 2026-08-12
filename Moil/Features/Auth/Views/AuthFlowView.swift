@@ -630,9 +630,9 @@ private struct SocialLoginRow: View {
                 dividerLine
             }
             HStack(spacing: 46) {
-                socialButton("구글", image: "SocialGoogle", size: 34)
-                socialButton("애플", image: "SocialApple", size: 32)
-                kakaoButton
+                socialButton("구글", image: "SocialGoogle")
+                socialButton("애플", image: "SocialApple")
+                socialButton("카카오", image: "SocialKakao")
             }
         }
     }
@@ -643,30 +643,14 @@ private struct SocialLoginRow: View {
             .frame(height: 1)
     }
 
-    private func socialButton(_ name: String, image: String, size: CGFloat) -> some View {
+    private func socialButton(_ name: String, image: String) -> some View {
         Button { onSelect(name) } label: {
             Image(image)
                 .resizable()
                 .scaledToFit()
-                .frame(width: size, height: size)
                 .frame(width: 38, height: 38)
         }
         .accessibilityLabel("\(name)로 로그인")
-    }
-
-    private var kakaoButton: some View {
-        Button { onSelect("카카오") } label: {
-            Circle()
-                .fill(Color(red: 1.0, green: 0.898, blue: 0.0))
-                .frame(width: 38, height: 38)
-                .overlay {
-                    Image("SocialKakao")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 22, height: 20.7)
-                }
-        }
-        .accessibilityLabel("카카오로 로그인")
     }
 }
 
