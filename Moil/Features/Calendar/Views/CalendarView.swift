@@ -671,15 +671,8 @@ private struct EventEditorView: View {
             }
             MoilTextField(placeholder: "일정 제목", text: $title)
             HStack(spacing: 10) {
-                Button("삭제", role: .destructive) { onDelete(); dismiss() }
-                    .frame(maxWidth: .infinity).frame(height: 48)
-                    .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 12))
-                Button("저장") { onSave(trimmedTitle); dismiss() }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 48)
-                    .background(trimmedTitle.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .disabled(trimmedTitle.isEmpty)
+                MoilButton(title: "삭제", style: .outline) { onDelete(); dismiss() }
+                MoilButton(title: "저장", isEnabled: !trimmedTitle.isEmpty) { onSave(trimmedTitle); dismiss() }
             }
         }
         .padding(20)

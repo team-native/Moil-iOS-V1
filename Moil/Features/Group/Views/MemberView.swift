@@ -404,20 +404,8 @@ private struct GroupNameEditor: View {
                     .font(MoilTypography.bold(18))
                 MoilTextField(placeholder: "그룹 이름", text: $name)
                 HStack(spacing: 8) {
-                    Button("취소", action: onCancel)
-                        .font(MoilTypography.semibold(14))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(MoilColor.surface)
-                        .overlay { RoundedRectangle(cornerRadius: 10).stroke(MoilColor.textTertiary.opacity(0.3), lineWidth: 1) }
-                    Button("저장", action: onSave)
-                        .font(MoilTypography.semibold(14))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(MoilColor.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    MoilButton(title: "취소", style: .outline, action: onCancel)
+                    MoilButton(title: "저장", action: onSave)
                 }
             }
             .padding(20)
@@ -471,20 +459,9 @@ private struct AdministratorTransferEditor: View {
                     }
                 }
 
-                Button("권한 넘기기", action: onTransfer)
-                    .font(MoilTypography.semibold(14))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(selection == nil ? MoilColor.textTertiary.opacity(0.45) : MoilColor.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .disabled(selection == nil)
+                MoilButton(title: "권한 넘기기", isEnabled: selection != nil, action: onTransfer)
                     .padding(.top, 16)
-                Button("취소", action: onCancel)
-                    .font(MoilTypography.semibold(14))
-                    .foregroundStyle(MoilColor.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                MoilButton(title: "취소", style: .text, action: onCancel)
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
@@ -521,10 +498,7 @@ private struct LeaveGroupConfirmation: View {
                 MoilButton(title: "그룹 나가기", height: 44, action: onLeave)
                     .padding(.top, 16)
             }
-            Button("취소", action: onCancel)
-                .font(MoilTypography.semibold(14))
-                .foregroundStyle(MoilColor.textSecondary)
-                .frame(maxWidth: .infinity).frame(height: 40)
+            MoilButton(title: "취소", style: .text, action: onCancel)
         }
         .padding(18)
         .frame(width: 260)
@@ -575,16 +549,12 @@ private struct PermissionEditorView: View {
                 .frame(height: 56)
                 if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
             }
-            Button("완료") {
+            MoilButton(title: "완료") {
                 onSave(members.compactMap { member in
                     guard let userId = Int(member.id) else { return nil }
                     return MemberRoleRequest(userId: userId, role: administrators.contains(member.id) ? "admin" : "member")
                 })
             }
-                .font(MoilTypography.bold(14)).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).frame(height: 48)
-                .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(20)
         }
     }
 }

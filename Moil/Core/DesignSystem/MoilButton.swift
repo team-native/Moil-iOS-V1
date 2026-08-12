@@ -7,11 +7,13 @@ struct MoilButton: View {
     enum Style {
         case filled
         case outline
+        /// 취소처럼 배경 없이 글자만 두는 보조 버튼입니다.
+        case text
 
         var background: Color {
             switch self {
             case .filled: MoilColor.primary
-            case .outline: .clear
+            case .outline, .text: .clear
             }
         }
 
@@ -19,6 +21,7 @@ struct MoilButton: View {
             switch self {
             case .filled: .white
             case .outline: MoilColor.textPrimary
+            case .text: MoilColor.textSecondary
             }
         }
     }

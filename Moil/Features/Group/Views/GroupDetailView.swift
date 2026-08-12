@@ -86,12 +86,7 @@ struct GroupDetailView: View {
                     .background(MoilColor.groupDetailSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
 
-                Button("그룹 나가기") { isLeavingGroup = true }
-                    .font(MoilTypography.semibold(15))
-                    .foregroundStyle(MoilColor.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .disabled(groupID == nil || isLoading)
+                MoilButton(title: "그룹 나가기") { isLeavingGroup = true }
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 32)

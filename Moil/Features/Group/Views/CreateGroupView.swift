@@ -38,7 +38,7 @@ struct CreateGroupView: View {
                 .foregroundStyle(MoilColor.textSecondary)
                 .padding(.top, 22)
             Spacer()
-            Button("그룹 만들기") {
+            MoilButton(title: "그룹 만들기", isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                 Task {
                     do {
                         try await groupStore.create(name: name, nickname: "나", colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
@@ -48,10 +48,7 @@ struct CreateGroupView: View {
                     }
                 }
             }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
+                .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
         .safeAreaPadding(.top, 12)

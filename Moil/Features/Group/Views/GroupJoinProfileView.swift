@@ -56,7 +56,7 @@ struct GroupJoinProfileView: View {
                 .accessibilityLabel("프로필 추가")
             }
             Spacer()
-            Button("참여하기") {
+            MoilButton(title: "참여하기", isEnabled: isValidNickname && !isJoining) {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }
                 Task {
                     isJoining = true
@@ -69,10 +69,7 @@ struct GroupJoinProfileView: View {
                     }
                 }
             }
-                .disabled(!isValidNickname || isJoining)
-                .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(!isValidNickname || isJoining ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
+            .safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())

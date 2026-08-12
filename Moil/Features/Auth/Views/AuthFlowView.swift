@@ -371,13 +371,9 @@ private struct PasswordResetEmailView: View {
                 MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
-                Button("인증번호 받기") {
+                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@") && !isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
-                .font(MoilTypography.bold(16)).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).frame(height: 54)
-                .background(email.contains("@") ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                .clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!email.contains("@") || isSubmitting)
                 .safeAreaPadding(.bottom, 12)
             }
             .padding(.horizontal, 24).frame(maxWidth: 402)
