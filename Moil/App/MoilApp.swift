@@ -32,6 +32,8 @@ struct MoilApp: App {
                 .environmentObject(groupStore)
                 .environmentObject(sessionStore)
                 .environmentObject(eventStore)
+                // 날짜·시간 선택기까지 한국어로 나오도록 앱 전체 로케일을 고정합니다.
+                .environment(\.locale, Locale(identifier: "ko_KR"))
         }
     }
 }

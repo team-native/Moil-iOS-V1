@@ -35,7 +35,7 @@ struct CreateGroupView: View {
             MoilButton(title: "그룹 만들기", isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                 Task {
                     do {
-                        try await groupStore.create(name: name, nickname: "나", colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
+                        try await groupStore.create(name: name, nickname: MoilLocalAccount.displayName(fallback: nil), colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
                         didCreateGroup = true
                     } catch {
                         errorMessage = error.localizedDescription

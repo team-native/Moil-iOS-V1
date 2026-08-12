@@ -10,9 +10,8 @@ struct CalendarView: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
     private let calendar = Calendar.current
     @State private var isGroupMenuPresented = false
-    @State private var isScheduleComposerPresented = false
     @State private var isScheduleSearchPresented = false
-    @State private var scheduleDraftDay = 22
+    @State private var selectedDay: Int?
     @State private var isMemberViewPresented = false
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
@@ -21,7 +20,6 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
-    @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
 
     /// 날짜 칸마다 전체 목록을 다시 변환하지 않도록 한 번만 묶어 둡니다.
@@ -216,25 +214,21 @@ struct CalendarView: View {
                 }
             }
         }
-        .sheet(isPresented: $isScheduleComposerPresented) {
-            ScheduleComposerView(
-                day: scheduleDraftDay,
-                dateTitle: scheduleDraftDateTitle,
-                members: groupStore.members(for: groupStore.selectedGroupId)
-            ) { day, title, isAllDay, memberIDs in
-                createEvent(day: day, title: title, isAllDay: isAllDay, sharedMemberIDs: memberIDs)
-            }
-                .presentationDetents([.height(463)])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $selectedEvent) { event in
-            EventEditorView(event: event) { title in
-                updateEvent(event, title: title)
-            } onDelete: {
-                deleteEvent(event)
-            }
-            .presentationDetents([.height(300)])
-            .presentationDragIndicator(.visible)
+        .sheet(item: Binding(get: { selectedDay.map(DayScheduleSelection.init(day:)) }, set: { selectedDay = $0?.day })) { selection in
+            DayScheduleSheetContainer(
+                day: selection.day,
+                year: displayedYear,
+                month: displayedMonthValue,
+                events: eventsByDay[selection.day] ?? [],
+                members: groupStore.members(for: groupStore.selectedGroupId),
+                onCreate: { draft in createEvent(draft) },
+                onUpdate: { event, draft in updateEvent(event, draft: draft) },
+                onDelete: { event in deleteEvent(event) },
+                onLoadDetail: { event in await eventDetail(event) }
+            )
+            .presentationDetents([.height(MoilSheetMetrics.dayHeight)])
+            .presentationCornerRadius(26)
+            .presentationBackground(MoilSheetMetrics.sheetBackground)
         }
         .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView(showsTabBar: false) }
         .fullScreenCover(isPresented: $isMyPagePresented, onDismiss: {
@@ -317,11 +311,6 @@ struct CalendarView: View {
         return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
     }
 
-    private var scheduleDraftDateTitle: String {
-        let components = calendar.dateComponents([.month], from: displayedMonth)
-        return "\(components.month ?? 1)월 \(scheduleDraftDay)일"
-    }
-
     private func loadEvents() async {
         guard let groupId = groupStore.selectedGroupId else { return }
         do {
@@ -332,33 +321,35 @@ struct CalendarView: View {
         }
     }
 
-    private func createEvent(day: Int, title: String, isAllDay: Bool, sharedMemberIDs: [String]) {
+    private var displayedYear: Int {
+        calendar.component(.year, from: displayedMonth)
+    }
+
+    private var displayedMonthValue: Int {
+        calendar.component(.month, from: displayedMonth)
+    }
+
+    private func createEvent(_ draft: ScheduleDraft) {
         guard let groupId = groupStore.selectedGroupId, let groupID = Int(groupId) else {
             serverError = "그룹 정보를 불러오지 못했어요."
             return
         }
-        let memberIDs = sharedMemberIDs.compactMap(Int.init)
+        let memberIDs = draft.memberIDs.compactMap(Int.init)
         guard !memberIDs.isEmpty else {
             serverError = "일정을 공유할 구성원을 1명 이상 선택해주세요."
             return
         }
-        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
-        guard let year = components.year, let month = components.month else {
-            serverError = "일정 날짜를 만들지 못했어요."
-            return
-        }
-        // 날짜만 있는 API 값은 Date(시간대)를 거치지 않아야 KST에서 전날로 밀리지 않습니다.
-        let date = MoilCalendarDate.string(year: year, month: month, day: day)
         Task {
             do {
                 _ = try await sessionStore.service().createEvent(CreateEventRequest(
                     groupId: groupID,
-                    title: title,
-                    date: date,
-                    isAllDay: isAllDay,
-                    startTime: isAllDay ? nil : "09:00",
-                    endTime: isAllDay ? nil : "10:00",
-                    location: nil,
+                    title: draft.title,
+                    date: draft.dateString,
+                    isAllDay: false,
+                    startTime: draft.startTime,
+                    endTime: draft.endTime,
+                    location: draft.location.isEmpty ? nil : draft.location,
+                    memo: draft.memo.isEmpty ? nil : draft.memo,
                     sharedMemberIds: memberIDs
                 ))
                 await loadEvents()
@@ -366,22 +357,24 @@ struct CalendarView: View {
         }
     }
 
-    private func updateEvent(_ event: CalendarEvent, title: String) {
-        guard let groupId = groupStore.selectedGroupId else { return }
-        let currentUserIDs = groupStore.members(for: groupId).filter(\.isMe).compactMap { Int($0.id) }
-        let sharedMemberIDs = event.memberIDs.isEmpty ? currentUserIDs : event.memberIDs
+    private func updateEvent(_ event: CalendarEvent, draft: ScheduleDraft) {
+        let memberIDs = draft.memberIDs.compactMap(Int.init)
+        guard !memberIDs.isEmpty else {
+            serverError = "일정을 공유할 구성원을 1명 이상 선택해주세요."
+            return
+        }
         Task {
             do {
-                let request = UpdateEventRequest(
-                    title: title,
-                    date: event.date,
-                    isAllDay: event.isAllDay,
-                    startTime: event.startTime,
-                    endTime: event.endTime,
-                    location: event.location,
-                    sharedMemberIds: sharedMemberIDs
-                )
-                try await sessionStore.service().updateEvent(id: event.id, request: request)
+                try await sessionStore.service().updateEvent(id: event.id, request: UpdateEventRequest(
+                    title: draft.title,
+                    date: draft.dateString,
+                    isAllDay: false,
+                    startTime: draft.startTime,
+                    endTime: draft.endTime,
+                    location: draft.location.isEmpty ? nil : draft.location,
+                    memo: draft.memo.isEmpty ? nil : draft.memo,
+                    sharedMemberIds: memberIDs
+                ))
                 await loadEvents()
             } catch { serverError = error.localizedDescription }
         }
@@ -396,19 +389,16 @@ struct CalendarView: View {
         }
     }
 
-    private func selectEvent(_ event: CalendarEvent) async {
-        do {
-            let remoteEvent = try await sessionStore.service().event(id: event.id)
-            selectedEvent = CalendarEvent(remote: remoteEvent) ?? event
-        } catch {
-            selectedEvent = event
-        }
+    /// 목록 응답에는 메모·참여자가 빠져 있을 수 있어 상세를 한 번 더 불러옵니다.
+    private func eventDetail(_ event: CalendarEvent) async -> CalendarEvent {
+        guard let remote = try? await sessionStore.service().event(id: event.id),
+              let detail = CalendarEvent(remote: remote) else { return event }
+        return detail
     }
 
     private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
-            scheduleDraftDay = day
-            isScheduleComposerPresented = true
+            selectedDay = day
         } label: {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
@@ -423,10 +413,6 @@ struct CalendarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onLongPressGesture {
-            guard let event = events.first else { return }
-            Task { await selectEvent(event) }
-        }
     }
 
     private func eventChip(_ event: CalendarEvent) -> some View {
@@ -444,256 +430,8 @@ struct CalendarView: View {
 
 }
 
-private struct CalendarEvent: Identifiable {
-    /// 좁은 날짜 칸에서 말줄임표가 생기지 않도록 공백 포함 앞 여섯 글자만 씁니다.
-    var shortTitle: String { String(title.prefix(6)) }
-
-    let id: String
-    let day: Int
-    let owner: String
-    let title: String
-    let date: String
-    let color: Color
-    let isAllDay: Bool
-    let startTime: String?
-    let endTime: String?
-    let location: String?
-    let memberIDs: [Int]
-
-    init?(remote: MoilRemoteEvent) {
-        guard let normalizedDate = MoilCalendarDate.normalizedString(from: remote.date),
-              let eventDay = MoilCalendarDate.day(from: normalizedDate) else { return nil }
-        id = remote.id
-        day = eventDay
-        owner = remote.ownerName ?? "나"
-        title = remote.title
-        date = normalizedDate
-        color = MoilAvatarColor.color(for: remote.colorId)
-        isAllDay = remote.isAllDay
-        startTime = remote.startTime
-        endTime = remote.endTime
-        location = remote.location
-        memberIDs = remote.members.compactMap { $0.id.flatMap(Int.init) }
-    }
-}
-
-/// API의 `yyyy-MM-dd` 값과 ISO-8601 날짜 시간을 모두 로컬 달력 날짜로 정규화합니다.
-/// 서버가 UTC 날짜 시간을 반환해도 화면과 다음 수정 요청에서 하루가 밀리지 않게 합니다.
-private enum MoilCalendarDate {
-    private static var calendar: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = .autoupdatingCurrent
-        return calendar
-    }
-
-    static func string(year: Int, month: Int, day: Int) -> String {
-        String(format: "%04d-%02d-%02d", year, month, day)
-    }
-
-    static func normalizedString(from value: String) -> String? {
-        if let dateOnly = dateOnlyComponents(from: value) {
-            return string(year: dateOnly.year, month: dateOnly.month, day: dateOnly.day)
-        }
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = formatter.date(from: value) ?? {
-            formatter.formatOptions = [.withInternetDateTime]
-            return formatter.date(from: value)
-        }() ?? localDate(from: value)
-        guard let date else { return nil }
-
-        let components = calendar.dateComponents([.year, .month, .day], from: date)
-        guard let year = components.year, let month = components.month, let day = components.day else { return nil }
-        return string(year: year, month: month, day: day)
-    }
-
-    static func day(from date: String) -> Int? {
-        dateOnlyComponents(from: date)?.day
-    }
-
-    private static func dateOnlyComponents(from value: String) -> (year: Int, month: Int, day: Int)? {
-        // 서버가 `yyyy-MM-dd` 또는 `yyyy-MM-ddTHH:mm:ssZ`를 반환해도
-        // 원문 날짜를 우선 사용해 UTC 변환으로 전날로 밀리는 일을 막습니다.
-        let datePrefix = String(value.prefix(10))
-        let parts = datePrefix.split(separator: "-", omittingEmptySubsequences: false)
-        guard parts.count == 3,
-              parts[0].count == 4,
-              parts[1].count == 2,
-              parts[2].count == 2,
-              let year = Int(parts[0]),
-              let month = Int(parts[1]),
-              let day = Int(parts[2]),
-              (1...12).contains(month),
-              (1...31).contains(day) else { return nil }
-        return (year, month, day)
-    }
-
-    private static func localDate(from value: String) -> Date? {
-        let formats = ["yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd'T'HH:mm:ss"]
-
-        for format in formats {
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.calendar = Calendar(identifier: .gregorian)
-            formatter.timeZone = .autoupdatingCurrent
-            formatter.dateFormat = format
-
-            if let date = formatter.date(from: value) {
-                return date
-            }
-        }
-
-        return nil
-    }
-}
-
 #Preview("캘린더") {
     CalendarView()
-}
-
-private struct ScheduleComposerView: View {
-    @Environment(\.dismiss) private var dismiss
-    let day: Int
-    let dateTitle: String
-    let members: [MoilRemoteMember]
-    let onSave: (Int, String, Bool, [String]) -> Void
-    @State private var title = ""
-    @State private var allDay = false
-    @State private var selectedMemberIDs: Set<String>
-
-    init(day: Int, dateTitle: String, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
-        self.day = day
-        self.dateTitle = dateTitle
-        self.members = members
-        self.onSave = onSave
-        let currentUser = members.filter(\.isMe).map(\.id)
-        _selectedMemberIDs = State(initialValue: Set(currentUser.isEmpty ? members.prefix(1).map(\.id) : currentUser))
-    }
-
-    private var trimmedTitle: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var canSave: Bool {
-        !trimmedTitle.isEmpty && !selectedMemberIDs.isEmpty
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: dismiss.callAsFunction)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("새 일정").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("저장") {
-                    onSave(day, trimmedTitle, allDay, Array(selectedMemberIDs))
-                    dismiss()
-                }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
-                    .disabled(!canSave)
-            }
-            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-            .padding(.top, 34)
-            .padding(.bottom, 18)
-
-            MoilTextField(placeholder: "일정 제목", text: $title)
-                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .padding(.bottom, 8)
-
-            ScheduleRow(title: "날짜", value: dateTitle)
-            HStack {
-                Text("하루 종일").font(MoilTypography.regular(15))
-                Spacer()
-                Toggle("", isOn: $allDay).labelsHidden().tint(MoilColor.primary)
-            }
-            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(height: 50)
-            .overlay(alignment: .bottom) { Divider().padding(.horizontal, MoilTabScreenMetrics.horizontalPadding) }
-            ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
-            ScheduleRow(title: "위치", value: "추가", secondary: true)
-
-            VStack(alignment: .leading, spacing: 18) {
-                Text("누구와 공유할까요")
-                    .font(MoilTypography.semibold(13))
-                    .foregroundStyle(MoilColor.textSecondary)
-                HStack(spacing: 14) {
-                    ForEach(members) { member in
-                        Button { toggle(member.id) } label: {
-                            VStack(spacing: 6) {
-                                MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
-                                    .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
-                                Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).padding(.top, 16)
-            Spacer()
-        }
-        .background(MoilColor.surface)
-    }
-
-    private func toggle(_ memberID: String) {
-        if selectedMemberIDs.contains(memberID) { selectedMemberIDs.remove(memberID) } else { selectedMemberIDs.insert(memberID) }
-    }
-}
-
-private struct EventEditorView: View {
-    @Environment(\.dismiss) private var dismiss
-    let event: CalendarEvent
-    let onSave: (String) -> Void
-    let onDelete: () -> Void
-    @State private var title: String
-
-    init(event: CalendarEvent, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
-        self.event = event
-        self.onSave = onSave
-        self.onDelete = onDelete
-        _title = State(initialValue: event.title)
-    }
-
-    private var trimmedTitle: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("일정 수정").font(MoilTypography.bold(20))
-                Spacer()
-                Button("닫기", action: dismiss.callAsFunction).foregroundStyle(MoilColor.textSecondary)
-            }
-            MoilTextField(placeholder: "일정 제목", text: $title)
-            HStack(spacing: 10) {
-                MoilButton(title: "삭제", style: .outline) { onDelete(); dismiss() }
-                MoilButton(title: "저장", isEnabled: !trimmedTitle.isEmpty) { onSave(trimmedTitle); dismiss() }
-            }
-        }
-        .padding(20)
-        .background(MoilColor.surface)
-    }
-}
-
-private struct ScheduleRow: View {
-    let title: String
-    let value: String
-    var secondary = false
-
-    var body: some View {
-        HStack {
-            Text(title).font(MoilTypography.regular(15))
-            Spacer()
-            Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
-        }
-        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(height: 46)
-        .overlay(alignment: .bottom) { Divider().padding(.horizontal, MoilTabScreenMetrics.horizontalPadding) }
-    }
 }
 
 private struct ScheduleSearchView: View {

@@ -5,6 +5,8 @@ struct MyPageView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @AppStorage("moilDarkMode") private var isDarkMode = true
+    @AppStorage(MoilLocalAccount.nameKey) private var storedName = ""
+    @AppStorage(MoilLocalAccount.colorKey) private var profileColorId = ""
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
     @State private var isMemberPresented = false
@@ -33,29 +35,38 @@ struct MyPageView: View {
         self.showsTabBar = showsTabBar
         self.onAccountRoute = onAccountRoute
     }
-    /// 서버가 내려준 내 닉네임입니다. 아직 못 받았으면 빈 값 대신 기본값을 씁니다.
+    /// 회원가입 때 저장한 이름을 먼저 쓰고, 없으면 서버 닉네임을 씁니다.
     private var myName: String {
-        groupStore.groups
+        MoilLocalAccount.displayName(fallback: groupStore.groups
             .compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.nickname }
-            .first ?? "나"
+            .first)
     }
 
     @MainActor
     private var myColor: Color {
-        groupStore.groups
-            .compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.colorId }
-            .first.map(MoilAvatarColor.color(for:)) ?? MoilAvatarColor.green
+        let colorId = profileColorId.isEmpty
+            ? groupStore.groups.compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.colorId }.first
+            : profileColorId
+        return colorId.map(MoilAvatarColor.color(for:)) ?? MoilAvatarColor.green
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 14) {
-                    MoilAvatar(color: myColor, size: 56)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(myName).font(MoilTypography.bold(21))
+                Button { onAccountRoute?(.profileEdit) } label: {
+                    HStack(spacing: 14) {
+                        MoilAvatar(color: myColor, size: 56)
+                        Text(myName)
+                            .font(MoilTypography.bold(21))
+                            .foregroundStyle(MoilColor.textPrimary)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(MoilColor.textTertiary)
                     }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .padding(.bottom, 20)
 
                 GroupSection(title: "내 그룹") {
@@ -80,7 +91,7 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 28)
                 GroupSection(title: "환경설정") {
-                    Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
+                    MoilToggle(title: "다크 모드", isOn: $isDarkMode).padding(14)
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
@@ -156,6 +167,7 @@ struct MyPageView: View {
 }
 
 enum MoilAccountRoute: Hashable {
+    case profileEdit
     case passwordChange
     case accountDeletion
 }
@@ -170,6 +182,8 @@ struct MoilAccountPage: View {
 
     var body: some View {
         switch route {
+        case .profileEdit:
+            ProfileEditView(onClose: onClose)
         case .passwordChange:
             PasswordChangeView(onClose: onClose)
         case .accountDeletion:
@@ -284,9 +298,7 @@ private struct AccountDeletionView: View {
                         MoilValidatedField { MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress, keyboardType: .emailAddress) }
                         MoilValidatedField { MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password) }
                     }
-                    Toggle("그룹 데이터 유지", isOn: $leftData)
-                        .font(MoilTypography.regular(15))
-                        .tint(MoilColor.primary)
+                    MoilToggle(title: "그룹 데이터 유지", isOn: $leftData)
                         .padding(.vertical, 2)
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
@@ -331,4 +343,91 @@ private struct GroupRow: View {
     let title: String; let color: Color
     init(_ title: String, _ color: Color) { self.title = title; self.color = color }
     var body: some View { HStack { Circle().fill(color).frame(width: 8, height: 8); Text(title).font(MoilTypography.semibold(15)); Spacer(); Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(MoilColor.textTertiary) }.padding(14) }
+}
+
+/// 마이페이지 > 프로필 변경입니다. 이름은 서버에 저장하고, 색은 기기에 저장합니다.
+private struct ProfileEditView: View {
+    let onClose: () -> Void
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    @EnvironmentObject private var groupStore: MoilGroupStore
+    @AppStorage(MoilLocalAccount.nameKey) private var storedName = ""
+    @AppStorage(MoilLocalAccount.colorKey) private var profileColorId = ""
+    @State private var name = ""
+    @State private var selectedColor = MoilAvatarColor.green
+    @State private var message: String?
+    @State private var isSaving = false
+    private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
+
+    private var canSubmit: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSaving
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MoilInlineHeader(title: "프로필 변경", onBack: onClose)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    MoilAvatar(color: selectedColor, size: 76)
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, 24)
+
+                    MoilFormStack {
+                        MoilValidatedField(label: "이름") {
+                            MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
+                        }
+                    }
+
+                    Text("내 프로필 색 선택")
+                        .font(MoilTypography.semibold(12))
+                        .foregroundStyle(MoilColor.textTertiary)
+                        .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+                        .padding(.bottom, 18)
+                    MoilColorPicker(colors: colors, selection: $selectedColor)
+
+                    if let message {
+                        Text(message)
+                            .font(MoilTypography.regular(12))
+                            .foregroundStyle(MoilColor.error)
+                            .padding(.top, 14)
+                    }
+                }
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, 12)
+                .padding(.bottom, 32)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            MoilButton(title: "저장", isEnabled: canSubmit) { Task { await save() } }
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isSaving)
+        .onAppear {
+            name = storedName
+            if name.isEmpty {
+                name = groupStore.groups
+                    .compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.nickname }
+                    .first ?? ""
+            }
+            if !profileColorId.isEmpty {
+                selectedColor = MoilAvatarColor.color(for: profileColorId)
+            }
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let profile = try await sessionStore.service().updateProfileName(trimmed)
+            storedName = profile.name
+            profileColorId = MoilAvatarColor.id(for: selectedColor)
+            onClose()
+        } catch {
+            message = error.localizedDescription
+        }
+    }
 }

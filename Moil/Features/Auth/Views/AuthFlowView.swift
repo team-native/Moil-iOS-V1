@@ -133,6 +133,8 @@ struct AuthFlowView: View {
         do {
             let tokens = try await sessionStore.service().confirmSignUp(sessionId: signUpSessionId, password: password, confirmation: confirmation)
             sessionStore.save(tokens)
+            // 로그인 응답에는 이름이 없어서, 회원가입 때 받은 이름을 기기에 저장해 씁니다.
+            MoilLocalAccount.name = signUpName
             try await groupStore.load(using: sessionStore.service())
             route = .main
             return nil

@@ -118,12 +118,14 @@ struct MemberView: View {
                 PermissionEditorView(members: currentMembers) { updatedRoles in
                     Task { await updateRoles(updatedRoles) }
                 }
-                    .presentationDetents([.height(327)])
+                    .presentationDetents([.height(CGFloat(150 + currentMembers.count * 52))])
+                    .presentationCornerRadius(26)
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $isSharingInvite) {
                 InviteShareView(inviteCode: inviteCode)
-                    .presentationDetents([.height(250)])
+                    .presentationDetents([.height(230)])
+                    .presentationCornerRadius(26)
                     .presentationDragIndicator(.visible)
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
@@ -155,7 +157,10 @@ struct MemberView: View {
             }
     }
 
+    @ViewBuilder
     private var groupPicker: some View {
+        // 그룹이 하나뿐이면 고를 것이 없어 감춥니다.
+        if groupStore.groups.count > 1 {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(groupStore.groups) { group in
@@ -172,8 +177,11 @@ struct MemberView: View {
                     .contentShape(Capsule())
                 }
             }
+            .padding(.vertical, 2)
         }
+        .frame(height: 38)
         .padding(.bottom, 28)
+        }
     }
 
     private var memberList: some View {
@@ -214,8 +222,8 @@ struct MemberView: View {
         VStack(alignment: .leading, spacing: 0) {
             SectionTitle("그룹 설정").padding(.bottom, 8)
             VStack(spacing: 0) {
-                Toggle("알림 받기", isOn: $notificationsEnabled)
-                    .padding(14).tint(MoilColor.primary).disabled(isSavingNotification)
+                MoilToggle(title: "알림 받기", isOn: $notificationsEnabled)
+                    .padding(14).disabled(isSavingNotification)
                 Divider()
                 Button("그룹 나가기") { isLeavingGroup = true }
                     .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
@@ -355,8 +363,10 @@ private struct InviteShareView: View {
     @State private var copied = false
     let inviteCode: String
 
+    private var inviteLink: String { "moil.app/join/\(inviteCode)" }
+
     private func copyInviteLink() {
-        UIPasteboard.general.string = inviteCode
+        UIPasteboard.general.string = inviteLink
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         copied = true
         Task {
@@ -365,29 +375,69 @@ private struct InviteShareView: View {
         }
     }
 
+    /// 피그마 기준: 제목·링크는 왼쪽 정렬, 공유 버튼 3개는 가운데 정렬입니다.
     var body: some View {
-        VStack(spacing: 20) {
-            Text("초대 링크 공유").font(MoilTypography.bold(18)).padding(.top, 12)
-            Text("친구에게 링크를 보내 그룹에 초대하세요")
-                .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
-            HStack(spacing: 24) {
-                ForEach([("메시지", "message.fill"), ("카카오톡", "bubble.left.and.bubble.right.fill"), ("링크 복사", "doc.on.doc")], id: \.0) { item in
-                    Button {
-                        copyInviteLink()
-                    } label: {
-                        VStack(spacing: 8) {
-                            Circle().fill(MoilColor.primary.opacity(0.12)).frame(width: 52, height: 52)
-                                .overlay { Image(systemName: item.1).foregroundStyle(MoilColor.primary) }
-                            Text(item.0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textPrimary)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            Text("초대 링크 공유")
+                .font(MoilTypography.bold(20))
+                .foregroundStyle(MoilColor.textPrimary)
+                .padding(.top, 26)
+            Text(copied ? "링크를 복사했어요" : inviteLink)
+                .font(MoilTypography.regular(14))
+                .foregroundStyle(copied ? MoilColor.primary : MoilColor.textSecondary)
+                .padding(.top, 8)
+
+            HStack(spacing: 17) {
+                shareButton("카카오톡", color: Color(red: 0.984, green: 0.898, blue: 0.000), icon: "message.fill", iconColor: .black) {
+                    share(text: inviteLink)
+                }
+                shareButton("메시지", color: Color(red: 0.361, green: 0.553, blue: 0.937), icon: "message.fill", iconColor: .white) {
+                    share(text: inviteLink)
+                }
+                shareButton("링크 복사", color: MoilColor.surface, icon: "doc.on.doc", iconColor: MoilColor.textPrimary, hasBorder: true) {
+                    copyInviteLink()
                 }
             }
-            Text(copied ? "초대 링크를 복사했습니다" : "")
-                .font(MoilTypography.regular(12)).foregroundStyle(MoilColor.primary)
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 26)
+
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity).background(MoilColor.surface)
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(MoilColor.surface)
+    }
+
+    private func shareButton(
+        _ title: String,
+        color: Color,
+        icon: String,
+        iconColor: Color,
+        hasBorder: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 50, height: 50)
+                    .overlay { Circle().stroke(MoilColor.emptyStateBorder, lineWidth: hasBorder ? 1 : 0) }
+                    .overlay { Image(systemName: icon).font(.system(size: 19, weight: .medium)).foregroundStyle(iconColor) }
+                Text(title)
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.textSecondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// 카카오톡·메시지는 iOS 기본 공유 시트로 넘깁니다.
+    private func share(text: String) {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = scene.keyWindow?.rootViewController else { return }
+        let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        root.presentedViewController?.present(controller, animated: true) ?? root.present(controller, animated: true)
     }
 }
 
@@ -410,7 +460,8 @@ private struct GroupNameEditor: View {
             }
             .padding(20)
             .frame(maxWidth: 320)
-            .background(MoilColor.surface)
+            // 입력 칸과 같은 색이면 칸이 안 보여서, 다이얼로그는 한 단계 어두운 배경을 씁니다.
+            .background(MoilColor.background)
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .padding(.horizontal, 32)
         }
@@ -521,41 +572,78 @@ private struct PermissionEditorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("멤버 권한 설정")
-                .font(MoilTypography.bold(17))
-                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .padding(.top, 20)
-                .padding(.bottom, 14)
+                .font(MoilTypography.bold(20))
+                .foregroundStyle(MoilColor.textPrimary)
+                .padding(.top, 26)
+                .padding(.bottom, 18)
+
             ForEach(members) { member in
                 HStack(spacing: 12) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 34)
+                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 28)
                     Text(member.nickname)
                         .font(MoilTypography.semibold(15))
+                        .foregroundStyle(MoilColor.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 12)
-                    Picker("권한", selection: Binding(get: { administrators.contains(member.id) }, set: { enabled in
-                        if enabled {
-                            administrators.insert(member.id)
-                        } else {
-                            administrators.remove(member.id)
+                    RolePicker(isAdministrator: Binding(
+                        get: { administrators.contains(member.id) },
+                        set: { enabled in
+                            var updated = administrators
+                            if enabled { updated.insert(member.id) } else { updated.remove(member.id) }
+                            var transaction = Transaction()
+                            transaction.disablesAnimations = true
+                            withTransaction(transaction) { administrators = updated }
                         }
-                    })) {
-                        Text("멤버").tag(false)
-                        Text("관리자").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 132)
+                    ))
                 }
-                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .frame(height: 56)
-                if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, MoilTabScreenMetrics.horizontalPadding) }
+                .frame(height: 52)
+                if member.id != members.last?.id {
+                    Rectangle().fill(MoilColor.emptyStateBorder).frame(height: 1)
+                }
             }
+
             MoilButton(title: "완료") {
                 onSave(members.compactMap { member in
                     guard let userId = Int(member.id) else { return nil }
                     return MemberRoleRequest(userId: userId, role: administrators.contains(member.id) ? "admin" : "member")
                 })
+                dismiss()
             }
+            .padding(.top, 22)
+
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(MoilColor.surface)
+    }
+}
+
+/// 피그마의 관리자/멤버 알약형 선택입니다.
+private struct RolePicker: View {
+    @Binding var isAdministrator: Bool
+
+    var body: some View {
+        HStack(spacing: 0) {
+            segment("관리자", isSelected: isAdministrator) { isAdministrator = true }
+            segment("멤버", isSelected: !isAdministrator) { isAdministrator = false }
+        }
+        .padding(3)
+        .background(MoilColor.background)
+        .clipShape(Capsule())
+    }
+
+    private func segment(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(MoilTypography.bold(13))
+                .foregroundStyle(isSelected ? .white : MoilColor.textTertiary)
+                .frame(width: 58, height: 30)
+                .background(isSelected ? MoilColor.primary : .clear)
+                .clipShape(Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
