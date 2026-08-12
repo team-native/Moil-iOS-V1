@@ -285,6 +285,11 @@ private struct SignUpInfoView: View {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && !email.isEmpty && emailIsValid
     }
 
+    private var emailState: MoilFieldState {
+        guard !email.isEmpty else { return .neutral }
+        return emailIsValid ? .success("올바른 형식이에요") : .failure("올바른 이메일 주소를 입력해주세요")
+    }
+
     var body: some View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
@@ -296,30 +301,15 @@ private struct SignUpInfoView: View {
                         .foregroundStyle(MoilColor.textPrimary)
                         .safeAreaPadding(.top, 16)
 
-                    Text("이름")
-                        .font(MoilTypography.semibold(12))
-                        .foregroundStyle(MoilColor.textTertiary)
-                        .padding(.top, 20)
-                        .padding(.bottom, 10)
-                    AuthTextField(title: "이름 입력", text: $name, contentType: .name)
-
-                    Text("이메일")
-                        .font(MoilTypography.semibold(12))
-                        .foregroundStyle(MoilColor.textTertiary)
-                        .padding(.top, 18)
-                        .padding(.bottom, 10)
-                    AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(emailIsValid ? .clear : MoilColor.error, lineWidth: 1)
-                        }
-
-                    if !emailIsValid {
-                        Text("올바른 이메일 주소를 입력해주세요")
-                            .font(MoilTypography.regular(12))
-                            .foregroundStyle(MoilColor.error)
-                            .padding(.top, 8)
+                    MoilValidatedField(label: "이름") {
+                        AuthTextField(title: "이름 입력", text: $name, contentType: .name)
                     }
+                    .padding(.top, 20)
+
+                    MoilValidatedField(label: "이메일", state: emailState) {
+                        AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+                    }
+                    .padding(.top, 18)
                 }
 
                 Spacer()
@@ -401,6 +391,18 @@ private struct EmailVerificationView: View {
 
     private var isComplete: Bool { code.count == 6 }
 
+    private var codeState: MoilFieldState {
+        guard !code.isEmpty else { return .neutral }
+        return isComplete ? .success("인증번호가 확인되었어요") : .failure("인증번호 6자리를 모두 입력해주세요")
+    }
+
+    /// 입력 중인 칸과 완료 상태를 테두리로 구분합니다.
+    private func codeBoxBorder(at index: Int) -> Color {
+        if isComplete { return MoilColor.success }
+        if index == code.count && !code.isEmpty { return MoilColor.primary }
+        return .clear
+    }
+
     var body: some View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
@@ -436,7 +438,7 @@ private struct EmailVerificationView: View {
                         }
                             .frame(width: 52, height: 52)
                             .background(MoilColor.surface)
-                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(index == code.count && !code.isEmpty ? MoilColor.error : .clear, lineWidth: 1) }
+                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
@@ -465,6 +467,18 @@ private struct EmailVerificationView: View {
                     }
                 }
                 .padding(.top, 16)
+
+                if let message = codeState.message {
+                    HStack(spacing: 6) {
+                        if codeState.isSuccess {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        Text(message).font(MoilTypography.bold(12))
+                    }
+                    .foregroundStyle(codeState.tint)
+                    .padding(.top, 10)
+                }
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
                     .font(MoilTypography.semibold(13))

@@ -5,6 +5,7 @@ enum MoilColor {
     static let primary = Color("BrandPrimary")
     static let primaryPressed = Color("BrandPrimaryPressed")
     static let error = Color("Error")
+    static let success = Color("Success")
 
     // Neutral
     static let background = Color("Background")
