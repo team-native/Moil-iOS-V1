@@ -29,22 +29,34 @@ enum MoilColor {
     static let black40 = Color.black.opacity(0.40)
 }
 
+/// 피그마 원본 서체인 Inter를 씁니다.
+/// Inter에는 한글 글자가 없어서, 같은 굵기의 Pretendard를 뒤에 이어 붙여
+/// 영문·숫자는 Inter로, 한글은 Pretendard로 그려지게 합니다.
+/// (Pretendard의 영문 자형은 Inter를 바탕으로 만들어져 두 서체가 섞여도 어긋나 보이지 않습니다.)
 enum MoilTypography {
     static func regular(_ size: CGFloat) -> Font {
-        .custom("Pretendard-Regular", size: size)
+        font("Inter-Regular", fallback: "Pretendard-Regular", size: size)
     }
 
     static func semibold(_ size: CGFloat) -> Font {
-        .custom("Pretendard-SemiBold", size: size)
+        font("Inter-SemiBold", fallback: "Pretendard-SemiBold", size: size)
     }
 
     static func bold(_ size: CGFloat) -> Font {
-        .custom("Pretendard-Bold", size: size)
+        font("Inter-Bold", fallback: "Pretendard-Bold", size: size)
     }
 
-    /// 번들에는 Bold가 가장 굵어, 그보다 굵게 보여야 하는 큰 제목에만 굵기를 더 올려 씁니다.
+    /// Bold보다 굵어야 하는 큰 제목에 씁니다.
     static func heavy(_ size: CGFloat) -> Font {
-        .custom("Pretendard-Bold", size: size).weight(.black)
+        font("Inter-ExtraBold", fallback: "Pretendard-Bold", size: size)
+    }
+
+    private static func font(_ name: String, fallback: String, size: CGFloat) -> Font {
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: name,
+            .cascadeList: [UIFontDescriptor(fontAttributes: [.name: fallback])]
+        ])
+        return Font(UIFont(descriptor: descriptor, size: size))
     }
 }
 
