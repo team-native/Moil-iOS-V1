@@ -74,10 +74,10 @@ struct MemberView: View {
                     }
                 )
             } else {
+                MoilScreenHeader(title: "멤버")
                 ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     groupPicker
-                        .safeAreaPadding(.top, MoilTabScreenMetrics.titleTopPadding)
                     memberList
                     inviteCodeCard
                     groupSettings

@@ -54,6 +54,13 @@ struct AuthFlowView: View {
         // 런치 화면과 auth 화면은 피그마에서 다크 한 가지로만 정의되어 있습니다.
         .preferredColorScheme(route == .main ? (isDarkMode ? .dark : .light) : .dark)
         .task { await restoreSession() }
+        // 토큰 재발급까지 실패해 세션이 끊기면 메인에 머물지 않고 로그인으로 돌아갑니다.
+        .onChange(of: sessionStore.accessToken) { _, token in
+            guard route == .main, token == nil else { return }
+            groupStore.reset()
+            eventStore.reset()
+            route = .login
+        }
     }
 
     private func login(email: String, password: String) async -> String? {
