@@ -220,13 +220,15 @@ private struct PasswordChangeView: View {
         VStack(spacing: 0) {
         MoilInlineHeader(title: "비밀번호 변경", onBack: onClose)
         ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: MoilTabScreenMetrics.fieldSpacing) {
                     Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
-                    MoilTextField(placeholder: "현재 비밀번호", text: $origin, isSecure: true, contentType: .password)
-                    MoilTextField(placeholder: "새 비밀번호", text: $newPassword, isSecure: true, contentType: .newPassword)
-                    MoilTextField(placeholder: "새 비밀번호 확인", text: $confirmation, isSecure: true, contentType: .newPassword)
+                    MoilFormStack {
+                        MoilValidatedField { MoilTextField(placeholder: "현재 비밀번호", text: $origin, isSecure: true, contentType: .password) }
+                        MoilValidatedField { MoilTextField(placeholder: "새 비밀번호", text: $newPassword, isSecure: true, contentType: .newPassword) }
+                        MoilValidatedField { MoilTextField(placeholder: "새 비밀번호 확인", text: $confirmation, isSecure: true, contentType: .newPassword) }
+                    }
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
@@ -267,12 +269,14 @@ private struct AccountDeletionView: View {
         VStack(spacing: 0) {
         MoilInlineHeader(title: "회원 탈퇴", onBack: onClose)
         ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: MoilTabScreenMetrics.fieldSpacing) {
                     Text("탈퇴하면 계정에 접근할 수 없어요.")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
-                    MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress, keyboardType: .emailAddress)
-                    MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                    MoilFormStack {
+                        MoilValidatedField { MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress, keyboardType: .emailAddress) }
+                        MoilValidatedField { MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password) }
+                    }
                     Toggle("그룹 데이터 유지", isOn: $leftData)
                         .font(MoilTypography.regular(15))
                         .tint(MoilColor.primary)

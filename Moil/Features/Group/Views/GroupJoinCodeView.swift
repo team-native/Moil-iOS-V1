@@ -28,8 +28,12 @@ struct GroupJoinCodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             MoilScreenHeader(title: "그룹 참여", subtitle: "초대 코드를 입력해주세요", onBack: backAction)
             VStack(alignment: .leading, spacing: 0) {
-            Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.bottom, 10)
-            MoilTextField(placeholder: "FAM-0000", text: $code, autocapitalization: .characters, tracking: 1)
+            MoilFormStack {
+                MoilValidatedField(label: "초대 코드") {
+                    MoilTextField(placeholder: "FAM-0000", text: $code, autocapitalization: .characters, tracking: 1)
+                }
+            }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 .overlay { RoundedRectangle(cornerRadius: 14).stroke(error == nil ? Color.clear : MoilColor.error, lineWidth: 1) }
                 .onChange(of: code) { _, value in
                     let normalized = String(value.uppercased().prefix(64))

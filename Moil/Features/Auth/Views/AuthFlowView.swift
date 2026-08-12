@@ -310,15 +310,15 @@ private struct SignUpInfoView: View {
 
     var body: some View {
         MoilAuthScaffold(title: "회원가입", onBack: onBack) {
-            MoilValidatedField(label: "이름") {
-                MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
+            MoilFormStack {
+                MoilValidatedField(label: "이름") {
+                    MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
+                }
+                MoilValidatedField(label: "이메일", state: emailState) {
+                    MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
+                }
             }
-            .padding(.top, 20)
-
-            MoilValidatedField(label: "이메일", state: emailState) {
-                MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
-            }
-            .padding(.top, 18)
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
 
             if let serverError {
                 Text(serverError)
@@ -368,7 +368,12 @@ private struct PasswordResetEmailView: View {
                 .safeAreaPadding(.top, 16)
                 Text("가입한 이메일 주소로 인증번호를 보낼게요.")
                     .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary).padding(.top, 12)
-                MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
+                MoilFormStack {
+                    MoilValidatedField(label: "이메일") {
+                        MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
+                    }
+                }
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
                 MoilButton(title: "인증번호 받기", isEnabled: email.contains("@") && !isSubmitting) {
@@ -530,15 +535,15 @@ private struct PasswordSetupView: View {
 
     var body: some View {
         MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack) {
-            MoilValidatedField(label: "비밀번호", state: passwordState) {
-                MoilTextField(placeholder: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+            MoilFormStack {
+                MoilValidatedField(label: "비밀번호", state: passwordState) {
+                    MoilTextField(placeholder: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+                }
+                MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
+                    MoilTextField(placeholder: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
+                }
             }
-            .padding(.top, 20)
-
-            MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
-                MoilTextField(placeholder: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
-            }
-            .padding(.top, 22)
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
 
             if let serverError {
                 Text(serverError)

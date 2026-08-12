@@ -28,17 +28,21 @@ enum MoilFieldState: Equatable {
 }
 
 /// 라벨과 입력 칸, 검증 문구를 한 덩어리로 묶습니다.
+/// 여러 개를 쌓을 때는 `MoilFormStack`을 써서 간격까지 같게 맞춥니다.
 struct MoilValidatedField<Field: View>: View {
-    let label: String
+    /// 라벨이 없는 폼도 같은 컴포넌트를 쓰도록 선택 항목입니다.
+    var label: String?
     var state: MoilFieldState = .neutral
     @ViewBuilder let field: Field
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(label)
-                .font(MoilTypography.semibold(12))
-                .foregroundStyle(MoilColor.textTertiary)
-                .padding(.bottom, 10)
+            if let label {
+                Text(label)
+                    .font(MoilTypography.semibold(12))
+                    .foregroundStyle(MoilColor.textTertiary)
+                    .padding(.bottom, 10)
+            }
 
             field
                 .overlay {
@@ -58,6 +62,17 @@ struct MoilValidatedField<Field: View>: View {
                 .foregroundStyle(state.tint)
                 .padding(.top, 8)
             }
+        }
+    }
+}
+
+/// 폼 입력 칸들을 같은 간격으로 쌓습니다.
+struct MoilFormStack<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MoilTabScreenMetrics.fieldSpacing) {
+            content
         }
     }
 }
