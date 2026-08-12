@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AuthFlowView: View {
+    @AppStorage("moilDarkMode") private var isDarkMode = false
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
@@ -50,6 +51,8 @@ struct AuthFlowView: View {
             MoilTabNavigationView(onLogout: logout)
         }
         }
+        // 런치 화면과 auth 화면은 피그마에서 다크 한 가지로만 정의되어 있습니다.
+        .preferredColorScheme(route == .main ? (isDarkMode ? .dark : .light) : .dark)
         .task { await restoreSession() }
     }
 
@@ -193,78 +196,100 @@ private struct LoginView: View {
             MoilColor.background
                 .ignoresSafeArea()
 
+            // 피그마: 컨테이너 좌우 24, 위 40, 아래 34
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    VStack(spacing: 6) {
-                        Image("MoilMascot")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 75, height: 74)
-                        Text("모일")
-                            .font(MoilTypography.bold(22))
-                            .foregroundStyle(MoilColor.textPrimary)
-                        Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                    }
+                Spacer(minLength: 0)
+
+                // 피그마: 마스코트 76x76.34, 아래 10
+                Image("MoilMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 76, height: 76.34)
+                    .padding(.bottom, 10)
+
+                // 피그마: 위 6 / 아래 2
+                Text("모일")
+                    .font(MoilTypography.bold(22))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.top, 6)
+                    .padding(.bottom, 2)
+
+                Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 6)
+                    .padding(.bottom, 2)
+                    // 피그마: 로고 블록 아래 36
                     .padding(.bottom, 36)
 
-                    VStack(spacing: 12) {
-                        AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                        AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                        HStack {
-                            Spacer()
-                            Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
-                                .font(MoilTypography.regular(13))
-                                .foregroundStyle(MoilColor.textSecondary)
-                        }
-                    }
+                AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                    // 피그마: 이메일 칸 아래 12
+                    .padding(.bottom, 12)
 
-                    SocialLoginRow { provider in
-                        errorMessage = "\(provider) 로그인은 준비 중이에요."
-                    }
-                    .padding(.top, 44)
+                AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                    // 피그마: 비밀번호 블록 63, 칸 53
+                    .padding(.bottom, 10)
+
+                HStack {
+                    Spacer(minLength: 0)
+                    Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
+                .padding(.top, 4)
+                .padding(.bottom, 2)
 
-                VStack(spacing: 14) {
-                        Button("로그인") {
-                            Task {
-                                isSubmitting = true
-                                errorMessage = await onLogin(email, password)
-                                isSubmitting = false
-                            }
-                        }
-                            .font(MoilTypography.bold(16))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .disabled(!canSubmit)
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(MoilTypography.regular(12))
-                                .foregroundStyle(MoilColor.error)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                Spacer(minLength: 0)
 
-                        Button {
-                            showingSignUp = true
-                        } label: {
-                            Text("계정이 없으신가요? ")
-                                .foregroundStyle(MoilColor.textSecondary)
-                            + Text("회원가입")
-                                .fontWeight(.bold)
-                                .foregroundStyle(MoilColor.primary)
-                        }
-                        .font(MoilTypography.regular(14))
+                SocialLoginRow { provider in
+                    errorMessage = "\(provider) 로그인은 준비 중이에요."
                 }
+                // 피그마: 아이콘 아래 52에서 하단 블록 시작
+                .padding(.bottom, 52)
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.error)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 8)
+                }
+
+                // 피그마: 버튼 위 18 / 아래 17, 모서리 14
+                Button("로그인") {
+                    Task {
+                        isSubmitting = true
+                        errorMessage = await onLogin(email, password)
+                        isSubmitting = false
+                    }
+                }
+                .font(MoilTypography.bold(16))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 18)
+                .padding(.bottom, 17)
+                .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .disabled(!canSubmit || isSubmitting)
+
+                // 피그마: 버튼과 14 간격, 위 3 / 아래 2
+                Button {
+                    showingSignUp = true
+                } label: {
+                    Text("계정이 없으신가요? ")
+                        .foregroundStyle(MoilColor.textSecondary)
+                    + Text("회원가입")
+                        .fontWeight(.bold)
+                        .foregroundStyle(MoilColor.primary)
+                }
+                .font(MoilTypography.regular(14))
+                .padding(.top, 17)
+                .padding(.bottom, 2)
             }
-            .safeAreaPadding(.top, 16)
             .padding(.horizontal, 24)
-            .safeAreaPadding(.bottom, 12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .safeAreaPadding(.top, 40)
+            .safeAreaPadding(.bottom, 34)
+            .frame(maxWidth: 402)
         }
     }
 }
@@ -587,68 +612,104 @@ private struct AuthTextField: View {
     @Binding var text: String
     var isSecure = false
     var contentType: UITextContentType?
+    var placeholderColor: Color = MoilColor.fieldPlaceholder
     @State private var isRevealed = false
 
     var body: some View {
         HStack(spacing: 10) {
-            Group {
-                if isSecure && !isRevealed {
-                    SecureField(title, text: $text)
-                } else {
-                    TextField(title, text: $text)
+            ZStack(alignment: .leading) {
+                if text.isEmpty {
+                    Text(title)
+                        .font(MoilTypography.regular(15))
+                        .foregroundStyle(placeholderColor)
                 }
+                Group {
+                    if isSecure && !isRevealed {
+                        SecureField("", text: $text)
+                    } else {
+                        TextField("", text: $text)
+                    }
+                }
+                .font(MoilTypography.regular(15))
+                .foregroundStyle(MoilColor.textPrimary)
+                .textContentType(contentType)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
             }
-            .textContentType(contentType)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
 
             if isSecure {
                 Button { isRevealed.toggle() } label: {
                     Image(systemName: isRevealed ? "eye" : "eye.slash")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundStyle(MoilColor.textTertiary)
+                        .font(.system(size: 16, weight: .regular))
+                        .foregroundStyle(placeholderColor)
+                        .frame(width: 24, height: 24)
                 }
                 .accessibilityLabel(isRevealed ? "비밀번호 숨기기" : "비밀번호 표시")
             }
         }
-        .moilField()
+        .padding(.horizontal, 16)
+        .frame(height: 53)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(MoilColor.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
 /// 피그마 로그인 화면의 간편 로그인 영역입니다. 연동 전까지는 안내만 띄웁니다.
+/// 구분선과 아이콘 위치는 피그마 좌표를 그대로 씁니다.
 private struct SocialLoginRow: View {
     let onSelect: (String) -> Void
 
+    /// 피그마: 구분선 125x1, 좌측 x30 / 우측 x247, 텍스트와 각각 14 간격
+    private let dividerWidth: CGFloat = 125
+    /// 피그마: 아이콘 중심 x 97 / 201 / 303 → 간격 102, 아이콘 상자 38
+    private let iconBoxSize: CGFloat = 38
+    private let iconGap: CGFloat = 102 - 38
+
     var body: some View {
-        VStack(spacing: 22) {
-            HStack(spacing: 12) {
-                dividerLine
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                divider
                 Text("간편 로그인")
                     .font(MoilTypography.regular(13))
                     .foregroundStyle(MoilColor.textSecondary)
                     .fixedSize()
-                dividerLine
+                divider
             }
-            HStack(spacing: 46) {
-                socialButton("구글", image: "SocialGoogle")
-                socialButton("애플", image: "SocialApple")
-                socialButton("카카오", image: "SocialKakao")
+            .padding(.horizontal, -6)
+
+            HStack(spacing: iconGap) {
+                socialButton("구글") {
+                    Image("SocialGoogle").resizable().scaledToFit().frame(width: 34, height: 34)
+                }
+                socialButton("애플") {
+                    // 피그마 벡터는 흰 글리프여서 라이트 모드에서 보이지 않습니다. 같은 모양의 시스템 아이콘을 씁니다.
+                    Image(systemName: "apple.logo")
+                        .font(.system(size: 30))
+                        .foregroundStyle(MoilColor.textPrimary)
+                }
+                socialButton("카카오") {
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.898, blue: 0.0))
+                        .frame(width: 38, height: 38)
+                        .overlay {
+                            Image("SocialKakao").resizable().scaledToFit().frame(width: 22, height: 20.7)
+                        }
+                }
             }
+            .padding(.top, 39)
         }
     }
 
-    private var dividerLine: some View {
+    private var divider: some View {
         Rectangle()
             .fill(MoilColor.textTertiary.opacity(0.34))
-            .frame(height: 1)
+            .frame(width: dividerWidth, height: 1)
     }
 
-    private func socialButton(_ name: String, image: String) -> some View {
+    private func socialButton<Icon: View>(_ name: String, @ViewBuilder icon: () -> Icon) -> some View {
         Button { onSelect(name) } label: {
-            Image(image)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 38)
+            icon().frame(width: iconBoxSize, height: iconBoxSize)
         }
         .accessibilityLabel("\(name)로 로그인")
     }
