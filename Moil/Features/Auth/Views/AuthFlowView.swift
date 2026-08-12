@@ -387,127 +387,110 @@ private struct EmailVerificationView: View {
     @State private var serverError: String?
     @FocusState private var isCodeFieldFocused: Bool
     @State private var isCaretVisible = true
-    @State private var isEditingCode = true
 
     private var isComplete: Bool { code.count == 6 }
 
+    /// 서버 오류가 있으면 그 문구를, 없으면 입력 진행 상태를 코드 칸 바로 아래에 보여 줍니다.
     private var codeState: MoilFieldState {
+        if let serverError { return .failure(serverError) }
         guard !code.isEmpty else { return .neutral }
-        return isComplete ? .success("인증번호가 확인되었어요") : .failure("인증번호 6자리를 모두 입력해주세요")
+        return isComplete ? .success("인증번호가 확인되었어요") : .neutral
     }
 
-    /// 입력 중인 칸과 완료 상태를 테두리로 구분합니다.
-    private func codeBoxBorder(at index: Int) -> Color {
+    /// 피그마: 기본은 테두리 없음, 오류일 때 #CF4040, 완료되면 확인 색
+    private func boxBorder(at index: Int) -> Color {
+        if case .failure = codeState { return MoilColor.error }
         if isComplete { return MoilColor.success }
-        if index == code.count && !code.isEmpty { return MoilColor.primary }
-        return .clear
+        return index == code.count && isCodeFieldFocused ? MoilColor.primary : .clear
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+        MoilAuthScaffold(
+            title: "이메일 인증",
+            subtitle: "\(email)로 전송된\n인증번호 6자리를 입력해주세요",
+            onBack: onBack
+        ) {
+            // 피그마: 코드 칸 위 16, 칸 52x55, 간격 8, 모서리 12
+            HStack(spacing: 8) {
+                ForEach(0..<6, id: \.self) { index in
+                    ZStack {
+                        Text(code.character(at: index))
+                            .font(MoilTypography.bold(19))
                             .foregroundStyle(MoilColor.textPrimary)
+                        if index == code.count && isCodeFieldFocused {
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(MoilColor.textPrimary)
+                                .frame(width: 2, height: 24)
+                                .opacity(isCaretVisible ? 1 : 0)
+                                .accessibilityHidden(true)
+                        }
                     }
-                    Text("이메일 인증")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
+                    .frame(width: 52, height: 55)
+                    .background(MoilColor.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay { RoundedRectangle(cornerRadius: 12).stroke(boxBorder(at: index), lineWidth: 1) }
                 }
-                .safeAreaPadding(.top, 16)
-                Text("\(email)로 전송된 인증번호 6자리를 입력해주세요")
-                    .font(MoilTypography.regular(14))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 16)
+            .contentShape(Rectangle())
+            .onTapGesture { isCodeFieldFocused = true }
+            .background {
+                TextField("", text: $code)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused($isCodeFieldFocused)
+                    .opacity(0.001)
+                    .frame(width: 1, height: 1)
+            }
+            .onChange(of: code) { _, value in
+                code = String(value.filter(\.isNumber).prefix(6))
+                // 다시 입력하면 이전 오류 문구를 지웁니다.
+                serverError = nil
+            }
+            .onAppear {
+                isCodeFieldFocused = true
+                // 커서가 깜박이도록 반복 애니메이션을 겁니다.
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    isCaretVisible = false
+                }
+            }
+
+            // 피그마: 코드 칸 바로 아래에 상태 문구
+            if let message = codeState.message {
+                HStack(spacing: 6) {
+                    if codeState.isSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    Text(message).font(MoilTypography.bold(12))
+                }
+                .foregroundStyle(codeState.tint)
+                .padding(.top, 10)
+            }
+
+            if !resendMessage.isEmpty {
+                Text(resendMessage)
+                    .font(MoilTypography.regular(12))
                     .foregroundStyle(MoilColor.textSecondary)
-                    .padding(.top, 12)
-
-                HStack(spacing: 8) {
-                    ForEach(0..<6, id: \.self) { index in
-                        ZStack {
-                            Text(code.character(at: index))
-                                .font(MoilTypography.bold(19))
-                            if index == code.count && isEditingCode {
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(Color.white)
-                                    .frame(width: 2, height: 24)
-                                    .opacity(isCaretVisible ? 1 : 0.28)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                            .frame(width: 52, height: 52)
-                            .background(MoilColor.surface)
-                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    isEditingCode = true
-                    isCodeFieldFocused = true
-                }
-                .background {
-                    TextField("", text: $code)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                        .focused($isCodeFieldFocused)
-                        .opacity(0.001)
-                        .frame(width: 1, height: 1)
-                }
-                .onChange(of: code) { _, value in
-                    code = String(value.filter(\.isNumber).prefix(6))
-                    isEditingCode = code.count < 6
-                }
-                .onAppear {
-                    isEditingCode = true
-                    isCodeFieldFocused = true
-                    withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
-                        isCaretVisible = false
-                    }
-                }
-                .padding(.top, 16)
-
-                if let message = codeState.message {
-                    HStack(spacing: 6) {
-                        if codeState.isSuccess {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        Text(message).font(MoilTypography.bold(12))
-                    }
-                    .foregroundStyle(codeState.tint)
-                    .padding(.top, 10)
-                }
-
-                Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
-                    .font(MoilTypography.semibold(13))
-                    .foregroundStyle(MoilColor.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 18)
-                if !resendMessage.isEmpty {
-                    Text(resendMessage)
-                        .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
-                }
-
-                Spacer()
-                MoilPrimaryButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
+                    .padding(.top, 8)
+            }
+        } bottom: {
+            VStack(spacing: 0) {
+                MoilAuthButton(title: "다음", isEnabled: isComplete && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(code)
                         isSubmitting = false
                     }
                 }
-                    .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
+                // 피그마: 버튼 아래 22, SemiBold 13
+                Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
+                    .font(MoilTypography.semibold(13))
+                    .foregroundStyle(MoilColor.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 22)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
         }
     }
 }
