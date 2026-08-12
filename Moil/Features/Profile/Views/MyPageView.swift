@@ -127,6 +127,11 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
+        .task(id: groupStore.selectedGroupId) {
+            // 프로필 이름과 색을 서버 값으로 보여주기 위해 멤버를 불러옵니다.
+            guard let groupId = groupStore.selectedGroupId else { return }
+            _ = try? await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
+        }
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
             Button("로그아웃", role: .destructive, action: onLogout)
@@ -221,9 +226,6 @@ private struct PasswordChangeView: View {
         MoilInlineHeader(title: "비밀번호 변경", onBack: onClose)
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: MoilTabScreenMetrics.fieldSpacing) {
-                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
                     MoilFormStack {
                         MoilValidatedField { MoilTextField(placeholder: "현재 비밀번호", text: $origin, isSecure: true, contentType: .password) }
                         MoilValidatedField { MoilTextField(placeholder: "새 비밀번호", text: $newPassword, isSecure: true, contentType: .newPassword) }
@@ -270,9 +272,6 @@ private struct AccountDeletionView: View {
         MoilInlineHeader(title: "회원 탈퇴", onBack: onClose)
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: MoilTabScreenMetrics.fieldSpacing) {
-                    Text("탈퇴하면 계정에 접근할 수 없어요.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
                     MoilFormStack {
                         MoilValidatedField { MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress, keyboardType: .emailAddress) }
                         MoilValidatedField { MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password) }

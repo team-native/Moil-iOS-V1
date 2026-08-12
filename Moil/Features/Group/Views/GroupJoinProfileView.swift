@@ -42,23 +42,12 @@ struct GroupJoinProfileView: View {
             }
             Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            HStack(spacing: 14) {
-                ForEach(colors, id: \.self) { color in
-                    Button { selectedColor = color } label: {
-                        MoilAvatar(color: color, size: 40)
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
-                    }
-                }
-                Button { isAdditionalProfilePresented = true } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                }
-                .accessibilityLabel("프로필 추가")
-            }
+            Text("내 프로필 색 선택")
+                .font(MoilTypography.semibold(12))
+                .foregroundStyle(MoilColor.textTertiary)
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+                .padding(.bottom, 18)
+            MoilColorPicker(colors: colors, selection: $selectedColor, onAdd: { isAdditionalProfilePresented = true })
             Spacer()
             MoilButton(title: "참여하기", isEnabled: isValidNickname && !isJoining) {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }

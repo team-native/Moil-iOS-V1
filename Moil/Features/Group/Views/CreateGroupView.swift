@@ -20,23 +20,12 @@ struct CreateGroupView: View {
                 }
             }
             .padding(.top, MoilTabScreenMetrics.fieldSpacing)
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            HStack(spacing: 16) {
-                ForEach(colors, id: \.self) { color in
-                    Button { selectedColor = color } label: {
-                        MoilAvatar(color: color, size: 46)
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
-                    }
-                }
-                Button { isAdditionalProfilePresented = true } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(width: 40, height: 40)
-                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                }
-                .accessibilityLabel("프로필 추가")
-            }
+            Text("내 프로필 색 선택")
+                .font(MoilTypography.semibold(12))
+                .foregroundStyle(MoilColor.textTertiary)
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+                .padding(.bottom, 18)
+            MoilColorPicker(colors: colors, selection: $selectedColor, onAdd: { isAdditionalProfilePresented = true })
             Text("그룹을 만든 뒤 초대 코드로 구성원을 초대할 수 있어요.")
                 .font(MoilTypography.regular(13))
                 .foregroundStyle(MoilColor.textSecondary)
