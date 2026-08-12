@@ -593,10 +593,9 @@ private struct ScheduleComposerView: View {
             .padding(.bottom, 18)
 
             TextField("일정 제목", text: $title)
-                .font(MoilTypography.semibold(21))
+                .moilField()
                 .padding(.horizontal, 18)
-                .frame(height: 58)
-                .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+                .padding(.bottom, 8)
 
             ScheduleRow(title: "날짜", value: dateTitle)
             HStack {
@@ -664,9 +663,7 @@ private struct EventEditorView: View {
                 Button("닫기", action: dismiss.callAsFunction).foregroundStyle(MoilColor.textSecondary)
             }
             TextField("일정 제목", text: $title)
-                .font(MoilTypography.semibold(17))
-                .padding(.horizontal, 14).frame(height: 52)
-                .background(MoilColor.background).clipShape(RoundedRectangle(cornerRadius: 12))
+                .moilField()
             HStack(spacing: 10) {
                 Button("삭제", role: .destructive) { onDelete(); dismiss() }
                     .frame(maxWidth: .infinity).frame(height: 48)
@@ -728,12 +725,8 @@ private struct ScheduleSearchView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(MoilColor.textTertiary)
                     TextField("일정 검색", text: $query)
-                        .font(MoilTypography.regular(16))
                 }
-                .padding(.horizontal, 14)
-                .frame(height: 48)
-                .background(MoilColor.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .moilField()
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
