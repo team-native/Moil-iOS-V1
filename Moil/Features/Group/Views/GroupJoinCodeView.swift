@@ -47,7 +47,7 @@ struct GroupJoinCodeView: View {
                     .padding(.top, 16)
             }
             Spacer()
-            Button(isVerified ? "다음" : "확인") {
+            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isVerifying) {
                 if isVerified { onNext() }
                 else {
                     Task {
@@ -66,10 +66,6 @@ struct GroupJoinCodeView: View {
                     }
                 }
             }
-            .font(MoilTypography.bold(16)).foregroundStyle(.white)
-            .frame(maxWidth: .infinity).frame(height: 54)
-            .background(code.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
-            .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isVerifying)
             .safeAreaPadding(.bottom, 12)
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)

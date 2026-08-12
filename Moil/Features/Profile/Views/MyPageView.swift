@@ -4,20 +4,19 @@ struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
-    @AppStorage("moilDarkMode") private var isDarkMode = false
+    @AppStorage("moilDarkMode") private var isDarkMode = true
     @State private var isGroupDetailPresented = false
     @State private var isLogoutConfirmationPresented = false
     @State private var isMemberPresented = false
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
-    @State private var accountRoute: AccountRoute?
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
     let showsTabBar: Bool
-    /// 탭 안에서 열릴 때는 상위 네비게이션이 탭바를 그리므로 진입 여부를 알려 줍니다.
-    @Binding var isAccountPagePresented: Bool
+    /// 계정 화면 이동은 상위 네비게이션이 처리합니다.
+    var onAccountRoute: ((MoilAccountRoute) -> Void)?
 
     init(
         onCreateGroup: @escaping () -> Void = {},
@@ -25,23 +24,36 @@ struct MyPageView: View {
         onLogout: @escaping () -> Void = {},
         onTabSelect: ((MoilTab) -> Void)? = nil,
         showsTabBar: Bool = true,
-        isAccountPagePresented: Binding<Bool> = .constant(false)
+        onAccountRoute: ((MoilAccountRoute) -> Void)? = nil
     ) {
         self.onCreateGroup = onCreateGroup
         self.onLeaveGroup = onLeaveGroup
         self.onLogout = onLogout
         self.onTabSelect = onTabSelect
         self.showsTabBar = showsTabBar
-        self._isAccountPagePresented = isAccountPagePresented
+        self.onAccountRoute = onAccountRoute
     }
+    /// 서버가 내려준 내 닉네임입니다. 아직 못 받았으면 빈 값 대신 기본값을 씁니다.
+    private var myName: String {
+        groupStore.groups
+            .compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.nickname }
+            .first ?? "나"
+    }
+
+    @MainActor
+    private var myColor: Color {
+        groupStore.groups
+            .compactMap { groupStore.members(for: $0.id).first(where: \.isMe)?.colorId }
+            .first.map(MoilAvatarColor.color(for:)) ?? MoilAvatarColor.green
+    }
+
     var body: some View {
-        NavigationStack {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
-                    MoilAvatar(color: MoilAvatarColor.green, size: 56)
+                    MoilAvatar(color: myColor, size: 56)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("나").font(MoilTypography.bold(21))
+                        Text(myName).font(MoilTypography.bold(21))
                     }
                 }
                 .padding(.bottom, 20)
@@ -71,11 +83,11 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
-                    AccountMenuRow(title: "비밀번호 변경") { accountRoute = .passwordChange }
+                    AccountMenuRow(title: "비밀번호 변경") { onAccountRoute?(.passwordChange) }
                     Divider()
                     AccountMenuRow(title: "로그아웃") { isLogoutConfirmationPresented = true }
                     Divider()
-                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { accountRoute = .accountDeletion }
+                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { onAccountRoute?(.accountDeletion) }
                 }
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
@@ -84,7 +96,7 @@ struct MyPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
-        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar && accountRoute == nil) { tab in
+        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
             } else {
@@ -114,26 +126,11 @@ struct MyPageView: View {
         .fullScreenCover(isPresented: $isJoinProfilePresented) {
             GroupJoinProfileView { isJoinProfilePresented = false }
         }
-        .navigationDestination(item: $accountRoute) { route in
-            switch route {
-            case .passwordChange:
-                PasswordChangeView()
-            case .accountDeletion:
-                AccountDeletionView { email, password, leftData in
-                    await deleteAccount(email: email, password: password, leftData: leftData)
-                }
-            }
-        }
-        .toolbar(.hidden, for: .navigationBar)
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }
             Button("로그아웃", role: .destructive, action: onLogout)
         } message: {
             Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
-        }
-        .onChange(of: accountRoute) { _, route in
-            isAccountPagePresented = route != nil
-        }
         }
     }
 
@@ -152,9 +149,35 @@ struct MyPageView: View {
     MyPageView()
 }
 
-private enum AccountRoute: Hashable {
+enum MoilAccountRoute: Hashable {
     case passwordChange
     case accountDeletion
+}
+
+/// 계정 화면은 탭 콘텐츠를 대체해 표시하므로 상위에서 이 래퍼를 그립니다.
+struct MoilAccountPage: View {
+    let route: MoilAccountRoute
+    let onClose: () -> Void
+    let onLogout: () -> Void
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    @EnvironmentObject private var groupStore: MoilGroupStore
+
+    var body: some View {
+        switch route {
+        case .passwordChange:
+            PasswordChangeView(onClose: onClose)
+        case .accountDeletion:
+            AccountDeletionView(onClose: onClose) { email, password, leftData in
+                do {
+                    try await sessionStore.service().deleteAccount(email: email, password: password, leftData: leftData)
+                    sessionStore.clear()
+                    groupStore.reset()
+                    onLogout()
+                    return nil
+                } catch { return error.localizedDescription }
+            }
+        }
+    }
 }
 
 private struct AccountMenuRow: View {
@@ -179,7 +202,7 @@ private struct AccountMenuRow: View {
 }
 
 private struct PasswordChangeView: View {
-    @Environment(\.dismiss) private var dismiss
+    let onClose: () -> Void
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @State private var origin = ""
     @State private var newPassword = ""
@@ -208,8 +231,7 @@ private struct PasswordChangeView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            Button("비밀번호 변경") { Task { await changePassword() } }
-                .accountButton(enabled: canSubmit)
+            MoilButton(title: "비밀번호 변경", isEnabled: canSubmit) { Task { await changePassword() } }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 12)
         }
@@ -223,13 +245,13 @@ private struct PasswordChangeView: View {
         do {
             try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
             origin = ""; newPassword = ""; confirmation = ""
-            dismiss()
+            onClose()
         } catch { message = "비밀번호를 변경하지 못했어요." }
     }
 }
 
 private struct AccountDeletionView: View {
-    @Environment(\.dismiss) private var dismiss
+    let onClose: () -> Void
     @State private var email = ""
     @State private var password = ""
     @State private var leftData = false
@@ -258,17 +280,16 @@ private struct AccountDeletionView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            Button("회원 탈퇴") {
+            MoilButton(title: "회원 탈퇴", isEnabled: !isDeleting) {
                 Task {
                     isDeleting = true
                     message = await onDelete(email, password, leftData)
                     isDeleting = false
-                    if message == nil { dismiss() }
+                    if message == nil { onClose() }
                 }
             }
-                .accountButton(enabled: !isDeleting)
-                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .padding(.bottom, 12)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())

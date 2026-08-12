@@ -515,20 +515,10 @@ private struct LeaveGroupConfirmation: View {
                 .padding(.top, 6)
 
             if isAdministrator {
-                Button("관리자 권한 이전", action: onTransfer)
-                    .font(MoilTypography.semibold(14))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 44)
-                    .background(MoilColor.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                MoilButton(title: "관리자 권한 이전", height: 44, action: onTransfer)
                     .padding(.top, 16)
             } else {
-                Button("그룹 나가기", action: onLeave)
-                    .font(MoilTypography.semibold(14))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 44)
-                    .background(MoilColor.error)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                MoilButton(title: "그룹 나가기", height: 44, action: onLeave)
                     .padding(.top, 16)
             }
             Button("취소", action: onCancel)

@@ -62,14 +62,6 @@ struct MoilAuthButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(title, action: action)
-            .font(MoilTypography.bold(16))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 18)
-            .padding(.bottom, 17)
-            .background(isEnabled ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .disabled(!isEnabled)
+        MoilButton(title: title, isEnabled: isEnabled, action: action)
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AuthFlowView: View {
-    @AppStorage("moilDarkMode") private var isDarkMode = false
+    @AppStorage("moilDarkMode") private var isDarkMode = true
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
@@ -256,21 +256,13 @@ private struct LoginView: View {
                 }
 
                 // 피그마: 버튼 위 18 / 아래 17, 모서리 14
-                Button("로그인") {
+                MoilButton(title: "로그인", isEnabled: canSubmit && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         errorMessage = await onLogin(email, password)
                         isSubmitting = false
                     }
                 }
-                .font(MoilTypography.bold(16))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 18)
-                .padding(.bottom, 17)
-                .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .disabled(!canSubmit || isSubmitting)
 
                 // 피그마: 버튼과 14 간격, 위 3 / 아래 2
                 Button {
@@ -613,7 +605,11 @@ private struct AuthTextField: View {
             }
 
             if isSecure {
-                Button { isRevealed.toggle() } label: {
+                Button {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { isRevealed.toggle() }
+                } label: {
                     Image(systemName: isRevealed ? "eye" : "eye.slash")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(placeholderColor)

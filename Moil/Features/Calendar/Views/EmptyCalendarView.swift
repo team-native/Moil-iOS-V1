@@ -34,23 +34,11 @@ struct EmptyCalendarView: View {
                 .padding(.top, 7)
 
             // 피그마: 설명 아래 32
-            Button("그룹 참여하기", action: onJoin)
-                .font(MoilTypography.semibold(15))
-                .foregroundStyle(.white)
-                .frame(width: buttonWidth, height: buttonHeight)
-                .background(MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+            MoilButton(title: "그룹 참여하기", height: buttonHeight, width: buttonWidth, action: onJoin)
                 .padding(.top, 32)
 
             // 피그마: 버튼 사이 14, 테두리 #383531
-            Button("새 그룹 만들기", action: onCreate)
-                .font(MoilTypography.semibold(15))
-                .foregroundStyle(MoilColor.textPrimary)
-                .frame(width: buttonWidth, height: buttonHeight)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(MoilColor.emptyStateBorder, lineWidth: 1)
-                }
+            MoilButton(title: "새 그룹 만들기", style: .outline, height: buttonHeight, width: buttonWidth, action: onCreate)
                 .padding(.top, 14)
 
             Spacer(minLength: 0)
