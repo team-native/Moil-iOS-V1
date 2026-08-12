@@ -47,7 +47,7 @@ struct GroupJoinCodeView: View {
                     .padding(.top, 16)
             }
             Spacer()
-            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isVerifying) {
+            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, isLoading: isVerifying) {
                 if isVerified { onNext() }
                 else {
                     Task {

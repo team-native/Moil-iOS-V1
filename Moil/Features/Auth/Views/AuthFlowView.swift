@@ -263,7 +263,7 @@ private struct LoginView: View {
                 }
 
                 // 피그마: 버튼 위 18 / 아래 17, 모서리 14
-                MoilButton(title: "로그인", isEnabled: canSubmit && !isSubmitting) {
+                MoilButton(title: "로그인", isEnabled: canSubmit, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         errorMessage = await onLogin(email, password)
@@ -335,7 +335,7 @@ private struct SignUpInfoView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: "다음", isEnabled: canProceed && !isSubmitting) {
+                MoilAuthButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
@@ -383,7 +383,7 @@ private struct PasswordResetEmailView: View {
                 .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
-                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@") && !isSubmitting) {
+                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@"), isLoading: isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
                 .safeAreaPadding(.bottom, 12)
@@ -493,7 +493,7 @@ private struct EmailVerificationView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: "다음", isEnabled: isComplete && !isSubmitting) {
+                MoilAuthButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(code)
@@ -560,7 +560,7 @@ private struct PasswordSetupView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch && !isSubmitting) {
+                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)

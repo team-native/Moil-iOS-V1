@@ -59,9 +59,10 @@ struct MoilAuthScaffold<Content: View, Bottom: View>: View {
 struct MoilAuthButton: View {
     let title: String
     var isEnabled = true
+    var isLoading = false
     let action: () -> Void
 
     var body: some View {
-        MoilButton(title: title, isEnabled: isEnabled, action: action)
+        MoilButton(title: title, isEnabled: isEnabled, isLoading: isLoading, action: action)
     }
 }

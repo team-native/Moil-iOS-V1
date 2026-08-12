@@ -216,9 +216,10 @@ private struct PasswordChangeView: View {
     @State private var newPassword = ""
     @State private var confirmation = ""
     @State private var message: String?
+    @State private var isChanging = false
 
     private var canSubmit: Bool {
-        !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation
+        !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation && !isChanging
     }
 
     var body: some View {
@@ -240,7 +241,7 @@ private struct PasswordChangeView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            MoilButton(title: "비밀번호 변경", isEnabled: canSubmit) { Task { await changePassword() } }
+            MoilButton(title: "비밀번호 변경", isEnabled: canSubmit, isLoading: isChanging) { Task { await changePassword() } }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 12)
         }
@@ -250,6 +251,8 @@ private struct PasswordChangeView: View {
     }
 
     private func changePassword() async {
+        isChanging = true
+        defer { isChanging = false }
         do {
             try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
             origin = ""; newPassword = ""; confirmation = ""
@@ -266,6 +269,10 @@ private struct AccountDeletionView: View {
     @State private var message: String?
     @State private var isDeleting = false
     let onDelete: (String, String, Bool) async -> String?
+
+    private var canDelete: Bool {
+        email.contains("@") && !password.isEmpty && !isDeleting
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -289,7 +296,7 @@ private struct AccountDeletionView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            MoilButton(title: "회원 탈퇴", isEnabled: !isDeleting) {
+            MoilButton(title: "회원 탈퇴", isEnabled: canDelete, isLoading: isDeleting) {
                 Task {
                     isDeleting = true
                     message = await onDelete(email, password, leftData)

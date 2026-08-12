@@ -29,6 +29,7 @@ struct MoilButton: View {
     let title: String
     var style: Style = .filled
     var isEnabled = true
+    var isLoading = false
     /// 피그마: 로그인 버튼은 위 18 / 아래 17이라 높이 54가 됩니다.
     var height: CGFloat = 54
     var width: CGFloat?
@@ -36,9 +37,15 @@ struct MoilButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(MoilTypography.bold(16))
-                .foregroundStyle(style.foreground)
+            Group {
+                if isLoading {
+                    MoilLoadingView(size: 22, lineWidth: 3)
+                } else {
+                    Text(title)
+                        .font(MoilTypography.bold(16))
+                        .foregroundStyle(style.foreground)
+                }
+            }
                 .frame(maxWidth: width == nil ? .infinity : nil)
                 .frame(width: width, height: height)
                 .background(style.background.opacity(isEnabled ? 1 : 0.78))
@@ -53,7 +60,7 @@ struct MoilButton: View {
                 .contentShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        .disabled(!isEnabled || isLoading)
     }
 }
 
