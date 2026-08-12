@@ -15,6 +15,7 @@ enum MoilColor {
     static let textSecondary = Color("TextSecondary")
     static let textTertiary = Color("TextTertiary")
     static let fieldPlaceholder = Color("FieldPlaceholder")
+    static let emptyStateBorder = Color("EmptyStateBorder")
     static let label = Color("MoilLabel")
     static let launchBackground = Color("LaunchBackground")
     static let groupDetailBackground = Color("GroupDetailBackground")
