@@ -241,13 +241,14 @@ private struct PasswordChangeView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            MoilButton(title: "비밀번호 변경", isEnabled: canSubmit, isLoading: isChanging) { Task { await changePassword() } }
+            MoilButton(title: "비밀번호 변경", isEnabled: canSubmit) { Task { await changePassword() } }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 12)
         }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isChanging)
     }
 
     private func changePassword() async {
@@ -296,7 +297,7 @@ private struct AccountDeletionView: View {
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
-            MoilButton(title: "회원 탈퇴", isEnabled: canDelete, isLoading: isDeleting) {
+            MoilButton(title: "회원 탈퇴", isEnabled: canDelete) {
                 Task {
                     isDeleting = true
                     message = await onDelete(email, password, leftData)
@@ -310,6 +311,7 @@ private struct AccountDeletionView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isDeleting)
     }
 }
 

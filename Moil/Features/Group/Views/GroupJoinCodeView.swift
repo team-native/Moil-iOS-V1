@@ -47,7 +47,7 @@ struct GroupJoinCodeView: View {
                     .padding(.top, 16)
             }
             Spacer()
-            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, isLoading: isVerifying) {
+            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isVerifying) {
                 if isVerified { onNext() }
                 else {
                     Task {
@@ -71,6 +71,7 @@ struct GroupJoinCodeView: View {
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isVerifying)
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)

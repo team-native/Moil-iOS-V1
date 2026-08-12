@@ -49,7 +49,7 @@ struct GroupJoinProfileView: View {
                 .padding(.bottom, 18)
             MoilColorPicker(colors: colors, selection: $selectedColor, onAdd: { isAdditionalProfilePresented = true })
             Spacer()
-            MoilButton(title: "참여하기", isEnabled: isValidNickname, isLoading: isJoining) {
+            MoilButton(title: "참여하기", isEnabled: isValidNickname && !isJoining) {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }
                 Task {
                     isJoining = true
@@ -66,6 +66,7 @@ struct GroupJoinProfileView: View {
         }
         .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isJoining)
         .alert("프로필 추가", isPresented: $isAdditionalProfilePresented) {
             Button("확인", role: .cancel) { }
         } message: {

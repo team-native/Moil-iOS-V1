@@ -263,7 +263,7 @@ private struct LoginView: View {
                 }
 
                 // 피그마: 버튼 위 18 / 아래 17, 모서리 14
-                MoilButton(title: "로그인", isEnabled: canSubmit, isLoading: isSubmitting) {
+                MoilButton(title: "로그인", isEnabled: canSubmit && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         errorMessage = await onLogin(email, password)
@@ -290,6 +290,7 @@ private struct LoginView: View {
             .safeAreaPadding(.bottom, 34)
             .frame(maxWidth: 402)
         }
+        .moilLoading(isSubmitting)
     }
 }
 
@@ -316,7 +317,7 @@ private struct SignUpInfoView: View {
     }
 
     var body: some View {
-        MoilAuthScaffold(title: "회원가입", onBack: onBack) {
+        MoilAuthScaffold(title: "회원가입", onBack: onBack, isLoading: isSubmitting) {
             MoilFormStack {
                 MoilValidatedField(label: "이름") {
                     MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
@@ -335,7 +336,7 @@ private struct SignUpInfoView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
+                MoilAuthButton(title: "다음", isEnabled: canProceed && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
@@ -383,7 +384,7 @@ private struct PasswordResetEmailView: View {
                 .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
-                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@"), isLoading: isSubmitting) {
+                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@") && !isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
                 .safeAreaPadding(.bottom, 12)
@@ -424,7 +425,8 @@ private struct EmailVerificationView: View {
         MoilAuthScaffold(
             title: "이메일 인증",
             subtitle: "\(email)로 전송된\n인증번호 6자리를 입력해주세요",
-            onBack: onBack
+            onBack: onBack,
+            isLoading: isSubmitting
         ) {
             // 피그마: 코드 칸 위 16, 칸 52x55, 간격 8, 모서리 12
             HStack(spacing: 8) {
@@ -493,7 +495,7 @@ private struct EmailVerificationView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
+                MoilAuthButton(title: "다음", isEnabled: isComplete && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(code)
@@ -541,7 +543,7 @@ private struct PasswordSetupView: View {
     }
 
     var body: some View {
-        MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack) {
+        MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack, isLoading: isSubmitting) {
             MoilFormStack {
                 MoilValidatedField(label: "비밀번호", state: passwordState) {
                     MoilTextField(placeholder: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
@@ -560,7 +562,7 @@ private struct PasswordSetupView: View {
             }
         } bottom: {
             VStack(spacing: 0) {
-                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch, isLoading: isSubmitting) {
+                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)

@@ -6,6 +6,8 @@ struct MoilAuthScaffold<Content: View, Bottom: View>: View {
     let title: String
     var subtitle: String?
     var onBack: (() -> Void)?
+    /// 통신 중이면 화면 전체를 로딩 페이지로 덮습니다.
+    var isLoading = false
     @ViewBuilder let content: Content
     @ViewBuilder let bottom: Bottom
 
@@ -52,6 +54,7 @@ struct MoilAuthScaffold<Content: View, Bottom: View>: View {
         .padding(.horizontal, horizontalPadding)
         .frame(maxWidth: 402, maxHeight: .infinity, alignment: .topLeading)
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isLoading)
     }
 }
 
@@ -59,10 +62,9 @@ struct MoilAuthScaffold<Content: View, Bottom: View>: View {
 struct MoilAuthButton: View {
     let title: String
     var isEnabled = true
-    var isLoading = false
     let action: () -> Void
 
     var body: some View {
-        MoilButton(title: title, isEnabled: isEnabled, isLoading: isLoading, action: action)
+        MoilButton(title: title, isEnabled: isEnabled, action: action)
     }
 }
