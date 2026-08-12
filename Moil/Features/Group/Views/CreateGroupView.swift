@@ -15,8 +15,7 @@ struct CreateGroupView: View {
         NavigationStack {
         VStack(alignment: .leading, spacing: 0) {
             Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
-            TextField("예: 우리 가족", text: $name)
-                .moilField()
+            MoilTextField(placeholder: "예: 우리 가족", text: $name)
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             HStack(spacing: 16) {
                 ForEach(colors, id: \.self) { color in

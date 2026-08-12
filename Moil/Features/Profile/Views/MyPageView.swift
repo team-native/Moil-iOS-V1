@@ -224,9 +224,9 @@ private struct PasswordChangeView: View {
                     Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
-                    SecureField("현재 비밀번호", text: $origin).accountField()
-                    SecureField("새 비밀번호", text: $newPassword).accountField()
-                    SecureField("새 비밀번호 확인", text: $confirmation).accountField()
+                    MoilTextField(placeholder: "현재 비밀번호", text: $origin, isSecure: true, contentType: .password)
+                    MoilTextField(placeholder: "새 비밀번호", text: $newPassword, isSecure: true, contentType: .newPassword)
+                    MoilTextField(placeholder: "새 비밀번호 확인", text: $confirmation, isSecure: true, contentType: .newPassword)
                     if let message {
                         Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
                     }
@@ -271,8 +271,8 @@ private struct AccountDeletionView: View {
                     Text("탈퇴하면 계정에 접근할 수 없어요.")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
-                    TextField("이메일", text: $email).accountField()
-                    SecureField("비밀번호", text: $password).accountField()
+                    MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress, keyboardType: .emailAddress)
+                    MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
                     Toggle("그룹 데이터 유지", isOn: $leftData)
                         .font(MoilTypography.regular(15))
                         .tint(MoilColor.primary)
@@ -304,9 +304,6 @@ private struct AccountDeletionView: View {
 }
 
 private extension View {
-    func accountField() -> some View {
-        moilField()
-    }
 
     func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {
         font(MoilTypography.bold(15)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50)

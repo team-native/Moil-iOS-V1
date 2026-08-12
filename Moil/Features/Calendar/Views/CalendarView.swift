@@ -600,8 +600,7 @@ private struct ScheduleComposerView: View {
             .padding(.top, 34)
             .padding(.bottom, 18)
 
-            TextField("일정 제목", text: $title)
-                .moilField()
+            MoilTextField(placeholder: "일정 제목", text: $title)
                 .padding(.horizontal, 18)
                 .padding(.bottom, 8)
 
@@ -670,8 +669,7 @@ private struct EventEditorView: View {
                 Spacer()
                 Button("닫기", action: dismiss.callAsFunction).foregroundStyle(MoilColor.textSecondary)
             }
-            TextField("일정 제목", text: $title)
-                .moilField()
+            MoilTextField(placeholder: "일정 제목", text: $title)
             HStack(spacing: 10) {
                 Button("삭제", role: .destructive) { onDelete(); dismiss() }
                     .frame(maxWidth: .infinity).frame(height: 48)
@@ -729,13 +727,13 @@ private struct ScheduleSearchView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(MoilColor.textTertiary)
-                    TextField("일정 검색", text: $query)
-                }
-                .moilField()
-                .padding(.horizontal, 16)
+                MoilTextField(placeholder: "일정 검색", text: $query)
+                    .overlay(alignment: .trailing) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(MoilColor.textTertiary)
+                            .padding(.trailing, 16)
+                    }
+                    .padding(.horizontal, 16)
                 .padding(.top, 12)
 
                 if filteredEvents.isEmpty {

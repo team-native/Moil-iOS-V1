@@ -42,7 +42,6 @@ struct EmptyCalendarView: View {
                 .padding(.top, 14)
 
             Spacer(minLength: 0)
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())

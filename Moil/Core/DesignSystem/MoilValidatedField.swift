@@ -65,10 +65,10 @@ struct MoilValidatedField<Field: View>: View {
 #Preview("검증 상태 입력 칸") {
     VStack(spacing: 22) {
         MoilValidatedField(label: "이메일", state: .success("올바른 형식이에요")) {
-            TextField("moil@example", text: .constant("moil@example.com")).moilField()
+            MoilTextField(placeholder: "moil@example", text: .constant("moil@example.com"))
         }
         MoilValidatedField(label: "비밀번호", state: .failure("비밀번호는 8자 이상이어야 해요")) {
-            TextField("비밀번호 입력", text: .constant("1234")).moilField()
+            MoilTextField(placeholder: "비밀번호 입력", text: .constant("1234"), isSecure: true)
         }
     }
     .padding(24)

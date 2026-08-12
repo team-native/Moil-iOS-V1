@@ -402,8 +402,7 @@ private struct GroupNameEditor: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("그룹 이름 변경")
                     .font(MoilTypography.bold(18))
-                TextField("그룹 이름", text: $name)
-                    .moilField()
+                MoilTextField(placeholder: "그룹 이름", text: $name)
                 HStack(spacing: 8) {
                     Button("취소", action: onCancel)
                         .font(MoilTypography.semibold(14))

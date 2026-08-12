@@ -222,11 +222,11 @@ private struct LoginView: View {
                     // 피그마: 로고 블록 아래 36
                     .padding(.bottom, 36)
 
-                AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress)
                     // 피그마: 이메일 칸 아래 12
                     .padding(.bottom, 12)
 
-                AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
                     // 피그마: 비밀번호 블록 63, 칸 53
                     .padding(.bottom, 10)
 
@@ -311,12 +311,12 @@ private struct SignUpInfoView: View {
     var body: some View {
         MoilAuthScaffold(title: "회원가입", onBack: onBack) {
             MoilValidatedField(label: "이름") {
-                AuthTextField(title: "이름 입력", text: $name, contentType: .name)
+                MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
             }
             .padding(.top, 20)
 
             MoilValidatedField(label: "이메일", state: emailState) {
-                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+                MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
             }
             .padding(.top, 18)
 
@@ -368,7 +368,7 @@ private struct PasswordResetEmailView: View {
                 .safeAreaPadding(.top, 16)
                 Text("가입한 이메일 주소로 인증번호를 보낼게요.")
                     .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary).padding(.top, 12)
-                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
+                MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
                 Button("인증번호 받기") {
@@ -535,12 +535,12 @@ private struct PasswordSetupView: View {
     var body: some View {
         MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack) {
             MoilValidatedField(label: "비밀번호", state: passwordState) {
-                AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+                MoilTextField(placeholder: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
             }
             .padding(.top, 20)
 
             MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
-                AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
+                MoilTextField(placeholder: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
             }
             .padding(.top, 22)
 
@@ -571,58 +571,6 @@ private struct PasswordSetupView: View {
                 .padding(.top, 17)
             }
         }
-    }
-}
-
-private struct AuthTextField: View {
-    let title: String
-    @Binding var text: String
-    var isSecure = false
-    var contentType: UITextContentType?
-    var placeholderColor: Color = MoilColor.fieldPlaceholder
-    @State private var isRevealed = false
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack(alignment: .leading) {
-                if text.isEmpty {
-                    Text(title)
-                        .font(MoilTypography.regular(15))
-                        .foregroundStyle(placeholderColor)
-                }
-                Group {
-                    if isSecure && !isRevealed {
-                        SecureField("", text: $text)
-                    } else {
-                        TextField("", text: $text)
-                    }
-                }
-                .font(MoilTypography.regular(15))
-                .foregroundStyle(MoilColor.textPrimary)
-                .textContentType(contentType)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            }
-
-            if isSecure {
-                Button {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) { isRevealed.toggle() }
-                } label: {
-                    Image(systemName: isRevealed ? "eye" : "eye.slash")
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(placeholderColor)
-                        .frame(width: 24, height: 24)
-                }
-                .accessibilityLabel(isRevealed ? "비밀번호 숨기기" : "비밀번호 표시")
-            }
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 53)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MoilColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
