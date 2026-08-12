@@ -22,7 +22,6 @@ struct MoilApp: App {
         UINavigationBar.appearance().compactAppearance = appearance
     }
 
-    @AppStorage("moilDarkMode") private var isDarkMode = false
     @StateObject private var groupStore = MoilGroupStore()
     @StateObject private var sessionStore = MoilSessionStore()
     @StateObject private var eventStore = MoilEventStore()
@@ -30,7 +29,6 @@ struct MoilApp: App {
     var body: some Scene {
         WindowGroup {
             AuthFlowView()
-                .preferredColorScheme(isDarkMode ? .dark : .light)
                 .environmentObject(groupStore)
                 .environmentObject(sessionStore)
                 .environmentObject(eventStore)
