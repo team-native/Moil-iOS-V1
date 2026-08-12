@@ -516,51 +516,43 @@ private struct PasswordSetupView: View {
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                    Text("비밀번호 설정")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
-                .safeAreaPadding(.top, 16)
-                MoilValidatedField(label: "비밀번호", state: passwordState) {
-                    AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
-                }
-                .padding(.top, 20)
+        MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack) {
+            MoilValidatedField(label: "비밀번호", state: passwordState) {
+                AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+            }
+            .padding(.top, 20)
 
-                MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
-                    AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
-                }
-                .padding(.top, 22)
-                Spacer()
-                Button(actionTitle) {
+            MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
+                AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
+            }
+            .padding(.top, 22)
+
+            if let serverError {
+                Text(serverError)
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.error)
+                    .padding(.top, 8)
+            }
+        } bottom: {
+            VStack(spacing: 0) {
+                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)
                         isSubmitting = false
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(passwordIsValid && passwordsMatch ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .disabled(!(passwordIsValid && passwordsMatch))
-                    .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
+                Button(action: onBack) {
+                    Text("이미 계정이 있으신가요? ")
+                        .foregroundStyle(MoilColor.textSecondary)
+                    + Text("로그인")
+                        .fontWeight(.bold)
+                        .foregroundStyle(MoilColor.primary)
                 }
+                .font(MoilTypography.regular(14))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 17)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
         }
     }
 }
