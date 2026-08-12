@@ -531,6 +531,16 @@ private struct PasswordSetupView: View {
     private var passwordIsValid: Bool { password.count >= 8 }
     private var passwordsMatch: Bool { !confirmation.isEmpty && password == confirmation }
 
+    private var passwordState: MoilFieldState {
+        guard !password.isEmpty else { return .neutral }
+        return passwordIsValid ? .success("올바른 형식이에요") : .failure("비밀번호는 8자 이상이어야 해요")
+    }
+
+    private var confirmationState: MoilFieldState {
+        guard !confirmation.isEmpty else { return .neutral }
+        return passwordsMatch ? .success("비밀번호가 일치해요") : .failure("비밀번호가 올바르지 않아요")
+    }
+
     var body: some View {
         ZStack {
             MoilColor.background.ignoresSafeArea()
@@ -546,30 +556,15 @@ private struct PasswordSetupView: View {
                         .foregroundStyle(MoilColor.textPrimary)
                 }
                 .safeAreaPadding(.top, 16)
-                Text("비밀번호")
-                    .font(MoilTypography.semibold(12))
-                    .foregroundStyle(MoilColor.textTertiary)
-                    .padding(.top, 20)
-                    .padding(.bottom, 10)
-                AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
-                if !password.isEmpty && !passwordIsValid {
-                    Text("비밀번호는 8자 이상이어야 해요")
-                        .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.error)
-                        .padding(.top, 8)
+                MoilValidatedField(label: "비밀번호", state: passwordState) {
+                    AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
                 }
-                Text("비밀번호 확인")
-                    .font(MoilTypography.semibold(12))
-                    .foregroundStyle(MoilColor.textTertiary)
-                    .padding(.top, 22)
-                    .padding(.bottom, 10)
-                AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
-                if !confirmation.isEmpty && !passwordsMatch {
-                    Text("비밀번호가 일치하지 않아요")
-                        .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.error)
-                        .padding(.top, 8)
+                .padding(.top, 20)
+
+                MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
+                    AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
                 }
+                .padding(.top, 22)
                 Spacer()
                 Button(actionTitle) {
                     Task {
