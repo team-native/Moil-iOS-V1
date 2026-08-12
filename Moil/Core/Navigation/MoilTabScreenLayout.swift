@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Shared spacing so every tab screen starts its content at the same place.
 enum MoilTabScreenMetrics {
-    static let horizontalPadding: CGFloat = 16
+    /// 피그마 기준 좌우 여백입니다. 모든 화면이 이 값을 씁니다.
+    static let horizontalPadding: CGFloat = 24
     static let topPadding: CGFloat = 8
     /// 상태 표시줄과 제목이 붙어 보이지 않도록 제목 위에 넉넉히 띄웁니다.
     static let titleTopPadding: CGFloat = 28

@@ -71,7 +71,7 @@ struct GroupJoinProfileView: View {
             }
             .safeAreaPadding(.bottom, 12)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .background(MoilColor.background.ignoresSafeArea())
         .alert("프로필 추가", isPresented: $isAdditionalProfilePresented) {
             Button("확인", role: .cancel) { }

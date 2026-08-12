@@ -88,7 +88,7 @@ struct GroupDetailView: View {
 
                 MoilButton(title: "그룹 나가기") { isLeavingGroup = true }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .padding(.bottom, 32)
         }
         .background(MoilColor.groupDetailBackground.ignoresSafeArea())

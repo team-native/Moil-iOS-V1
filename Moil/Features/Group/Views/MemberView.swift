@@ -463,7 +463,7 @@ private struct AdministratorTransferEditor: View {
                     .padding(.top, 16)
                 MoilButton(title: "취소", style: .text, action: onCancel)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .padding(.bottom, 12)
             .frame(maxWidth: 320)
             .background(MoilColor.surface)
@@ -522,7 +522,7 @@ private struct PermissionEditorView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("멤버 권한 설정")
                 .font(MoilTypography.bold(17))
-                .padding(.horizontal, 20)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.top, 20)
                 .padding(.bottom, 14)
             ForEach(members) { member in
@@ -545,9 +545,9 @@ private struct PermissionEditorView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 132)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .frame(height: 56)
-                if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
+                if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, MoilTabScreenMetrics.horizontalPadding) }
             }
             MoilButton(title: "완료") {
                 onSave(members.compactMap { member in

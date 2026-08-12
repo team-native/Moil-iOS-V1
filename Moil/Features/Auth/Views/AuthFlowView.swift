@@ -278,7 +278,7 @@ private struct LoginView: View {
                 .padding(.top, 17)
                 .padding(.bottom, 2)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .safeAreaPadding(.top, 40)
             .safeAreaPadding(.bottom, 34)
             .frame(maxWidth: 402)
@@ -376,7 +376,7 @@ private struct PasswordResetEmailView: View {
                 }
                 .safeAreaPadding(.bottom, 12)
             }
-            .padding(.horizontal, 24).frame(maxWidth: 402)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(maxWidth: 402)
         }
     }
 }

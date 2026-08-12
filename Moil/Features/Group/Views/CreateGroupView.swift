@@ -50,7 +50,7 @@ struct CreateGroupView: View {
             }
                 .safeAreaPadding(.bottom, 12)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .safeAreaPadding(.top, 12)
         .background(MoilColor.background.ignoresSafeArea())
         .navigationTitle("새 그룹 만들기")

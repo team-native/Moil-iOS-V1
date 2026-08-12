@@ -10,7 +10,7 @@ struct MoilAuthScaffold<Content: View, Bottom: View>: View {
     @ViewBuilder let bottom: Bottom
 
     /// 피그마: 좌우 24, 제목 상단 76(안전 영역 62 + 14)
-    private let horizontalPadding: CGFloat = 24
+    private let horizontalPadding = MoilTabScreenMetrics.horizontalPadding
     private let titleTopPadding: CGFloat = 14
 
     var body: some View {

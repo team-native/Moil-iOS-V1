@@ -596,12 +596,12 @@ private struct ScheduleComposerView: View {
                     .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
                     .disabled(!canSave)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .padding(.top, 34)
             .padding(.bottom, 18)
 
             MoilTextField(placeholder: "일정 제목", text: $title)
-                .padding(.horizontal, 18)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 8)
 
             ScheduleRow(title: "날짜", value: dateTitle)
@@ -610,8 +610,8 @@ private struct ScheduleComposerView: View {
                 Spacer()
                 Toggle("", isOn: $allDay).labelsHidden().tint(MoilColor.primary)
             }
-            .padding(.horizontal, 18).frame(height: 50)
-            .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(height: 50)
+            .overlay(alignment: .bottom) { Divider().padding(.horizontal, MoilTabScreenMetrics.horizontalPadding) }
             ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
             ScheduleRow(title: "위치", value: "추가", secondary: true)
 
@@ -633,7 +633,7 @@ private struct ScheduleComposerView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 18).padding(.top, 16)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).padding(.top, 16)
             Spacer()
         }
         .background(MoilColor.surface)
@@ -691,8 +691,8 @@ private struct ScheduleRow: View {
             Spacer()
             Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
         }
-        .padding(.horizontal, 18).frame(height: 46)
-        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(height: 46)
+        .overlay(alignment: .bottom) { Divider().padding(.horizontal, MoilTabScreenMetrics.horizontalPadding) }
     }
 }
 
@@ -726,7 +726,7 @@ private struct ScheduleSearchView: View {
                             .foregroundStyle(MoilColor.textTertiary)
                             .padding(.trailing, 16)
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.top, 12)
 
                 if filteredEvents.isEmpty {
