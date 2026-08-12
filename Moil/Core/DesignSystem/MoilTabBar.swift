@@ -55,9 +55,12 @@ struct MoilTabBar: View {
         Button { onSelect(tab) } label: {
             Image(systemName: icon)
                 .font(.system(size: 21, weight: .regular))
-                .frame(maxWidth: .infinity)
                 .foregroundStyle(selected == tab ? MoilColor.primary : style.unselectedColor)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                // 아이콘 글리프만이 아니라 칸 전체가 눌리도록 합니다.
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel(for: tab))
     }
 

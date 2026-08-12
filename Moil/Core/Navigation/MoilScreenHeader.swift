@@ -44,3 +44,32 @@ struct MoilScreenHeader: View {
     }
     .background(MoilColor.background)
 }
+
+/// 내비게이션 바가 없는 화면에서 iOS 기본 형태를 흉내 내는 상단 바입니다.
+/// 뒤로 가기 버튼은 왼쪽, 제목은 가운데에 둡니다.
+struct MoilInlineHeader: View {
+    let title: String
+    let onBack: () -> Void
+
+    var body: some View {
+        ZStack {
+            Text(title)
+                .font(MoilTypography.bold(17))
+                .foregroundStyle(MoilColor.textPrimary)
+
+            HStack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .frame(width: 44, height: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(height: 44)
+        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+        .safeAreaPadding(.top, 8)
+    }
+}

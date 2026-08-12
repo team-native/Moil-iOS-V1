@@ -95,11 +95,14 @@ struct CalendarView: View {
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundStyle(MoilColor.textSecondary)
                         }
+                        .contentShape(Rectangle())
                         Spacer()
                         Button { isScheduleSearchPresented = true } label: {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 21, weight: .medium))
                                 .foregroundStyle(MoilColor.textPrimary)
+                                .frame(width: 44, height: 44, alignment: .trailing)
+                                .contentShape(Rectangle())
                         }
                     }
                     .frame(height: 32)
@@ -118,6 +121,7 @@ struct CalendarView: View {
                                         }
                                         .padding(.horizontal, 14)
                                         .frame(height: 46)
+                                        .contentShape(Rectangle())
                                     }
                                     .foregroundStyle(MoilColor.textPrimary)
                                     if group.id != groupStore.groups.last?.id { Divider() }
@@ -135,6 +139,7 @@ struct CalendarView: View {
                                         .font(MoilTypography.semibold(14))
                                         .padding(.horizontal, 14)
                                         .frame(height: 46)
+                                        .contentShape(Rectangle())
                                 }
                                 .foregroundStyle(MoilColor.primary)
                             }
@@ -160,6 +165,7 @@ struct CalendarView: View {
                             .background(MoilColor.background)
                             .clipShape(Circle())
                             .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
+                            .contentShape(Circle())
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         Button { moveMonth(by: 1) } label: {
@@ -168,6 +174,7 @@ struct CalendarView: View {
                             .background(MoilColor.background)
                             .clipShape(Circle())
                             .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
+                            .contentShape(Circle())
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         .padding(.leading, 6)
@@ -413,6 +420,7 @@ struct CalendarView: View {
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .top)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onLongPressGesture {

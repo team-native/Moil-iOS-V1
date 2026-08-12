@@ -75,6 +75,7 @@ struct MyPageView: View {
                             .foregroundStyle(MoilColor.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
+                            .contentShape(Rectangle())
                     }
                 }
                 .padding(.bottom, 28)
@@ -197,7 +198,9 @@ private struct AccountMenuRow: View {
                     .foregroundStyle(MoilColor.textTertiary)
             }
             .padding(16)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -214,6 +217,8 @@ private struct PasswordChangeView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+        MoilInlineHeader(title: "비밀번호 변경", onBack: onClose)
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
@@ -235,10 +240,9 @@ private struct PasswordChangeView: View {
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 12)
         }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("비밀번호 변경")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func changePassword() async {
@@ -260,6 +264,8 @@ private struct AccountDeletionView: View {
     let onDelete: (String, String, Bool) async -> String?
 
     var body: some View {
+        VStack(spacing: 0) {
+        MoilInlineHeader(title: "회원 탈퇴", onBack: onClose)
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("탈퇴하면 계정에 접근할 수 없어요.")
@@ -291,10 +297,9 @@ private struct AccountDeletionView: View {
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
             .padding(.bottom, 12)
         }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("회원 탈퇴")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
