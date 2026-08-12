@@ -51,7 +51,10 @@ struct MoilFieldStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(MoilTypography.regular(15))
-            .padding(16)
+            .padding(.horizontal, 16)
+            // 높이를 고정하지 않으면 커서가 생길 때 내용 높이가 달라져 칸이 미세하게 흔들립니다.
+            .frame(minHeight: 53)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(MoilColor.surface)
             .clipShape(RoundedRectangle(cornerRadius: 14))
     }
