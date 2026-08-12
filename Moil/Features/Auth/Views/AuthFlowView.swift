@@ -277,12 +277,13 @@ private struct SignUpInfoView: View {
     @State private var isSubmitting = false
     @State private var serverError: String?
 
+    /// 입력하는 즉시 형식을 판단합니다.
     private var emailIsValid: Bool {
-        email.isEmpty || (email.contains("@") && email.contains("."))
+        email.range(of: #"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$"#, options: .regularExpression) != nil
     }
 
     private var canProceed: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && !email.isEmpty && emailIsValid
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && emailIsValid
     }
 
     private var emailState: MoilFieldState {
@@ -291,40 +292,32 @@ private struct SignUpInfoView: View {
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
+        MoilAuthScaffold(title: "회원가입", onBack: onBack) {
+            MoilValidatedField(label: "이름") {
+                AuthTextField(title: "이름 입력", text: $name, contentType: .name)
+            }
+            .padding(.top, 20)
 
+            MoilValidatedField(label: "이메일", state: emailState) {
+                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+            }
+            .padding(.top, 18)
+
+            if let serverError {
+                Text(serverError)
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.error)
+                    .padding(.top, 8)
+            }
+        } bottom: {
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("회원가입")
-                        .font(MoilTypography.bold(28))
-                        .foregroundStyle(MoilColor.textPrimary)
-                        .safeAreaPadding(.top, 16)
-
-                    MoilValidatedField(label: "이름") {
-                        AuthTextField(title: "이름 입력", text: $name, contentType: .name)
-                    }
-                    .padding(.top, 20)
-
-                    MoilValidatedField(label: "이메일", state: emailState) {
-                        AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
-                    }
-                    .padding(.top, 18)
-                }
-
-                Spacer()
-
-                MoilPrimaryButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
+                MoilAuthButton(title: "다음", isEnabled: canProceed && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
                         isSubmitting = false
                     }
                 }
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
-
                 Button(action: onBack) {
                     Text("이미 계정이 있으신가요? ")
                         .foregroundStyle(MoilColor.textSecondary)
@@ -333,11 +326,9 @@ private struct SignUpInfoView: View {
                         .foregroundStyle(MoilColor.primary)
                 }
                 .font(MoilTypography.regular(14))
-                .padding(.top, 14)
-                .safeAreaPadding(.bottom, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 17)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
         }
     }
 }
