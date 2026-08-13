@@ -9,7 +9,8 @@ enum MoilSheetMetrics {
 
     /// 다크 값은 피그마 원본 그대로이고, 라이트 값은 같은 자리에 맞춘 밝은 색입니다.
     static let sheetBackground = Color("SheetBackground")
-    static let composerBackground = Color("SheetComposerBackground")
+    /// 새 일정 시트도 일별 목록과 같은 배경을 씁니다.
+    static let composerBackground = Color("SheetBackground")
     static let divider = Color("SheetDivider")
     static let handle = Color("SheetHandle")
     static let titleText = MoilColor.textPrimary
@@ -216,10 +217,10 @@ struct EventDetailSheet: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
             }
-            .frame(height: 31)
-            .padding(.top, 16)
+            .frame(height: 22)
+            .padding(.top, 12)
 
-            detailDivider.padding(.top, 16)
+            detailDivider.padding(.top, 12)
 
             HStack(spacing: 0) {
                 Text("\(MoilSheetGlyph.members)  참여자 \(event.members.count)명")
@@ -604,7 +605,11 @@ struct DayScheduleSheetContainer: View {
             }
             .presentationBackground(.clear)
         }
-        .sheet(isPresented: $isComposerPresented) {
+        .moilBottomSheet(
+            isPresented: $isComposerPresented,
+            height: MoilSheetMetrics.composerHeight,
+            background: MoilSheetMetrics.composerBackground
+        ) {
             ScheduleComposerView(
                 title: composerEvent == nil ? "새 일정" : "일정 수정",
                 date: date,
@@ -617,9 +622,6 @@ struct DayScheduleSheetContainer: View {
                     onCreate(draft)
                 }
             }
-            .presentationDetents([.height(MoilSheetMetrics.composerHeight)])
-            .presentationCornerRadius(24)
-            .presentationBackground(MoilSheetMetrics.composerBackground)
         }
     }
 }

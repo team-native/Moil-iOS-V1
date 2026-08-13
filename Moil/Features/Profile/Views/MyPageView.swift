@@ -92,7 +92,7 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 28)
                 GroupSection(title: "환경설정") {
-                    MoilToggle(title: "다크 모드", isOn: $isDarkMode).padding(14)
+                    MoilToggle(title: "다크 모드", isOn: $isDarkMode).padding(.horizontal, 14).frame(height: 48)
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {

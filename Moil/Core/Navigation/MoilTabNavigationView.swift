@@ -14,12 +14,7 @@ struct MoilTabNavigationView: View {
             MoilColor.background
                 .ignoresSafeArea()
 
-            if let accountRoute {
-                MoilAccountPage(route: accountRoute, onClose: { closeAccountPage() }, onLogout: onLogout)
-                    // 계정 화면은 오른쪽에서 밀려 들어옵니다.
-                    .transition(.move(edge: .trailing))
-                    .zIndex(1)
-            } else if isCreatingGroup {
+            if isCreatingGroup {
                 CreateGroupView(onClose: closeCreateGroup)
             } else if isJoiningProfile {
                 GroupJoinProfileView {
@@ -28,6 +23,15 @@ struct MoilTabNavigationView: View {
                 }
             } else {
                 tabContent
+            }
+
+            // 계정 화면은 탭 화면 위로 오른쪽에서 밀려 들어옵니다.
+            if let accountRoute {
+                MoilAccountPage(route: accountRoute, onClose: { closeAccountPage() }, onLogout: onLogout)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(MoilColor.background.ignoresSafeArea())
+                    .transition(.move(edge: .trailing))
+                    .zIndex(2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

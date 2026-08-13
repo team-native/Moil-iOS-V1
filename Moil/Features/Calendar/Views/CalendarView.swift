@@ -403,7 +403,7 @@ struct CalendarView: View {
 
     private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
-            withAnimation(.easeOut(duration: 0.22)) { selectedDay = day }
+            selectedDay = day
         } label: {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")

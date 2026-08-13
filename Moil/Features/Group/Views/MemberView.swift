@@ -52,9 +52,6 @@ struct MemberView: View {
         ["OWNER", "ADMIN"].contains(member.role.uppercased())
     }
 
-    /// 탭 화면 위에 뜨는 시트는 탭바가 그 위에 겹쳐 그려집니다. 그만큼 내용을 위로 올립니다.
-    private var tabBarOverlap: CGFloat { showsTabBar ? 0 : 62 }
-
     private var inviteCode: String {
         selectedGroup?.inviteCode ?? ""
     }
@@ -118,20 +115,14 @@ struct MemberView: View {
         }
             .moilBottomSheet(
                 isPresented: $isEditingPermissions,
-                height: CGFloat(180 + currentMembers.count * 52) + tabBarOverlap,
-                background: MoilColor.surface,
-                contentBottomPadding: tabBarOverlap
+                height: CGFloat(180 + currentMembers.count * 52),
+                background: MoilColor.surface
             ) {
                 PermissionEditorView(members: currentMembers) { updatedRoles in
                     Task { await updateRoles(updatedRoles) }
                 }
             }
-            .moilBottomSheet(
-                isPresented: $isSharingInvite,
-                height: 250 + tabBarOverlap,
-                background: MoilColor.surface,
-                contentBottomPadding: tabBarOverlap
-            ) {
+            .moilBottomSheet(isPresented: $isSharingInvite, height: 250, background: MoilColor.surface) {
                 InviteShareView(inviteCode: inviteCode)
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
@@ -225,15 +216,16 @@ struct MemberView: View {
             SectionTitle("그룹 설정").padding(.bottom, 8)
             VStack(spacing: 0) {
                 MoilToggle(title: "알림 받기", isOn: $notificationsEnabled)
-                    .padding(14)
+                    .padding(.horizontal, 14)
+                    .frame(height: 48)
                 // 관리자일 때만 관리자용 항목이 같은 카드 안에 이어집니다.
                 if isAdministratorMode {
                     Divider()
                     AdminSettingRow(title: "그룹 이름 변경") { groupNameDraft = selectedGroup?.name ?? ""; isEditingGroupName = true }
                     Divider()
-                        AdminSettingRow(title: "멤버 권한 설정") { withAnimation(.easeOut(duration: 0.22)) { isEditingPermissions = true } }
+                        AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                     Divider()
-                        AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { withAnimation(.easeOut(duration: 0.22)) { isSharingInvite = true } }
+                        AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
                 }
                 Divider()
                 Button("그룹 나가기") { isLeavingGroup = true }
