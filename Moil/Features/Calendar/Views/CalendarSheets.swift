@@ -19,6 +19,14 @@ enum MoilSheetMetrics {
     static let deleteButtonText = Color(red: 0.722, green: 0.369, blue: 0.329)   // #b85e54
 }
 
+/// 피그마 원본이 아이콘 대신 쓰는 글자들입니다. 그대로 옮겨 씁니다.
+enum MoilSheetGlyph {
+    static let date = "▣"
+    static let location = "⌖"
+    static let members = "♧"
+    static let memo = "▤"
+}
+
 /// 피그마 시트 상단의 손잡이입니다. 기본 드래그 인디케이터 대신 씁니다.
 private struct SheetHandle: View {
     var body: some View {
@@ -56,9 +64,9 @@ struct DayScheduleSheet: View {
                 Spacer(minLength: 0)
                 Button(action: onAdd) {
                     Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .regular))
+                        .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(MoilSheetMetrics.titleText)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 40, height: 40)
                         .background(MoilSheetMetrics.addButtonBackground)
                         .clipShape(Circle())
                         .contentShape(Circle())
@@ -107,31 +115,28 @@ private struct DayScheduleRow: View {
             Circle()
                 .fill(event.color)
                 .frame(width: 11, height: 11)
-                .padding(.top, 15)
             Spacer(minLength: 0).frame(width: 19)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(event.startTime ?? "하루")
                 Text(event.endTime ?? "종일")
             }
             .font(MoilTypography.regular(14))
             .foregroundStyle(MoilSheetMetrics.subText)
             .frame(width: 59, alignment: .leading)
-            .padding(.top, 8)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(event.title)
                     .font(MoilTypography.semibold(17))
                     .foregroundStyle(MoilSheetMetrics.titleText)
                     .lineLimit(1)
                 if let location = event.location, !location.isEmpty {
-                    Label(location, systemImage: "mappin.and.ellipse")
+                    Text("\(MoilSheetGlyph.location)  \(location)")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilSheetMetrics.subText)
                         .lineLimit(1)
                 }
             }
-            .padding(.top, 6)
 
             Spacer(minLength: 8)
 
@@ -140,15 +145,13 @@ private struct DayScheduleRow: View {
                     MoilAvatar(color: member.color, size: 25)
                 }
             }
-            .padding(.top, 9)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(MoilSheetMetrics.titleText)
                 .padding(.leading, 12)
-                .padding(.top, 13)
         }
-        .frame(height: 90, alignment: .top)
+        .frame(height: 62)
         .padding(.horizontal, 28)
         .contentShape(Rectangle())
     }
@@ -160,19 +163,19 @@ private struct DayScheduleRow: View {
 struct EventDetailSheet: View {
     let event: CalendarEvent
     let dateTitle: String
+    /// 그룹에서 쓰는 내 닉네임입니다. 이 이름이면 저장해 둔 내 이름으로 바꿔 보여 줍니다.
+    var myNickname: String?
     let onClose: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SheetHandle()
-
             HStack(spacing: 8) {
                 Circle()
                     .fill(event.color)
                     .frame(width: 12, height: 12)
-                Text(event.owner.isEmpty ? "일정" : event.owner)
+                Text(ownerText)
                     .font(MoilTypography.regular(13))
                     .foregroundStyle(MoilSheetMetrics.subText)
                 Spacer(minLength: 0)
@@ -185,27 +188,27 @@ struct EventDetailSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 18)
+            .padding(.top, 4)
 
             Text(event.title)
                 .font(MoilTypography.semibold(24))
                 .foregroundStyle(MoilSheetMetrics.titleText)
-                .padding(.top, 22)
+                .padding(.top, 10)
 
             HStack(spacing: 0) {
-                Label(dateTitle, systemImage: "calendar")
+                Text("\(MoilSheetGlyph.date)  \(dateTitle)")
                     .frame(width: 163, alignment: .leading)
                 Text(event.timeRangeText)
                 Spacer(minLength: 0)
             }
             .font(MoilTypography.regular(14))
             .foregroundStyle(MoilSheetMetrics.subText)
-            .padding(.top, 30)
+            .padding(.top, 16)
 
-            detailDivider.padding(.top, 17)
+            detailDivider.padding(.top, 14)
 
             HStack(spacing: 0) {
-                Label(event.location?.isEmpty == false ? event.location! : "위치 없음", systemImage: "mappin.and.ellipse")
+                Text("\(MoilSheetGlyph.location)  \(event.location?.isEmpty == false ? event.location! : "위치 없음")")
                     .font(MoilTypography.regular(14))
                     .foregroundStyle(MoilSheetMetrics.subText)
                     .lineLimit(1)
@@ -229,7 +232,7 @@ struct EventDetailSheet: View {
             detailDivider.padding(.top, 16)
 
             HStack(spacing: 0) {
-                Label("참여자 \(event.members.count)명", systemImage: "person.2")
+                Text("\(MoilSheetGlyph.members)  참여자 \(event.members.count)명")
                     .font(MoilTypography.regular(14))
                     .foregroundStyle(MoilSheetMetrics.subText)
                 Spacer(minLength: 8)
@@ -253,18 +256,12 @@ struct EventDetailSheet: View {
             detailDivider.padding(.top, 15)
 
             if let memo = event.memo, !memo.isEmpty {
-                Label {
-                    Text(memo)
-                        .multilineTextAlignment(.leading)
-                } icon: {
-                    Image(systemName: "text.alignleft")
-                }
-                .font(MoilTypography.regular(13))
-                .foregroundStyle(MoilSheetMetrics.subText)
-                .padding(.top, 19)
+                Text("\(MoilSheetGlyph.memo)  \(memo)")
+                    .multilineTextAlignment(.leading)
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilSheetMetrics.subText)
+                    .padding(.top, 16)
             }
-
-            Spacer(minLength: 20)
 
             HStack(spacing: 0) {
                 Button(action: onEdit) {
@@ -289,12 +286,21 @@ struct EventDetailSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 40)
+            .padding(.top, 24)
+            .padding(.bottom, 4)
         }
-        // 피그마: 상세 시트 좌우 42
-        .padding(.horizontal, 42)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .frame(width: 330)
         .background(MoilSheetMetrics.sheetBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .shadow(color: .black.opacity(0.35), radius: 24, y: 10)
+    }
+
+    private var ownerText: String {
+        guard !event.owner.isEmpty else { return "일정" }
+        guard event.owner == myNickname else { return event.owner }
+        return MoilLocalAccount.displayName(fallback: event.owner)
     }
 
     private var detailDivider: some View {
@@ -390,6 +396,7 @@ struct ScheduleComposerView: View {
                 .font(MoilTypography.semibold(21))
                 .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
                 .textInputAutocapitalization(.never)
+                .frame(height: 30)
                 .padding(.top, 6)
                 .padding(.bottom, 13)
             rowDivider
@@ -435,7 +442,7 @@ struct ScheduleComposerView: View {
                                             .stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 2)
                                             .padding(-3)
                                     }
-                                Text(member.nickname)
+                                Text(member.displayName)
                                     .font(selectedMemberIDs.contains(member.id) ? MoilTypography.bold(11) : MoilTypography.regular(11))
                                     .foregroundStyle(Color(red: 0.608, green: 0.596, blue: 0.569))
                             }
@@ -582,24 +589,29 @@ struct DayScheduleSheetContainer: View {
                 Task { detailEvent = await onLoadDetail(event) }
             }
         )
-        .sheet(item: $detailEvent) { event in
-            EventDetailSheet(
-                event: event,
-                dateTitle: dateTitle,
-                onClose: { detailEvent = nil },
-                onEdit: {
-                    detailEvent = nil
-                    composerEvent = event
-                    isComposerPresented = true
-                },
-                onDelete: {
-                    detailEvent = nil
-                    onDelete(event)
-                }
-            )
-            .presentationDetents([.height(MoilSheetMetrics.detailHeight)])
-            .presentationCornerRadius(26)
-            .presentationBackground(MoilSheetMetrics.sheetBackground)
+        // 상세는 밑에서 올라오지 않고 화면 가운데에 뜹니다.
+        .fullScreenCover(item: $detailEvent) { event in
+            ZStack {
+                Color.black.opacity(0.45)
+                    .ignoresSafeArea()
+                    .onTapGesture { detailEvent = nil }
+                EventDetailSheet(
+                    event: event,
+                    dateTitle: dateTitle,
+                    myNickname: members.first(where: \.isMe)?.nickname,
+                    onClose: { detailEvent = nil },
+                    onEdit: {
+                        detailEvent = nil
+                        composerEvent = event
+                        isComposerPresented = true
+                    },
+                    onDelete: {
+                        detailEvent = nil
+                        onDelete(event)
+                    }
+                )
+            }
+            .presentationBackground(.clear)
         }
         .sheet(isPresented: $isComposerPresented) {
             ScheduleComposerView(

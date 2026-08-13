@@ -119,7 +119,7 @@ struct GroupDetailView: View {
                 HStack(spacing: 12) {
                     MoilAvatar(color: MoilAvatarColor.color(for: members[index].colorId), size: 34)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(members[index].nickname).font(MoilTypography.semibold(15))
+                        Text(members[index].displayName).font(MoilTypography.semibold(15))
                         Text(roleTitle(members[index].role))
                             .font(MoilTypography.regular(12))
                             .foregroundStyle(MoilColor.groupDetailTextSecondary)

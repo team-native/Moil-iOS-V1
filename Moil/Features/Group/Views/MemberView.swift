@@ -37,7 +37,7 @@ struct MemberView: View {
     }
 
     private var members: [(String, String, Color)] {
-        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
+        currentMembers.map { ($0.displayName, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
     }
 
     /// 그룹 응답의 역할을 먼저 쓰고, 멤버 응답이 도착하면 그쪽으로 확정합니다.
@@ -223,7 +223,7 @@ struct MemberView: View {
             SectionTitle("그룹 설정").padding(.bottom, 8)
             VStack(spacing: 0) {
                 MoilToggle(title: "알림 받기", isOn: $notificationsEnabled)
-                    .padding(14).disabled(isSavingNotification)
+                    .padding(14)
                 Divider()
                 Button("그룹 나가기") { isLeavingGroup = true }
                     .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
@@ -580,12 +580,12 @@ private struct PermissionEditorView: View {
             ForEach(members) { member in
                 HStack(spacing: 12) {
                     MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 28)
-                    Text(member.nickname)
+                    Text(member.displayName)
                         .font(MoilTypography.semibold(15))
                         .foregroundStyle(MoilColor.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 12)
-                    RolePicker(isAdministrator: Binding(
+                    RolePicker(isEditable: !member.isMe, isAdministrator: Binding(
                         get: { administrators.contains(member.id) },
                         set: { enabled in
                             var updated = administrators
@@ -621,13 +621,16 @@ private struct PermissionEditorView: View {
 
 /// 피그마의 관리자/멤버 알약형 선택입니다.
 private struct RolePicker: View {
+    /// 내 권한은 내가 바꿀 수 없어 보기 전용으로 둡니다.
+    var isEditable = true
     @Binding var isAdministrator: Bool
 
     var body: some View {
         HStack(spacing: 0) {
-            segment("관리자", isSelected: isAdministrator) { isAdministrator = true }
-            segment("멤버", isSelected: !isAdministrator) { isAdministrator = false }
+            segment("관리자", isSelected: isAdministrator) { if isEditable { isAdministrator = true } }
+            segment("멤버", isSelected: !isAdministrator) { if isEditable { isAdministrator = false } }
         }
+        .opacity(isEditable ? 1 : 0.55)
         .padding(3)
         .background(MoilColor.background)
         .clipShape(Capsule())

@@ -321,6 +321,10 @@ struct CalendarView: View {
         }
     }
 
+    private func isToday(_ day: Int) -> Bool {
+        MoilCalendarDate.isToday(year: displayedYear, month: displayedMonthValue, day: day)
+    }
+
     private var displayedYear: Int {
         calendar.component(.year, from: displayedMonth)
     }
@@ -402,8 +406,11 @@ struct CalendarView: View {
         } label: {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
-                    .font(MoilTypography.regular(15))
+                    .font(isToday(day) ? MoilTypography.bold(15) : MoilTypography.regular(15))
+                    .foregroundStyle(isToday(day) ? .white : MoilColor.textPrimary)
                     .frame(width: 32, height: 32, alignment: .center)
+                    // 오늘 날짜는 동그라미로 표시합니다.
+                    .background { if isToday(day) { Circle().fill(MoilColor.primary) } }
                 ForEach(events) { event in
                     eventChip(event)
                 }

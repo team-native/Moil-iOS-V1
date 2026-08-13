@@ -261,6 +261,11 @@ struct MoilRemoteMember: Decodable, Identifiable {
         colorId = try? container.string(for: [.colorId, .profileColor])
         isMe = (try? container.decode(Bool.self, forKey: .isMe)) ?? false
     }
+
+    /// 내 프로필이면 저장해 둔 내 이름을 먼저 보여 줍니다.
+    var displayName: String {
+        isMe ? MoilLocalAccount.displayName(fallback: nickname) : nickname
+    }
 }
 
 private struct MoilMemberList: Decodable {
