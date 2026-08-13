@@ -57,7 +57,7 @@ struct MyPageView: View {
                     HStack(spacing: 14) {
                         MoilAvatar(color: myColor, size: 56)
                         Text(myName)
-                            .font(MoilTypography.bold(21))
+                            .font(MoilTypography.semibold(21))
                             .foregroundStyle(MoilColor.textPrimary)
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
@@ -83,7 +83,7 @@ struct MyPageView: View {
                     Divider()
                     Button(action: onCreateGroup) {
                         Label("새 그룹 만들기", systemImage: "plus")
-                            .font(MoilTypography.semibold(15))
+                            .font(MoilTypography.regular(15))
                             .foregroundStyle(MoilColor.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
@@ -210,7 +210,8 @@ private struct AccountMenuRow: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(MoilTypography.semibold(15))
+                    // '다크 모드' 줄과 같은 크기·굵기로 맞춥니다.
+                    .font(MoilTypography.regular(15))
                     .foregroundStyle(isDestructive ? MoilColor.error : MoilColor.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -343,7 +344,7 @@ private struct GroupSection<Content: View>: View {
 private struct GroupRow: View {
     let title: String; let color: Color
     init(_ title: String, _ color: Color) { self.title = title; self.color = color }
-    var body: some View { HStack { Circle().fill(color).frame(width: 8, height: 8); Text(title).font(MoilTypography.semibold(15)); Spacer(); Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(MoilColor.textTertiary) }.padding(14) }
+    var body: some View { HStack { Circle().fill(color).frame(width: 8, height: 8); Text(title).font(MoilTypography.regular(15)); Spacer(); Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(MoilColor.textTertiary) }.padding(14) }
 }
 
 /// 마이페이지 > 프로필 변경입니다. 이름은 서버에 저장하고, 색은 기기에 저장합니다.

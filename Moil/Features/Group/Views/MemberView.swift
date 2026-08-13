@@ -349,11 +349,17 @@ struct MemberView: View {
 }
 
 private struct InviteShareView: View {
-    @Environment(\.dismiss) private var dismiss
     @State private var copied = false
+    @State private var shareTarget: MoilShareTarget?
+    @State private var cannotSendMessage = false
     let inviteCode: String
 
-    private var inviteLink: String { "moil.app/join/\(inviteCode)" }
+    private var inviteLink: String { "https://moil.app/join/\(inviteCode)" }
+
+    /// 공유 앱에 보낼 문구입니다.
+    private var shareText: String {
+        "모일에서 함께 일정을 맞춰요.\n초대 링크: \(inviteLink)"
+    }
 
     private func copyInviteLink() {
         UIPasteboard.general.string = inviteLink
@@ -376,14 +382,19 @@ private struct InviteShareView: View {
             Text(copied ? "링크를 복사했어요" : inviteLink)
                 .font(MoilTypography.regular(14))
                 .foregroundStyle(copied ? MoilColor.primary : MoilColor.textSecondary)
+                .lineLimit(1)
                 .padding(.top, 8)
 
             HStack(spacing: 17) {
                 shareButton("카카오톡", color: Color(red: 0.984, green: 0.898, blue: 0.000), icon: "message.fill", iconColor: .black) {
-                    share(text: inviteLink)
+                    shareTarget = .activity
                 }
                 shareButton("메시지", color: Color(red: 0.361, green: 0.553, blue: 0.937), icon: "message.fill", iconColor: .white) {
-                    share(text: inviteLink)
+                    if MoilMessageComposer.canSend {
+                        shareTarget = .message
+                    } else {
+                        cannotSendMessage = true
+                    }
                 }
                 shareButton("링크 복사", color: MoilColor.surface, icon: "doc.on.doc", iconColor: MoilColor.textPrimary, hasBorder: true) {
                     copyInviteLink()
@@ -396,6 +407,21 @@ private struct InviteShareView: View {
         .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background(MoilColor.surface)
+        .sheet(item: $shareTarget) { target in
+            switch target {
+            case .message:
+                MoilMessageComposer(body: shareText) { shareTarget = nil }
+                    .ignoresSafeArea()
+            case .activity:
+                MoilActivitySheet(items: [shareText]) { shareTarget = nil }
+                    .ignoresSafeArea()
+            }
+        }
+        .alert("메시지를 보낼 수 없어요", isPresented: $cannotSendMessage) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("이 기기에서는 메시지를 보낼 수 없어요. 링크를 복사해 다른 앱으로 보내주세요.")
+        }
     }
 
     private func shareButton(
@@ -420,14 +446,6 @@ private struct InviteShareView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    /// 카카오톡·메시지는 iOS 기본 공유 시트로 넘깁니다.
-    private func share(text: String) {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let root = scene.keyWindow?.rootViewController else { return }
-        let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-        root.presentedViewController?.present(controller, animated: true) ?? root.present(controller, animated: true)
     }
 }
 

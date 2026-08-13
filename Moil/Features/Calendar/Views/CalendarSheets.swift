@@ -187,17 +187,16 @@ struct EventDetailSheet: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(MoilSheetMetrics.subText)
-                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .frame(width: 32, height: 24, alignment: .trailing)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 4)
 
             Text(event.title)
                 .font(MoilTypography.semibold(24))
                 .foregroundStyle(MoilSheetMetrics.titleText)
-                .padding(.top, 10)
+                .padding(.top, 12)
 
             HStack(spacing: 0) {
                 Text("\(MoilSheetGlyph.date)  \(dateTitle)")
@@ -222,6 +221,7 @@ struct EventDetailSheet: View {
             .padding(.top, 12)
 
             detailDivider.padding(.top, 12)
+                
 
             HStack(spacing: 0) {
                 Text("\(MoilSheetGlyph.members)  참여자 \(event.members.count)명")

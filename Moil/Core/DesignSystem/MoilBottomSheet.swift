@@ -36,14 +36,14 @@ private struct MoilBottomSheetContainer<SheetContent: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .onAppear {
-            withAnimation(.easeOut(duration: 0.26)) { isShown = true }
+            withAnimation(.easeOut(duration: 0.16)) { isShown = true }
         }
     }
 
     private func close() {
-        withAnimation(.easeIn(duration: 0.2)) { isShown = false }
+        withAnimation(.easeIn(duration: 0.14)) { isShown = false }
         // 내려가는 모션이 끝난 뒤에 화면을 닫습니다.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: onClose)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.14, execute: onClose)
     }
 }
 

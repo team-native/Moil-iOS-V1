@@ -58,14 +58,14 @@ struct MoilTabNavigationView: View {
                 onTabSelect: select,
                 showsTabBar: false,
                 onAccountRoute: { route in
-                    withAnimation(.easeOut(duration: 0.28)) { accountRoute = route }
+                    withAnimation(.easeOut(duration: 0.18)) { accountRoute = route }
                 }
             )
         }
     }
 
     private func closeAccountPage() {
-        withAnimation(.easeIn(duration: 0.24)) { accountRoute = nil }
+        withAnimation(.easeIn(duration: 0.16)) { accountRoute = nil }
     }
 
     private func select(_ tab: MoilTab) {
