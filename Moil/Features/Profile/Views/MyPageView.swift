@@ -465,6 +465,7 @@ private struct ThemePicker: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 0).frame(height: 6)
             ForEach(MoilThemeSetting.allCases) { option in
                 Button {
                     selection = option.rawValue
@@ -498,6 +499,7 @@ private struct ThemePicker: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            Spacer(minLength: 0).frame(height: 6)
         }
         .frame(width: 200)
         .background(MoilColor.surface)

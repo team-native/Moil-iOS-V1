@@ -51,6 +51,8 @@ struct DayScheduleSheet: View {
     let events: [CalendarEvent]
     let onAdd: () -> Void
     let onSelect: (CalendarEvent) -> Void
+    /// 목록이 바뀔 때 줄이 생기고 사라지는 모션을 확실히 태우기 위해 따로 들고 있습니다.
+    @State private var rows: [CalendarEvent] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,7 +83,7 @@ struct DayScheduleSheet: View {
             .padding(.horizontal, 28)
             .padding(.top, 13)
 
-            if events.isEmpty {
+            if rows.isEmpty {
                 Spacer(minLength: 0)
                 Text("등록된 일정이 없어요")
                     .font(MoilTypography.regular(14))
@@ -90,7 +92,7 @@ struct DayScheduleSheet: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        ForEach(events) { event in
+                        ForEach(rows) { event in
                             VStack(spacing: 0) {
                                 Button { onSelect(event) } label: {
                                     DayScheduleRow(event: event)
@@ -106,12 +108,15 @@ struct DayScheduleSheet: View {
                         }
                     }
                     .padding(.top, 12)
-                    .animation(.easeOut(duration: 0.22), value: events.map(\.id))
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(MoilSheetMetrics.sheetBackground)
+        .onAppear { rows = events }
+        .onChange(of: events.map(\.id)) { _, _ in
+            withAnimation(.easeOut(duration: 0.25)) { rows = events }
+        }
     }
 }
 
@@ -363,7 +368,7 @@ struct ScheduleComposerView: View {
             Capsule()
                 .fill(MoilSheetMetrics.divider)
                 .frame(width: 36, height: 4)
-                .padding(.top, 12)
+                .padding(.top, 14)
 
             HStack {
                 Button("취소") { dismissSheet() }
@@ -382,8 +387,8 @@ struct ScheduleComposerView: View {
                 .foregroundStyle(canSave ? MoilColor.primary : MoilSheetMetrics.subText)
                 .disabled(!canSave)
             }
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .padding(.top, 22)
+            .padding(.bottom, 12)
 
             // 피그마: 제목은 SemiBold 21, 아래 구분선
             TextField("", text: $eventTitle, prompt: Text("일정 제목").foregroundColor(MoilColor.fieldPlaceholder))

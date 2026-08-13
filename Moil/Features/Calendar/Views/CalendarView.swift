@@ -465,6 +465,18 @@ private struct ScheduleSearchView: View {
         eventStore.events(groupId: groupId, month: month).compactMap(CalendarEvent.init(remote:))
     }
 
+    /// 검색 화면에서 지운 일정도 바로 목록에서 사라지게 합니다.
+    private func deleteSearchedEvent(_ event: CalendarEvent) async {
+        do {
+            try await sessionStore.service().deleteEvent(id: event.id)
+            guard let groupId else { return }
+            try await eventStore.load(groupId: groupId, month: month, using: sessionStore.service())
+        } catch {
+            guard !error.isRequestCancellation else { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private var filteredEvents: [CalendarEvent] {
         guard !query.isEmpty else { return events }
         return events.filter {
@@ -538,7 +550,11 @@ private struct ScheduleSearchView: View {
                     dateTitle: event.date,
                     onClose: { selectedEvent = nil },
                     onEdit: { selectedEvent = nil },
-                    onDelete: { selectedEvent = nil }
+                    onDelete: {
+                        let target = event
+                        selectedEvent = nil
+                        Task { await deleteSearchedEvent(target) }
+                    }
                 )
                 }
             }
