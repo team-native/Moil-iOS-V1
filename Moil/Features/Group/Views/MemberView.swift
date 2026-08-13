@@ -52,6 +52,9 @@ struct MemberView: View {
         ["OWNER", "ADMIN"].contains(member.role.uppercased())
     }
 
+    /// 탭 화면 위에 뜨는 시트는 탭바가 그 위에 겹쳐 그려집니다. 그만큼 내용을 위로 올립니다.
+    private var tabBarOverlap: CGFloat { showsTabBar ? 0 : 62 }
+
     private var inviteCode: String {
         selectedGroup?.inviteCode ?? ""
     }
@@ -81,7 +84,6 @@ struct MemberView: View {
                     memberList
                     inviteCodeCard
                     groupSettings
-                    administratorSettings
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 .padding(.bottom, 32)
@@ -114,19 +116,23 @@ struct MemberView: View {
                 }
             }
         }
-            .sheet(isPresented: $isEditingPermissions) {
+            .moilBottomSheet(
+                isPresented: $isEditingPermissions,
+                height: CGFloat(180 + currentMembers.count * 52) + tabBarOverlap,
+                background: MoilColor.surface,
+                contentBottomPadding: tabBarOverlap
+            ) {
                 PermissionEditorView(members: currentMembers) { updatedRoles in
                     Task { await updateRoles(updatedRoles) }
                 }
-                    .presentationDetents([.height(CGFloat(150 + currentMembers.count * 52))])
-                    .presentationCornerRadius(26)
-                    .presentationDragIndicator(.visible)
             }
-            .sheet(isPresented: $isSharingInvite) {
+            .moilBottomSheet(
+                isPresented: $isSharingInvite,
+                height: 250 + tabBarOverlap,
+                background: MoilColor.surface,
+                contentBottomPadding: tabBarOverlap
+            ) {
                 InviteShareView(inviteCode: inviteCode)
-                    .presentationDetents([.height(230)])
-                    .presentationCornerRadius(26)
-                    .presentationDragIndicator(.visible)
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
@@ -157,10 +163,7 @@ struct MemberView: View {
             }
     }
 
-    @ViewBuilder
     private var groupPicker: some View {
-        // 그룹이 하나뿐이면 고를 것이 없어 감춥니다.
-        if groupStore.groups.count > 1 {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(groupStore.groups) { group in
@@ -181,7 +184,6 @@ struct MemberView: View {
         }
         .frame(height: 38)
         .padding(.bottom, 28)
-        }
     }
 
     private var memberList: some View {
@@ -224,13 +226,23 @@ struct MemberView: View {
             VStack(spacing: 0) {
                 MoilToggle(title: "알림 받기", isOn: $notificationsEnabled)
                     .padding(14)
+                // 관리자일 때만 관리자용 항목이 같은 카드 안에 이어집니다.
+                if isAdministratorMode {
+                    Divider()
+                    AdminSettingRow(title: "그룹 이름 변경") { groupNameDraft = selectedGroup?.name ?? ""; isEditingGroupName = true }
+                    Divider()
+                        AdminSettingRow(title: "멤버 권한 설정") { withAnimation(.easeOut(duration: 0.22)) { isEditingPermissions = true } }
+                    Divider()
+                        AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { withAnimation(.easeOut(duration: 0.22)) { isSharingInvite = true } }
+                }
                 Divider()
                 Button("그룹 나가기") { isLeavingGroup = true }
                     .font(MoilTypography.regular(15)).foregroundStyle(MoilColor.error)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                     .popover(isPresented: $isLeavingGroup, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
                         LeaveGroupConfirmation(
-                            isAdministrator: isAdministratorMode,
+                            // 나 혼자인 그룹은 넘길 사람이 없으므로 바로 나갈 수 있게 합니다.
+                            isAdministrator: isAdministratorMode && currentMembers.count > 1,
                             onLeave: {
                                 isLeavingGroup = false
                                 Task { await leaveSelectedGroup() }
@@ -244,20 +256,6 @@ struct MemberView: View {
                         )
                         .presentationCompactAdaptation(.popover)
                     }
-            }
-            .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
-        }
-    }
-
-    @ViewBuilder private var administratorSettings: some View {
-        if isAdministratorMode {
-            SectionTitle("관리자 설정").padding(.top, 24).padding(.bottom, 8)
-            VStack(spacing: 0) {
-                AdminSettingRow(title: "그룹 이름 변경") { groupNameDraft = selectedGroup?.name ?? ""; isEditingGroupName = true }
-                Divider()
-                AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
-                Divider()
-                AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
         }
@@ -375,13 +373,14 @@ private struct InviteShareView: View {
         }
     }
 
-    /// 피그마 기준: 제목·링크는 왼쪽 정렬, 공유 버튼 3개는 가운데 정렬입니다.
+    /// 피그마 기준: 제목·링크는 왼쪽 정렬, 공유 버튼 3개는 가운데 정렬이고
+    /// 내용은 시트 아래쪽에 붙습니다.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0)
             Text("초대 링크 공유")
                 .font(MoilTypography.bold(20))
                 .foregroundStyle(MoilColor.textPrimary)
-                .padding(.top, 26)
             Text(copied ? "링크를 복사했어요" : inviteLink)
                 .font(MoilTypography.regular(14))
                 .foregroundStyle(copied ? MoilColor.primary : MoilColor.textSecondary)
@@ -399,12 +398,11 @@ private struct InviteShareView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, 26)
-
-            Spacer(minLength: 0)
+            .padding(.top, 22)
+            .padding(.bottom, 18)
         }
         .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         .background(MoilColor.surface)
     }
 
@@ -668,7 +666,13 @@ private struct AdminSettingRow: View {
 private struct SectionTitle: View {
     let title: String
     init(_ title: String) { self.title = title }
-    var body: some View { Text(title).font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary) }
+    /// 아래 카드 안 내용과 같은 자리에서 시작하도록 카드 안쪽 여백만큼 들여씁니다.
+    var body: some View {
+        Text(title)
+            .font(MoilTypography.semibold(12))
+            .foregroundStyle(MoilColor.textTertiary)
+            .padding(.leading, 16)
+    }
 }
 
 private struct MemberRow: View {

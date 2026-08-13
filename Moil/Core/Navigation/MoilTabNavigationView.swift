@@ -15,7 +15,10 @@ struct MoilTabNavigationView: View {
                 .ignoresSafeArea()
 
             if let accountRoute {
-                MoilAccountPage(route: accountRoute, onClose: { self.accountRoute = nil }, onLogout: onLogout)
+                MoilAccountPage(route: accountRoute, onClose: { closeAccountPage() }, onLogout: onLogout)
+                    // 계정 화면은 오른쪽에서 밀려 들어옵니다.
+                    .transition(.move(edge: .trailing))
+                    .zIndex(1)
             } else if isCreatingGroup {
                 CreateGroupView(onClose: closeCreateGroup)
             } else if isJoiningProfile {
@@ -50,9 +53,15 @@ struct MoilTabNavigationView: View {
                 onLogout: onLogout,
                 onTabSelect: select,
                 showsTabBar: false,
-                onAccountRoute: { accountRoute = $0 }
+                onAccountRoute: { route in
+                    withAnimation(.easeOut(duration: 0.28)) { accountRoute = route }
+                }
             )
         }
+    }
+
+    private func closeAccountPage() {
+        withAnimation(.easeIn(duration: 0.24)) { accountRoute = nil }
     }
 
     private func select(_ tab: MoilTab) {

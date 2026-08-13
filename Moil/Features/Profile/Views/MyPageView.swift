@@ -61,9 +61,10 @@ struct MyPageView: View {
                             .foregroundStyle(MoilColor.textPrimary)
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(MoilColor.textTertiary)
                     }
+                    .padding(.trailing, 16)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

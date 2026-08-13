@@ -10,12 +10,7 @@ struct MoilToggle: View {
     private let height: CGFloat = 31
 
     var body: some View {
-        Button {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) { isOn.toggle() }
-        } label: {
-            HStack(spacing: 12) {
+        HStack(spacing: 12) {
                 if !title.isEmpty {
                     Text(title)
                         .font(MoilTypography.regular(15))
@@ -32,10 +27,14 @@ struct MoilToggle: View {
                         .padding(2)
                 }
                 .frame(width: width, height: height)
-            }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        // 버튼으로 만들면 누르는 동안 글자까지 흐려져 깜박여 보여서 탭 제스처를 씁니다.
+        .onTapGesture {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { isOn.toggle() }
+        }
     }
 }
 

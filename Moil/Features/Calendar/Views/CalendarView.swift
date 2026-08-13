@@ -214,7 +214,11 @@ struct CalendarView: View {
                 }
             }
         }
-        .sheet(item: Binding(get: { selectedDay.map(DayScheduleSelection.init(day:)) }, set: { selectedDay = $0?.day })) { selection in
+        .moilBottomSheet(
+            item: Binding(get: { selectedDay.map(DayScheduleSelection.init(day:)) }, set: { selectedDay = $0?.day }),
+            height: MoilSheetMetrics.dayHeight,
+            background: MoilSheetMetrics.sheetBackground
+        ) { selection in
             DayScheduleSheetContainer(
                 day: selection.day,
                 year: displayedYear,
@@ -226,9 +230,6 @@ struct CalendarView: View {
                 onDelete: { event in deleteEvent(event) },
                 onLoadDetail: { event in await eventDetail(event) }
             )
-            .presentationDetents([.height(MoilSheetMetrics.dayHeight)])
-            .presentationCornerRadius(26)
-            .presentationBackground(MoilSheetMetrics.sheetBackground)
         }
         .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView(showsTabBar: false) }
         .fullScreenCover(isPresented: $isMyPagePresented, onDismiss: {
@@ -402,7 +403,7 @@ struct CalendarView: View {
 
     private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
-            selectedDay = day
+            withAnimation(.easeOut(duration: 0.22)) { selectedDay = day }
         } label: {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")

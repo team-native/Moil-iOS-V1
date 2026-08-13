@@ -7,16 +7,18 @@ enum MoilSheetMetrics {
     static let detailHeight: CGFloat = 654
     static let composerHeight: CGFloat = 463
 
-    static let sheetBackground = Color(red: 0.114, green: 0.110, blue: 0.102)   // #1d1c1a
-    static let composerBackground = Color(red: 0.141, green: 0.129, blue: 0.114) // #24211d
-    static let divider = Color(red: 0.200, green: 0.188, blue: 0.180)            // #33302e
-    static let handle = Color(red: 0.431, green: 0.420, blue: 0.400)             // #6e6b66
-    static let titleText = Color(red: 0.941, green: 0.941, blue: 0.929)          // #f0f0ed
-    static let subText = Color(red: 0.620, green: 0.612, blue: 0.588)            // #9e9c96
-    static let addButtonBackground = Color(red: 0.180, green: 0.180, blue: 0.180) // #2e2e2e
-    static let editButtonBackground = Color(red: 0.141, green: 0.133, blue: 0.129) // #242221
-    static let deleteButtonBackground = Color(red: 0.259, green: 0.161, blue: 0.141) // #422924
-    static let deleteButtonText = Color(red: 0.722, green: 0.369, blue: 0.329)   // #b85e54
+    /// 다크 값은 피그마 원본 그대로이고, 라이트 값은 같은 자리에 맞춘 밝은 색입니다.
+    static let sheetBackground = Color("SheetBackground")
+    static let composerBackground = Color("SheetComposerBackground")
+    static let divider = Color("SheetDivider")
+    static let handle = Color("SheetHandle")
+    static let titleText = MoilColor.textPrimary
+    static let subText = MoilColor.textSecondary
+    static let addButtonBackground = Color("SheetAddButton")
+    static let editButtonBackground = Color("SheetEditButton")
+    static let deleteButtonBackground = Color("SheetDeleteButton")
+    static let deleteButtonText = Color("SheetDeleteText")
+    static let moreAvatarBackground = Color("SheetMoreAvatar")
 }
 
 /// 피그마 원본이 아이콘 대신 쓰는 글자들입니다. 그대로 옮겨 씁니다.
@@ -213,18 +215,6 @@ struct EventDetailSheet: View {
                     .foregroundStyle(MoilSheetMetrics.subText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                if let location = event.location, !location.isEmpty {
-                    Button { openMap(location) } label: {
-                        Text("지도")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilSheetMetrics.subText)
-                            .frame(width: 60, height: 31)
-                            .background(Color(red: 0.149, green: 0.145, blue: 0.141))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .contentShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             .frame(height: 31)
             .padding(.top, 16)
@@ -245,7 +235,7 @@ struct EventDetailSheet: View {
                             .font(MoilTypography.regular(12))
                             .foregroundStyle(MoilSheetMetrics.titleText)
                             .frame(width: 30, height: 30)
-                            .background(Color(red: 0.271, green: 0.259, blue: 0.251))
+                            .background(MoilSheetMetrics.moreAvatarBackground)
                             .clipShape(Circle())
                     }
                 }
@@ -291,10 +281,11 @@ struct EventDetailSheet: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
-        .frame(width: 330)
+        .frame(maxWidth: .infinity)
         .background(MoilSheetMetrics.sheetBackground)
         .clipShape(RoundedRectangle(cornerRadius: 22))
         .shadow(color: .black.opacity(0.35), radius: 24, y: 10)
+        .padding(.horizontal, 36)
     }
 
     private var ownerText: String {
@@ -367,18 +358,18 @@ struct ScheduleComposerView: View {
     var body: some View {
         VStack(spacing: 0) {
             Capsule()
-                .fill(Color(red: 0.220, green: 0.208, blue: 0.192))
+                .fill(MoilSheetMetrics.divider)
                 .frame(width: 36, height: 4)
                 .padding(.top, 20)
 
             HStack {
                 Button("취소", action: dismiss.callAsFunction)
                     .font(MoilTypography.regular(16))
-                    .foregroundStyle(Color(red: 0.608, green: 0.596, blue: 0.569))
+                    .foregroundStyle(MoilSheetMetrics.subText)
                 Spacer(minLength: 0)
                 Text(title)
                     .font(MoilTypography.semibold(16))
-                    .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
+                    .foregroundStyle(MoilSheetMetrics.titleText)
                 Spacer(minLength: 0)
                 Button("저장") {
                     onSave(draft)
@@ -392,9 +383,9 @@ struct ScheduleComposerView: View {
             .padding(.bottom, 18)
 
             // 피그마: 제목은 SemiBold 21, 아래 구분선
-            TextField("", text: $eventTitle, prompt: Text("일정 제목").foregroundColor(Color(red: 0.380, green: 0.365, blue: 0.341)))
+            TextField("", text: $eventTitle, prompt: Text("일정 제목").foregroundColor(MoilColor.fieldPlaceholder))
                 .font(MoilTypography.semibold(21))
-                .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
+                .foregroundStyle(MoilSheetMetrics.titleText)
                 .textInputAutocapitalization(.never)
                 .frame(height: 30)
                 .padding(.top, 6)
@@ -418,20 +409,20 @@ struct ScheduleComposerView: View {
             composerRow("위치") {
                 TextField("", text: $location, prompt: Text("추가").foregroundColor(MoilSheetMetrics.subText))
                     .font(MoilTypography.regular(15))
-                    .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
+                    .foregroundStyle(MoilSheetMetrics.titleText)
                     .multilineTextAlignment(.trailing)
             }
             composerRow("메모") {
                 TextField("", text: $memo, prompt: Text("추가").foregroundColor(MoilSheetMetrics.subText))
                     .font(MoilTypography.regular(15))
-                    .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
+                    .foregroundStyle(MoilSheetMetrics.titleText)
                     .multilineTextAlignment(.trailing)
             }
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("누구와 공유할까요")
                     .font(MoilTypography.semibold(13))
-                    .foregroundStyle(Color(red: 0.608, green: 0.596, blue: 0.569))
+                    .foregroundStyle(MoilSheetMetrics.subText)
                 HStack(spacing: 14) {
                     ForEach(members) { member in
                         Button { toggle(member.id) } label: {
@@ -444,7 +435,7 @@ struct ScheduleComposerView: View {
                                     }
                                 Text(member.displayName)
                                     .font(selectedMemberIDs.contains(member.id) ? MoilTypography.bold(11) : MoilTypography.regular(11))
-                                    .foregroundStyle(Color(red: 0.608, green: 0.596, blue: 0.569))
+                                    .foregroundStyle(MoilSheetMetrics.subText)
                             }
                             .contentShape(Rectangle())
                         }
@@ -477,7 +468,7 @@ struct ScheduleComposerView: View {
     }
 
     private var rowDivider: some View {
-        Rectangle().fill(Color(red: 0.220, green: 0.208, blue: 0.192)).frame(height: 1)
+        Rectangle().fill(MoilSheetMetrics.divider).frame(height: 1)
     }
 
     @ViewBuilder
@@ -485,7 +476,7 @@ struct ScheduleComposerView: View {
         HStack(spacing: 12) {
             Text(label)
                 .font(MoilTypography.regular(15))
-                .foregroundStyle(Color(red: 0.953, green: 0.945, blue: 0.937))
+                .foregroundStyle(MoilSheetMetrics.titleText)
             Spacer(minLength: 0)
             value()
         }
