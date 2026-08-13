@@ -5,6 +5,7 @@ struct MyPageView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @AppStorage(MoilThemeSetting.storageKey) private var theme = MoilThemeSetting.dark.rawValue
+    @State private var isThemePickerPresented = false
     @AppStorage(MoilLocalAccount.nameKey) private var storedName = ""
     @AppStorage(MoilLocalAccount.colorKey) private var profileColorId = ""
     @State private var isGroupDetailPresented = false
@@ -92,13 +93,7 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 28)
                 GroupSection(title: "환경설정") {
-                    // 기본 드롭다운은 누른 줄 바로 아래에 붙어서 뜹니다.
-                    Menu {
-                        ForEach(MoilThemeSetting.allCases) { option in
-                            Button(option.title) { theme = option.rawValue }
-                        }
-                        Button("취소", role: .cancel) { }
-                    } label: {
+                    Button { isThemePickerPresented = true } label: {
                         HStack {
                             Text("테마")
                                 .font(MoilTypography.regular(15))
@@ -115,11 +110,12 @@ struct MyPageView: View {
                         .frame(height: 48)
                         .contentShape(Rectangle())
                     }
-                    .menuOrder(.fixed)
-                    // 메뉴가 열려 있는 동안에도 줄 내용이 그대로 보이게 합니다.
-                    .menuStyle(.button)
                     .buttonStyle(.plain)
-                    .tint(MoilColor.textPrimary)
+                    // 팝오버로 띄우면 누른 줄이 가려지지 않고 그대로 남습니다.
+                    .popover(isPresented: $isThemePickerPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .bottom) {
+                        ThemePicker(selection: $theme) { isThemePickerPresented = false }
+                            .presentationCompactAdaptation(.popover)
+                    }
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
@@ -458,5 +454,52 @@ private struct ProfileEditView: View {
         } catch {
             message = error.localizedDescription
         }
+    }
+}
+
+
+/// 테마 선택 목록입니다. 취소는 브랜드 색으로 둡니다.
+private struct ThemePicker: View {
+    @Binding var selection: String
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(MoilThemeSetting.allCases) { option in
+                Button {
+                    selection = option.rawValue
+                    onClose()
+                } label: {
+                    HStack {
+                        Text(option.title)
+                            .font(MoilTypography.regular(15))
+                            .foregroundStyle(MoilColor.textPrimary)
+                        Spacer(minLength: 12)
+                        if selection == option.rawValue {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(MoilColor.primary)
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(height: 46)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider()
+            }
+
+            Button(action: onClose) {
+                Text("취소")
+                    .font(MoilTypography.semibold(15))
+                    .foregroundStyle(MoilColor.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(width: 200)
+        .background(MoilColor.surface)
     }
 }

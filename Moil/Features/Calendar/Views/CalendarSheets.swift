@@ -585,8 +585,8 @@ struct DayScheduleSheetContainer: View {
         // 상세는 밑에서 올라오지 않고 화면 가운데에서 자연스럽게 나타납니다.
         .fullScreenCover(item: $detailEvent) { event in
             ZStack {
-                EventDetailBackdrop { detailEvent = nil }
-                EventDetailPopup {
+                MoilPopupBackdrop { detailEvent = nil }
+                MoilPopupAppearance {
                 EventDetailSheet(
                     event: event,
                     dateTitle: dateTitle,
@@ -632,7 +632,7 @@ struct DayScheduleSheetContainer: View {
 
 
 /// 팝업 뒤 어두운 배경입니다. 밀려 올라오지 않고 그 자리에서 서서히 나타납니다.
-private struct EventDetailBackdrop: View {
+struct MoilPopupBackdrop: View {
     let onTap: () -> Void
     @State private var isShown = false
 
@@ -646,7 +646,7 @@ private struct EventDetailBackdrop: View {
 }
 
 /// 가운데 팝업이 살짝 커지며 나타나게 감쌉니다.
-private struct EventDetailPopup<Content: View>: View {
+struct MoilPopupAppearance<Content: View>: View {
     @ViewBuilder let content: Content
     @State private var isShown = false
 

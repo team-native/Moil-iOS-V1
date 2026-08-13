@@ -531,9 +531,8 @@ private struct ScheduleSearchView: View {
         // 검색 결과를 누르면 캘린더로 나가지 않고 여기서 바로 상세를 엽니다.
         .fullScreenCover(item: $selectedEvent) { event in
             ZStack {
-                Color.black.opacity(0.45)
-                    .ignoresSafeArea()
-                    .onTapGesture { selectedEvent = nil }
+                MoilPopupBackdrop { selectedEvent = nil }
+                MoilPopupAppearance {
                 EventDetailSheet(
                     event: event,
                     dateTitle: event.date,
@@ -541,9 +540,11 @@ private struct ScheduleSearchView: View {
                     onEdit: { selectedEvent = nil },
                     onDelete: { selectedEvent = nil }
                 )
+                }
             }
             .presentationBackground(.clear)
         }
+        .transaction { $0.disablesAnimations = true }
         .task(id: "\(groupId ?? "")-\(month)") {
             guard let groupId else { return }
             do {

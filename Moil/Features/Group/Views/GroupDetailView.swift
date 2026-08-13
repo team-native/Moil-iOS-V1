@@ -41,7 +41,7 @@ struct GroupDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("구성원")
                     .font(MoilTypography.semibold(12))
-                    .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                    .foregroundStyle(MoilColor.textSecondary)
                     .padding(.top, 14)
                     .padding(.bottom, 10)
 
@@ -51,10 +51,10 @@ struct GroupDetailView: View {
                 } else if members.isEmpty {
                     Text("구성원 정보를 불러오지 못했어요.")
                         .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                        .foregroundStyle(MoilColor.textSecondary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 88)
-                        .background(MoilColor.groupDetailSurface)
+                        .background(MoilColor.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                 } else {
                     memberList
@@ -62,7 +62,7 @@ struct GroupDetailView: View {
 
                 Text("이번 달 일정")
                     .font(MoilTypography.semibold(12))
-                    .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                    .foregroundStyle(MoilColor.textSecondary)
                     .padding(.top, 15)
                     .padding(.bottom, 10)
 
@@ -75,7 +75,7 @@ struct GroupDetailView: View {
         }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(MoilColor.groupDetailBackground.ignoresSafeArea())
+        .background(MoilColor.background.ignoresSafeArea())
         // 그룹 나가기는 화면 맨 아래에 둡니다.
         .safeAreaInset(edge: .bottom) {
             MoilButton(title: "그룹 나가기") { isLeavingGroup = true }
@@ -85,11 +85,11 @@ struct GroupDetailView: View {
         .task(id: groupID) {
             await loadDetail()
         }
-        .confirmationDialog("\(groupName) 그룹을 나갈까요?", isPresented: $isLeavingGroup, titleVisibility: .visible) {
-            Button("그룹 나가기", role: .destructive) {
+        .alert("\(groupName) 그룹을 나갈까요?", isPresented: $isLeavingGroup) {
+            Button("취소", role: .cancel) { }
+            Button("확인", role: .destructive) {
                 Task { await leaveGroup() }
             }
-            Button("취소", role: .cancel) { }
         } message: {
             Text("나가면 그룹의 일정과 멤버 정보를 더 이상 볼 수 없어요.")
         }
@@ -109,7 +109,7 @@ struct GroupDetailView: View {
             if monthEvents.isEmpty {
                 Text("\(monthLabel)에 등록된 일정이 없어요")
                     .font(MoilTypography.regular(13))
-                    .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                    .foregroundStyle(MoilColor.textSecondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
             } else {
@@ -122,21 +122,21 @@ struct GroupDetailView: View {
                         Spacer(minLength: 8)
                         Text(eventDateText(event))
                             .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                            .foregroundStyle(MoilColor.textSecondary)
                     }
                     .padding(.horizontal, 14)
                     .frame(height: 52)
 
                     if event.id != monthEvents.last?.id {
                         Divider()
-                            .overlay(MoilColor.groupDetailSeparator)
+                            .overlay(MoilColor.emptyStateBorder)
                             .padding(.leading, 34)
                     }
                 }
             }
         }
-        .foregroundStyle(MoilColor.groupDetailTextPrimary)
-        .background(MoilColor.groupDetailSurface)
+        .foregroundStyle(MoilColor.textPrimary)
+        .background(MoilColor.surface)
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
@@ -154,7 +154,7 @@ struct GroupDetailView: View {
                         Text(members[index].displayName).font(MoilTypography.semibold(15))
                         Text(roleTitle(members[index].role))
                             .font(MoilTypography.regular(12))
-                            .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                            .foregroundStyle(MoilColor.textSecondary)
                     }
                     Spacer()
                 }
@@ -163,13 +163,13 @@ struct GroupDetailView: View {
 
                 if index < members.count - 1 {
                     Divider()
-                        .overlay(MoilColor.groupDetailSeparator)
+                        .overlay(MoilColor.emptyStateBorder)
                         .padding(.leading, 60)
                 }
             }
         }
-        .foregroundStyle(MoilColor.groupDetailTextPrimary)
-        .background(MoilColor.groupDetailSurface)
+        .foregroundStyle(MoilColor.textPrimary)
+        .background(MoilColor.surface)
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
