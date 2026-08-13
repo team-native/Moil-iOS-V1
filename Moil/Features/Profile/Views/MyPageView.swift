@@ -116,7 +116,10 @@ struct MyPageView: View {
                         .contentShape(Rectangle())
                     }
                     .menuOrder(.fixed)
+                    // 메뉴가 열려 있는 동안에도 줄 내용이 그대로 보이게 합니다.
+                    .menuStyle(.button)
                     .buttonStyle(.plain)
+                    .tint(MoilColor.textPrimary)
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {

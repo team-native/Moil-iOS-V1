@@ -7,7 +7,7 @@ struct GroupDetailView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
 
     @State private var members: [MoilRemoteMember] = []
-    @State private var monthEventCount = 0
+    @State private var monthEvents: [CalendarEvent] = []
     @State private var isLoading = true
     @State private var isLeavingGroup = false
     @State private var errorMessage: String?
@@ -34,32 +34,20 @@ struct GroupDetailView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            // 다른 하위 페이지와 같은 공통 헤더를 씁니다.
+            MoilInlineHeader(title: groupName, onBack: dismiss.callAsFunction)
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 9, height: 16)
-                    }
-                    Text(groupName)
-                        .font(MoilTypography.bold(22))
-                }
-                .foregroundStyle(MoilColor.groupDetailTextPrimary)
-                .safeAreaPadding(.top, 22)
-
                 Text("구성원")
                     .font(MoilTypography.semibold(12))
                     .foregroundStyle(MoilColor.groupDetailTextSecondary)
-                    .padding(.top, 17)
+                    .padding(.top, 14)
                     .padding(.bottom, 10)
 
                 if isLoading && members.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 88)
-                        .background(MoilColor.groupDetailSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                    // 불러오는 동안에는 빈 자리만 두고 껍데기 UI는 그리지 않습니다.
+                    Color.clear.frame(height: 0)
                 } else if members.isEmpty {
                     Text("구성원 정보를 불러오지 못했어요.")
                         .font(MoilTypography.regular(13))
@@ -78,20 +66,22 @@ struct GroupDetailView: View {
                     .padding(.top, 15)
                     .padding(.bottom, 10)
 
-                Text("\(monthLabel) 일정 \(monthEventCount)건")
-                    .font(MoilTypography.regular(13))
-                    .foregroundStyle(MoilColor.groupDetailTextSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(MoilColor.groupDetailSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                monthEventList
 
-                MoilButton(title: "그룹 나가기") { isLeavingGroup = true }
+                Spacer(minLength: 24)
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-            .padding(.bottom, 32)
+            .padding(.bottom, 24)
         }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(MoilColor.groupDetailBackground.ignoresSafeArea())
+        // 그룹 나가기는 화면 맨 아래에 둡니다.
+        .safeAreaInset(edge: .bottom) {
+            MoilButton(title: "그룹 나가기") { isLeavingGroup = true }
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
+        }
         .task(id: groupID) {
             await loadDetail()
         }
@@ -111,6 +101,48 @@ struct GroupDetailView: View {
         } message: {
             Text(errorMessage ?? "알 수 없는 오류가 발생했어요.")
         }
+    }
+
+    /// 이번 달에 어떤 일정이 있는지 목록으로 보여 줍니다.
+    private var monthEventList: some View {
+        VStack(spacing: 0) {
+            if monthEvents.isEmpty {
+                Text("\(monthLabel)에 등록된 일정이 없어요")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+            } else {
+                ForEach(monthEvents) { event in
+                    HStack(spacing: 12) {
+                        Circle().fill(event.color).frame(width: 8, height: 8)
+                        Text(event.title)
+                            .font(MoilTypography.semibold(15))
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(eventDateText(event))
+                            .font(MoilTypography.regular(13))
+                            .foregroundStyle(MoilColor.groupDetailTextSecondary)
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(height: 52)
+
+                    if event.id != monthEvents.last?.id {
+                        Divider()
+                            .overlay(MoilColor.groupDetailSeparator)
+                            .padding(.leading, 34)
+                    }
+                }
+            }
+        }
+        .foregroundStyle(MoilColor.groupDetailTextPrimary)
+        .background(MoilColor.groupDetailSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func eventDateText(_ event: CalendarEvent) -> String {
+        guard let time = event.startTime else { return "\(event.day)일" }
+        return "\(event.day)일 \(time)"
     }
 
     private var memberList: some View {
@@ -154,12 +186,19 @@ struct GroupDetailView: View {
             try await groupStore.refreshDetail(id: groupID, using: service)
             members = try await groupStore.loadMembers(groupId: groupID, using: service)
             try await eventStore.load(groupId: groupID, month: monthRequest, using: service)
-            monthEventCount = eventStore.events(groupId: groupID, month: monthRequest).count
+            monthEvents = loadedEvents(groupID)
         } catch {
             members = groupStore.members(for: groupID)
-            monthEventCount = eventStore.events(groupId: groupID, month: monthRequest).count
+            monthEvents = loadedEvents(groupID)
             errorMessage = error.localizedDescription
         }
+    }
+
+    @MainActor
+    private func loadedEvents(_ groupID: String) -> [CalendarEvent] {
+        eventStore.events(groupId: groupID, month: monthRequest)
+            .compactMap(CalendarEvent.init(remote:))
+            .sorted { ($0.day, $0.startTime ?? "") < ($1.day, $1.startTime ?? "") }
     }
 
     private func leaveGroup() async {

@@ -91,17 +91,22 @@ struct DayScheduleSheet: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         ForEach(events) { event in
-                            Button { onSelect(event) } label: {
-                                DayScheduleRow(event: event)
+                            VStack(spacing: 0) {
+                                Button { onSelect(event) } label: {
+                                    DayScheduleRow(event: event)
+                                }
+                                .buttonStyle(.plain)
+                                Rectangle()
+                                    .fill(MoilSheetMetrics.divider)
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 28)
                             }
-                            .buttonStyle(.plain)
-                            Rectangle()
-                                .fill(MoilSheetMetrics.divider)
-                                .frame(height: 1)
-                                .padding(.horizontal, 28)
+                            // 일정이 추가·삭제될 때 줄이 자연스럽게 생기고 사라집니다.
+                            .transition(.move(edge: .top).combined(with: .opacity))
                         }
                     }
                     .padding(.top, 12)
+                    .animation(.easeOut(duration: 0.22), value: events.map(\.id))
                 }
             }
         }
@@ -577,13 +582,10 @@ struct DayScheduleSheetContainer: View {
                 Task { detailEvent = await onLoadDetail(event) }
             }
         )
-        // 상세는 밑에서 올라오지 않고 화면 가운데에 뜹니다.
+        // 상세는 밑에서 올라오지 않고 화면 가운데에서 자연스럽게 나타납니다.
         .fullScreenCover(item: $detailEvent) { event in
             ZStack {
-                // 일별 목록 시트의 어두운 배경이 이미 깔려 있어 여기서는 살짝만 더 어둡게 합니다.
-                Color.black.opacity(0.15)
-                    .ignoresSafeArea()
-                    .onTapGesture { detailEvent = nil }
+                EventDetailBackdrop { detailEvent = nil }
                 EventDetailPopup {
                 EventDetailSheet(
                     event: event,
@@ -604,6 +606,7 @@ struct DayScheduleSheetContainer: View {
             }
             .presentationBackground(.clear)
         }
+        .transaction { $0.disablesAnimations = true }
         .moilBottomSheet(
             isPresented: $isComposerPresented,
             height: MoilSheetMetrics.composerHeight,
@@ -627,6 +630,20 @@ struct DayScheduleSheetContainer: View {
     }
 }
 
+
+/// 팝업 뒤 어두운 배경입니다. 밀려 올라오지 않고 그 자리에서 서서히 나타납니다.
+private struct EventDetailBackdrop: View {
+    let onTap: () -> Void
+    @State private var isShown = false
+
+    var body: some View {
+        Color.black.opacity(isShown ? 0.3 : 0)
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .onAppear { withAnimation(.easeOut(duration: 0.18)) { isShown = true } }
+    }
+}
 
 /// 가운데 팝업이 살짝 커지며 나타나게 감쌉니다.
 private struct EventDetailPopup<Content: View>: View {
