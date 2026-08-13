@@ -434,6 +434,8 @@ struct CalendarView: View {
             .frame(maxWidth: .infinity, alignment: .center)
             .background(event.color.opacity(0.45))
             .clipShape(RoundedRectangle(cornerRadius: 3))
+            // 옆 날짜의 칩과 붙어 보이지 않도록 좌우를 띄웁니다.
+            .padding(.horizontal, 3)
     }
 
 }
@@ -450,6 +452,7 @@ private struct ScheduleSearchView: View {
     let month: String
     @State private var query = ""
     @State private var errorMessage: String?
+    @State private var selectedEvent: CalendarEvent?
 
     private var events: [CalendarEvent] {
         eventStore.events(groupId: groupId, month: month).compactMap(CalendarEvent.init(remote:))
@@ -489,6 +492,7 @@ private struct ScheduleSearchView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(filteredEvents) { event in
+                                Button { selectedEvent = event } label: {
                                 HStack(spacing: 12) {
                                     Circle().fill(event.color).frame(width: 10, height: 10)
                                     VStack(alignment: .leading, spacing: 4) {
@@ -505,6 +509,9 @@ private struct ScheduleSearchView: View {
                                 .padding(16)
                                 .background(MoilColor.surface)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .contentShape(RoundedRectangle(cornerRadius: 16))
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(16)
@@ -514,6 +521,22 @@ private struct ScheduleSearchView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(MoilColor.background.ignoresSafeArea())
+        // 검색 결과를 누르면 캘린더로 나가지 않고 여기서 바로 상세를 엽니다.
+        .fullScreenCover(item: $selectedEvent) { event in
+            ZStack {
+                Color.black.opacity(0.45)
+                    .ignoresSafeArea()
+                    .onTapGesture { selectedEvent = nil }
+                EventDetailSheet(
+                    event: event,
+                    dateTitle: event.date,
+                    onClose: { selectedEvent = nil },
+                    onEdit: { selectedEvent = nil },
+                    onDelete: { selectedEvent = nil }
+                )
+            }
+            .presentationBackground(.clear)
+        }
         .task(id: "\(groupId ?? "")-\(month)") {
             guard let groupId else { return }
             do {

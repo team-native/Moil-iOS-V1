@@ -260,21 +260,17 @@ struct EventDetailSheet: View {
                     Text("수정")
                         .font(MoilTypography.semibold(16))
                         .foregroundStyle(MoilSheetMetrics.titleText)
-                        .frame(width: 88, height: 40)
-                        .background(MoilSheetMetrics.editButtonBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 9))
-                        .contentShape(RoundedRectangle(cornerRadius: 9))
+                        .frame(height: 40)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 Spacer(minLength: 0)
                 Button(action: onDelete) {
                     Text("삭제")
                         .font(MoilTypography.semibold(16))
-                        .foregroundStyle(MoilSheetMetrics.deleteButtonText)
-                        .frame(width: 88, height: 40)
-                        .background(MoilSheetMetrics.deleteButtonBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 9))
-                        .contentShape(RoundedRectangle(cornerRadius: 9))
+                        .foregroundStyle(MoilColor.primary)
+                        .frame(height: 40)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
@@ -588,6 +584,7 @@ struct DayScheduleSheetContainer: View {
                 Color.black.opacity(0.15)
                     .ignoresSafeArea()
                     .onTapGesture { detailEvent = nil }
+                EventDetailPopup {
                 EventDetailSheet(
                     event: event,
                     dateTitle: dateTitle,
@@ -603,6 +600,7 @@ struct DayScheduleSheetContainer: View {
                         onDelete(event)
                     }
                 )
+                }
             }
             .presentationBackground(.clear)
         }
@@ -626,5 +624,21 @@ struct DayScheduleSheetContainer: View {
                 }
             }
         }
+    }
+}
+
+
+/// 가운데 팝업이 살짝 커지며 나타나게 감쌉니다.
+private struct EventDetailPopup<Content: View>: View {
+    @ViewBuilder let content: Content
+    @State private var isShown = false
+
+    var body: some View {
+        content
+            .scaleEffect(isShown ? 1 : 0.92)
+            .opacity(isShown ? 1 : 0)
+            .onAppear {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) { isShown = true }
+            }
     }
 }

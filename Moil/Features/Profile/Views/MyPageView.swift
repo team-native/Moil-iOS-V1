@@ -4,7 +4,8 @@ struct MyPageView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
-    @AppStorage("moilDarkMode") private var isDarkMode = true
+    @AppStorage(MoilThemeSetting.storageKey) private var theme = MoilThemeSetting.dark.rawValue
+    @State private var isThemePickerPresented = false
     @AppStorage(MoilLocalAccount.nameKey) private var storedName = ""
     @AppStorage(MoilLocalAccount.colorKey) private var profileColorId = ""
     @State private var isGroupDetailPresented = false
@@ -92,7 +93,24 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 28)
                 GroupSection(title: "환경설정") {
-                    MoilToggle(title: "다크 모드", isOn: $isDarkMode).padding(.horizontal, 14).frame(height: 48)
+                    Button { isThemePickerPresented = true } label: {
+                        HStack {
+                            Text("테마")
+                                .font(MoilTypography.regular(15))
+                                .foregroundStyle(MoilColor.textPrimary)
+                            Spacer()
+                            Text(MoilThemeSetting(rawValue: theme)?.title ?? MoilThemeSetting.dark.title)
+                                .font(MoilTypography.regular(15))
+                                .foregroundStyle(MoilColor.textSecondary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(MoilColor.textTertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .frame(height: 48)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.bottom, 16)
                 GroupSection(title: "계정 보안") {
@@ -143,6 +161,12 @@ struct MyPageView: View {
             // 프로필 이름과 색을 서버 값으로 보여주기 위해 멤버를 불러옵니다.
             guard let groupId = groupStore.selectedGroupId else { return }
             _ = try? await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
+        }
+        .confirmationDialog("테마", isPresented: $isThemePickerPresented, titleVisibility: .hidden) {
+            ForEach(MoilThemeSetting.allCases) { option in
+                Button(option.title) { theme = option.rawValue }
+            }
+            Button("취소", role: .cancel) { }
         }
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }

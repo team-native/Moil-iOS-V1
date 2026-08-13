@@ -390,11 +390,7 @@ private struct InviteShareView: View {
                     shareTarget = .activity
                 }
                 shareButton("메시지", color: Color(red: 0.361, green: 0.553, blue: 0.937), icon: "message.fill", iconColor: .white) {
-                    if MoilMessageComposer.canSend {
-                        shareTarget = .message
-                    } else {
-                        cannotSendMessage = true
-                    }
+                    sendMessage()
                 }
                 shareButton("링크 복사", color: MoilColor.surface, icon: "doc.on.doc", iconColor: MoilColor.textPrimary, hasBorder: true) {
                     copyInviteLink()
@@ -422,6 +418,20 @@ private struct InviteShareView: View {
         } message: {
             Text("이 기기에서는 메시지를 보낼 수 없어요. 링크를 복사해 다른 앱으로 보내주세요.")
         }
+    }
+
+    /// 메시지 작성 화면을 띄우고, 안 되면 메시지 앱을 직접 엽니다.
+    private func sendMessage() {
+        if MoilMessageComposer.canSend {
+            shareTarget = .message
+            return
+        }
+        let encoded = shareText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "sms:&body=\(encoded)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+            return
+        }
+        cannotSendMessage = true
     }
 
     private func shareButton(

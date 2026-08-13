@@ -36,7 +36,7 @@ private struct MoilBottomSheetContainer<SheetContent: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .onAppear {
-            withAnimation(.easeOut(duration: 0.16)) { isShown = true }
+            withAnimation(.easeOut(duration: 0.21)) { isShown = true }
         }
     }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AuthFlowView: View {
-    @AppStorage("moilDarkMode") private var isDarkMode = true
+    @AppStorage(MoilThemeSetting.storageKey) private var theme = MoilThemeSetting.dark.rawValue
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
@@ -52,9 +52,9 @@ struct AuthFlowView: View {
             MoilTabNavigationView(onLogout: logout)
         }
         }
-        // 로그인·회원가입까지 포함해 모든 화면이 사용자가 고른 모드를 따릅니다.
-        // 기본값은 다크입니다.
-        .preferredColorScheme(isDarkMode ? .dark : .light)
+        // 로그인·회원가입까지 포함해 모든 화면이 사용자가 고른 테마를 따릅니다.
+        // 기본값은 다크이고, '시스템'을 고르면 기기 설정을 따릅니다.
+        .preferredColorScheme(MoilThemeSetting(rawValue: theme)?.colorScheme ?? .dark)
         .task { await restoreSession() }
         // 토큰 재발급까지 실패해 세션이 끊기면 메인에 머물지 않고 로그인으로 돌아갑니다.
         .onChange(of: sessionStore.accessToken) { _, token in
