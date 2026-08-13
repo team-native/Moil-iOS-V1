@@ -14,10 +14,6 @@ struct AuthFlowView: View {
     @State private var resetSessionId = ""
     @State private var hasRestoredSession = false
 
-    /// 런치·메인 화면은 사용자가 고른 모드를, 나머지 auth 화면은 다크를 씁니다.
-    private var isUserThemed: Bool {
-        route == .main || route == .restoring
-    }
 
     var body: some View {
         Group {
@@ -56,9 +52,9 @@ struct AuthFlowView: View {
             MoilTabNavigationView(onLogout: logout)
         }
         }
-        // auth 화면은 피그마에서 다크 한 가지로만 정의되어 있고,
-        // 런치 화면은 사용자가 고른 모드를 그대로 따릅니다.
-        .preferredColorScheme(isUserThemed ? (isDarkMode ? .dark : .light) : .dark)
+        // 로그인·회원가입까지 포함해 모든 화면이 사용자가 고른 모드를 따릅니다.
+        // 기본값은 다크입니다.
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .task { await restoreSession() }
         // 토큰 재발급까지 실패해 세션이 끊기면 메인에 머물지 않고 로그인으로 돌아갑니다.
         .onChange(of: sessionStore.accessToken) { _, token in

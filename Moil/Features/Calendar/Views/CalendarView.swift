@@ -405,7 +405,7 @@ struct CalendarView: View {
         Button {
             selectedDay = day
         } label: {
-            VStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .center, spacing: 3) {
                 Text("\(day)")
                     .font(isToday(day) ? MoilTypography.bold(15) : MoilTypography.regular(15))
                     .foregroundStyle(isToday(day) ? .white : MoilColor.textPrimary)

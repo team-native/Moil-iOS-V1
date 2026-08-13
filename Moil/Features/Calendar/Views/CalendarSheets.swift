@@ -5,7 +5,8 @@ import SwiftUI
 enum MoilSheetMetrics {
     static let dayHeight: CGFloat = 475
     static let detailHeight: CGFloat = 654
-    static let composerHeight: CGFloat = 463
+    /// 새 일정 시트도 일별 목록과 같은 크기를 씁니다.
+    static let composerHeight: CGFloat = 475
 
     /// 다크 값은 피그마 원본 그대로이고, 라이트 값은 같은 자리에 맞춘 밝은 색입니다.
     static let sheetBackground = Color("SheetBackground")
@@ -361,7 +362,7 @@ struct ScheduleComposerView: View {
             Capsule()
                 .fill(MoilSheetMetrics.divider)
                 .frame(width: 36, height: 4)
-                .padding(.top, 20)
+                .padding(.top, 12)
 
             HStack {
                 Button("취소", action: dismiss.callAsFunction)
@@ -380,8 +381,8 @@ struct ScheduleComposerView: View {
                 .foregroundStyle(canSave ? MoilColor.primary : MoilSheetMetrics.subText)
                 .disabled(!canSave)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 18)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
 
             // 피그마: 제목은 SemiBold 21, 아래 구분선
             TextField("", text: $eventTitle, prompt: Text("일정 제목").foregroundColor(MoilColor.fieldPlaceholder))
@@ -389,8 +390,7 @@ struct ScheduleComposerView: View {
                 .foregroundStyle(MoilSheetMetrics.titleText)
                 .textInputAutocapitalization(.never)
                 .frame(height: 30)
-                .padding(.top, 6)
-                .padding(.bottom, 13)
+                .padding(.bottom, 12)
             rowDivider
 
             composerRow("날짜") {
@@ -584,7 +584,8 @@ struct DayScheduleSheetContainer: View {
         // 상세는 밑에서 올라오지 않고 화면 가운데에 뜹니다.
         .fullScreenCover(item: $detailEvent) { event in
             ZStack {
-                Color.black.opacity(0.45)
+                // 일별 목록 시트의 어두운 배경이 이미 깔려 있어 여기서는 살짝만 더 어둡게 합니다.
+                Color.black.opacity(0.15)
                     .ignoresSafeArea()
                     .onTapGesture { detailEvent = nil }
                 EventDetailSheet(
@@ -608,7 +609,9 @@ struct DayScheduleSheetContainer: View {
         .moilBottomSheet(
             isPresented: $isComposerPresented,
             height: MoilSheetMetrics.composerHeight,
-            background: MoilSheetMetrics.composerBackground
+            background: MoilSheetMetrics.composerBackground,
+            // 일별 목록 시트의 어두운 배경 위에 뜨므로 한 번 더 덮지 않습니다.
+            isDimmed: false
         ) {
             ScheduleComposerView(
                 title: composerEvent == nil ? "새 일정" : "일정 수정",

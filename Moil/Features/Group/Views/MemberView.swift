@@ -122,7 +122,7 @@ struct MemberView: View {
                     Task { await updateRoles(updatedRoles) }
                 }
             }
-            .moilBottomSheet(isPresented: $isSharingInvite, height: 250, background: MoilColor.surface) {
+            .moilBottomSheet(isPresented: $isSharingInvite, height: 210, background: MoilColor.surface) {
                 InviteShareView(inviteCode: inviteCode)
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
@@ -297,7 +297,7 @@ struct MemberView: View {
             remoteMembers = []
             feedbackMessage = "\(group.name) 그룹에서 나왔어요."
         } catch {
-            feedbackMessage = "그룹을 나가지 못했어요."
+            feedbackMessage = error.localizedDescription
         }
     }
 
@@ -323,7 +323,7 @@ struct MemberView: View {
             isEditingPermissions = false
             await loadMembers()
         } catch {
-            feedbackMessage = "멤버 권한을 변경하지 못했어요."
+            feedbackMessage = error.localizedDescription
         }
     }
 
@@ -390,8 +390,8 @@ private struct InviteShareView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, 22)
-            .padding(.bottom, 18)
+            .padding(.top, 20)
+            .padding(.bottom, 26)
         }
         .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)

@@ -5,14 +5,17 @@ import SwiftUI
 private struct MoilBottomSheetContainer<SheetContent: View>: View {
     let height: CGFloat
     let background: Color
+    /// 시트 위에 또 시트를 띄울 때는 어두운 배경이 겹쳐 더 어두워지므로 한 번만 그립니다.
+    let isDimmed: Bool
     let onClose: () -> Void
     @ViewBuilder let sheetContent: SheetContent
     @State private var isShown = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color.black.opacity(isShown ? 0.35 : 0)
+            Color.black.opacity(isDimmed && isShown ? 0.35 : 0)
                 .ignoresSafeArea()
+                .contentShape(Rectangle())
                 .onTapGesture { close() }
 
             if isShown {
@@ -50,17 +53,22 @@ extension View {
         isPresented: Binding<Bool>,
         height: CGFloat,
         background: Color,
+        isDimmed: Bool = true,
         @ViewBuilder content: @escaping () -> SheetContent
     ) -> some View {
         fullScreenCover(isPresented: isPresented) {
             MoilBottomSheetContainer(
                 height: height,
                 background: background,
-                onClose: { isPresented.wrappedValue = false },
+                isDimmed: isDimmed,
+                onClose: { close(isPresented) },
                 sheetContent: { content() }
             )
             .presentationBackground(.clear)
         }
+        // 화면 자체는 모션 없이 나타나고, 시트만 아래에서 올라옵니다.
+        // 그래야 어두운 배경이 시트와 함께 밀려 올라오지 않습니다.
+        .transaction { $0.disablesAnimations = true }
     }
 
     /// 값이 있을 때만 시트를 띄우는 형태입니다.
@@ -68,16 +76,29 @@ extension View {
         item: Binding<Item?>,
         height: CGFloat,
         background: Color,
+        isDimmed: Bool = true,
         @ViewBuilder content: @escaping (Item) -> SheetContent
     ) -> some View {
         fullScreenCover(item: item) { value in
             MoilBottomSheetContainer(
                 height: height,
                 background: background,
-                onClose: { item.wrappedValue = nil },
+                isDimmed: isDimmed,
+                onClose: {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { item.wrappedValue = nil }
+                },
                 sheetContent: { content(value) }
             )
             .presentationBackground(.clear)
         }
+        .transaction { $0.disablesAnimations = true }
     }
+}
+
+private func close(_ isPresented: Binding<Bool>) {
+    var transaction = Transaction()
+    transaction.disablesAnimations = true
+    withTransaction(transaction) { isPresented.wrappedValue = false }
 }
