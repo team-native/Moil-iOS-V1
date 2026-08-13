@@ -5,7 +5,6 @@ struct MyPageView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @AppStorage(MoilThemeSetting.storageKey) private var theme = MoilThemeSetting.dark.rawValue
-    @State private var isThemePickerPresented = false
     @AppStorage(MoilLocalAccount.nameKey) private var storedName = ""
     @AppStorage(MoilLocalAccount.colorKey) private var profileColorId = ""
     @State private var isGroupDetailPresented = false
@@ -93,7 +92,13 @@ struct MyPageView: View {
                 }
                 .padding(.bottom, 28)
                 GroupSection(title: "환경설정") {
-                    Button { isThemePickerPresented = true } label: {
+                    // 기본 드롭다운은 누른 줄 바로 아래에 붙어서 뜹니다.
+                    Menu {
+                        ForEach(MoilThemeSetting.allCases) { option in
+                            Button(option.title) { theme = option.rawValue }
+                        }
+                        Button("취소", role: .cancel) { }
+                    } label: {
                         HStack {
                             Text("테마")
                                 .font(MoilTypography.regular(15))
@@ -110,6 +115,7 @@ struct MyPageView: View {
                         .frame(height: 48)
                         .contentShape(Rectangle())
                     }
+                    .menuOrder(.fixed)
                     .buttonStyle(.plain)
                 }
                 .padding(.bottom, 16)
@@ -161,12 +167,6 @@ struct MyPageView: View {
             // 프로필 이름과 색을 서버 값으로 보여주기 위해 멤버를 불러옵니다.
             guard let groupId = groupStore.selectedGroupId else { return }
             _ = try? await groupStore.loadMembers(groupId: groupId, using: sessionStore.service())
-        }
-        .confirmationDialog("테마", isPresented: $isThemePickerPresented, titleVisibility: .hidden) {
-            ForEach(MoilThemeSetting.allCases) { option in
-                Button(option.title) { theme = option.rawValue }
-            }
-            Button("취소", role: .cancel) { }
         }
         .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
             Button("취소", role: .cancel) { }

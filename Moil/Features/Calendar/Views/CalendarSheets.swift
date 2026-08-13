@@ -307,7 +307,7 @@ struct EventDetailSheet: View {
 
 /// 새 일정과 일정 수정이 함께 쓰는 입력 시트입니다. 피그마 `26:2334`.
 struct ScheduleComposerView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.moilSheetDismiss) private var dismissSheet
     let title: String
     let members: [MoilRemoteMember]
     let onSave: (ScheduleDraft) -> Void
@@ -361,7 +361,7 @@ struct ScheduleComposerView: View {
                 .padding(.top, 12)
 
             HStack {
-                Button("취소", action: dismiss.callAsFunction)
+                Button("취소") { dismissSheet() }
                     .font(MoilTypography.regular(16))
                     .foregroundStyle(MoilSheetMetrics.subText)
                 Spacer(minLength: 0)
@@ -371,7 +371,7 @@ struct ScheduleComposerView: View {
                 Spacer(minLength: 0)
                 Button("저장") {
                     onSave(draft)
-                    dismiss()
+                    dismissSheet()
                 }
                 .font(MoilTypography.bold(16))
                 .foregroundStyle(canSave ? MoilColor.primary : MoilSheetMetrics.subText)

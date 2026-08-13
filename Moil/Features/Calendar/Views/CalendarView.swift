@@ -405,16 +405,23 @@ struct CalendarView: View {
         Button {
             selectedDay = day
         } label: {
-            VStack(alignment: .center, spacing: 3) {
+            VStack(alignment: .center, spacing: 0) {
                 Text("\(day)")
                     .font(isToday(day) ? MoilTypography.bold(15) : MoilTypography.regular(15))
                     .foregroundStyle(isToday(day) ? .white : MoilColor.textPrimary)
                     .frame(width: 32, height: 32, alignment: .center)
                     // 오늘 날짜는 동그라미로 표시합니다.
                     .background { if isToday(day) { Circle().fill(MoilColor.primary) } }
-                ForEach(events) { event in
-                    eventChip(event)
+                VStack(spacing: 3) {
+                    ForEach(events) { event in
+                        eventChip(event)
+                            // 일정이 생기고 사라질 때 자연스럽게 나타나고 사라집니다.
+                            .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    }
                 }
+                .padding(.top, 6)
+                // 일정이 추가·삭제될 때 칩이 자연스럽게 나타나고 사라집니다.
+                .animation(.easeOut(duration: 0.22), value: events.map(\.id))
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .top)

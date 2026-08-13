@@ -1,5 +1,18 @@
 import SwiftUI
 
+/// 시트 안에서 '취소'처럼 스스로 닫을 때 씁니다.
+/// 기본 dismiss를 쓰면 내려가는 모션 없이 사라집니다.
+private struct MoilSheetDismissKey: EnvironmentKey {
+    static let defaultValue: () -> Void = { }
+}
+
+extension EnvironmentValues {
+    var moilSheetDismiss: () -> Void {
+        get { self[MoilSheetDismissKey.self] }
+        set { self[MoilSheetDismissKey.self] = newValue }
+    }
+}
+
 /// 화면 아래에서 올라와 맨 아래에 딱 붙는 시트입니다.
 /// iOS 기본 시트는 좌우·아래에 여백을 두고 뜨고 탭바 아래에 깔려서, 직접 그립니다.
 private struct MoilBottomSheetContainer<SheetContent: View>: View {
@@ -20,6 +33,7 @@ private struct MoilBottomSheetContainer<SheetContent: View>: View {
 
             if isShown {
                 sheetContent
+                    .environment(\.moilSheetDismiss, close)
                     .frame(maxWidth: .infinity)
                     .frame(height: height, alignment: .top)
                     .background(background)
