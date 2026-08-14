@@ -52,7 +52,16 @@ struct DayScheduleSheet: View {
     let onAdd: () -> Void
     let onSelect: (CalendarEvent) -> Void
     /// 목록이 바뀔 때 줄이 생기고 사라지는 모션을 확실히 태우기 위해 따로 들고 있습니다.
-    @State private var rows: [CalendarEvent] = []
+    /// 처음 그릴 때는 값이 없어 events를 그대로 써서, 시트와 목록이 한 덩어리로 올라옵니다.
+    @State private var rows: [CalendarEvent]?
+
+    private var displayedRows: [CalendarEvent] {
+        (rows ?? events).sorted { lhs, rhs in
+            // 시간이 같으면 나중에 만든 일정이 아래로 갑니다.
+            if lhs.startTime != rhs.startTime { return (lhs.startTime ?? "") < (rhs.startTime ?? "") }
+            return (Int(lhs.id) ?? 0) < (Int(rhs.id) ?? 0)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,7 +92,7 @@ struct DayScheduleSheet: View {
             .padding(.horizontal, 28)
             .padding(.top, 13)
 
-            if rows.isEmpty {
+            if displayedRows.isEmpty {
                 Spacer(minLength: 0)
                 Text("등록된 일정이 없어요")
                     .font(MoilTypography.regular(14))
@@ -92,7 +101,7 @@ struct DayScheduleSheet: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        ForEach(rows) { event in
+                        ForEach(displayedRows) { event in
                             VStack(spacing: 0) {
                                 Button { onSelect(event) } label: {
                                     DayScheduleRow(event: event)
@@ -104,7 +113,7 @@ struct DayScheduleSheet: View {
                                     .padding(.horizontal, 28)
                             }
                             // 일정이 추가·삭제될 때 줄이 자연스럽게 생기고 사라집니다.
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
                         }
                     }
                     .padding(.top, 12)
@@ -113,7 +122,6 @@ struct DayScheduleSheet: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(MoilSheetMetrics.sheetBackground)
-        .onAppear { rows = events }
         .onChange(of: events.map(\.id)) { _, _ in
             withAnimation(.easeOut(duration: 0.25)) { rows = events }
         }
