@@ -223,9 +223,9 @@ struct MemberView: View {
                     Divider()
                     AdminSettingRow(title: "그룹 이름 변경") { groupNameDraft = selectedGroup?.name ?? ""; isEditingGroupName = true }
                     Divider()
-                        AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
+                        AdminSettingRow(title: "멤버 권한 설정") { moilPresentWithoutAnimation { isEditingPermissions = true } }
                     Divider()
-                        AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
+                        AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { moilPresentWithoutAnimation { isSharingInvite = true } }
                 }
                 Divider()
                 Button("그룹 나가기") { isLeavingGroup = true }

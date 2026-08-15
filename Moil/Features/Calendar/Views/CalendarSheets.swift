@@ -589,10 +589,13 @@ struct DayScheduleSheetContainer: View {
             events: events,
             onAdd: {
                 composerEvent = nil
-                isComposerPresented = true
+                moilPresentWithoutAnimation { isComposerPresented = true }
             },
             onSelect: { event in
-                Task { detailEvent = await onLoadDetail(event) }
+                Task {
+                    let detail = await onLoadDetail(event)
+                    moilPresentWithoutAnimation { detailEvent = detail }
+                }
             }
         )
         // 상세는 밑에서 올라오지 않고 화면 가운데에서 자연스럽게 나타납니다.
@@ -608,7 +611,7 @@ struct DayScheduleSheetContainer: View {
                     onEdit: {
                         detailEvent = nil
                         composerEvent = event
-                        isComposerPresented = true
+                        moilPresentWithoutAnimation { isComposerPresented = true }
                     },
                     onDelete: {
                         detailEvent = nil
@@ -619,7 +622,6 @@ struct DayScheduleSheetContainer: View {
             }
             .presentationBackground(.clear)
         }
-        .transaction { $0.disablesAnimations = true }
         .moilBottomSheet(
             isPresented: $isComposerPresented,
             height: MoilSheetMetrics.composerHeight,

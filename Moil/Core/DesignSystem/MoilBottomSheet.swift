@@ -80,9 +80,6 @@ extension View {
             )
             .presentationBackground(.clear)
         }
-        // 화면 자체는 모션 없이 나타나고, 시트만 아래에서 올라옵니다.
-        // 그래야 어두운 배경이 시트와 함께 밀려 올라오지 않습니다.
-        .transaction { $0.disablesAnimations = true }
     }
 
     /// 값이 있을 때만 시트를 띄우는 형태입니다.
@@ -107,12 +104,17 @@ extension View {
             )
             .presentationBackground(.clear)
         }
-        .transaction { $0.disablesAnimations = true }
     }
 }
 
 private func close(_ isPresented: Binding<Bool>) {
+    moilPresentWithoutAnimation { isPresented.wrappedValue = false }
+}
+
+/// 화면(커버) 자체는 모션 없이 나타나고, 시트만 아래에서 올라오게 합니다.
+/// 뷰에 `.transaction`을 걸면 시트 안 목록 모션까지 사라져서, 상태를 바꿀 때만 끕니다.
+func moilPresentWithoutAnimation(_ body: () -> Void) {
     var transaction = Transaction()
     transaction.disablesAnimations = true
-    withTransaction(transaction) { isPresented.wrappedValue = false }
+    withTransaction(transaction, body)
 }

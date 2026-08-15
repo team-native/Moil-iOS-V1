@@ -403,7 +403,7 @@ struct CalendarView: View {
 
     private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
-            selectedDay = day
+            moilPresentWithoutAnimation { selectedDay = day }
         } label: {
             VStack(alignment: .center, spacing: 0) {
                 Text("\(day)")
@@ -511,7 +511,7 @@ private struct ScheduleSearchView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(filteredEvents) { event in
-                                Button { selectedEvent = event } label: {
+                                Button { moilPresentWithoutAnimation { selectedEvent = event } } label: {
                                 HStack(spacing: 12) {
                                     Circle().fill(event.color).frame(width: 10, height: 10)
                                     VStack(alignment: .leading, spacing: 4) {
@@ -560,7 +560,6 @@ private struct ScheduleSearchView: View {
             }
             .presentationBackground(.clear)
         }
-        .transaction { $0.disablesAnimations = true }
         .task(id: "\(groupId ?? "")-\(month)") {
             guard let groupId else { return }
             do {
