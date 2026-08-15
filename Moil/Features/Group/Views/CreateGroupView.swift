@@ -12,63 +12,43 @@ struct CreateGroupView: View {
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var onClose: (() -> Void)? = nil
     var body: some View {
-        NavigationStack {
         VStack(alignment: .leading, spacing: 0) {
-            Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
-            TextField("예: 우리 가족", text: $name)
-                .moilField()
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            HStack(spacing: 16) {
-                ForEach(colors, id: \.self) { color in
-                    Button { selectedColor = color } label: {
-                        MoilAvatar(color: color, size: 46)
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
-                    }
+            MoilInlineHeader(title: "새 그룹 만들기", onBack: close)
+            VStack(alignment: .leading, spacing: 0) {
+            MoilFormStack {
+                MoilValidatedField(label: "그룹 이름") {
+                    MoilTextField(placeholder: "예: 우리 가족", text: $name)
                 }
-                Button { isAdditionalProfilePresented = true } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(width: 40, height: 40)
-                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                }
-                .accessibilityLabel("프로필 추가")
             }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+            Text("내 프로필 색 선택")
+                .font(MoilTypography.semibold(12))
+                .foregroundStyle(MoilColor.textTertiary)
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+                .padding(.bottom, 18)
+            MoilColorPicker(colors: colors, selection: $selectedColor, onAdd: { isAdditionalProfilePresented = true })
             Text("그룹을 만든 뒤 초대 코드로 구성원을 초대할 수 있어요.")
                 .font(MoilTypography.regular(13))
                 .foregroundStyle(MoilColor.textSecondary)
                 .padding(.top, 22)
             Spacer()
-            Button("그룹 만들기") {
+            MoilButton(title: "그룹 만들기", isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                 Task {
                     do {
-                        try await groupStore.create(name: name, nickname: "나", colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
+                        try await groupStore.create(name: name, nickname: MoilLocalAccount.displayName(fallback: nil), colorId: MoilAvatarColor.id(for: selectedColor), using: sessionStore.service())
                         didCreateGroup = true
                     } catch {
                         errorMessage = error.localizedDescription
                     }
                 }
             }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
-        }
-        .padding(.horizontal, 24)
-        .safeAreaPadding(.top, 12)
-        .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("새 그룹 만들기")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(action: close) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
+                .safeAreaPadding(.bottom, 12)
             }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, 12)
         }
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(MoilColor.background.ignoresSafeArea())
         .alert("그룹을 만들었어요", isPresented: $didCreateGroup) {
             Button("확인", action: close)
         } message: {

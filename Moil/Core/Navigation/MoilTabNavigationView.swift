@@ -5,8 +5,9 @@ struct MoilTabNavigationView: View {
     @State private var selectedTab: MoilTab = .calendar
     @State private var isJoiningProfile = false
     @State private var isCreatingGroup = false
-    /// 마이페이지에서 계정 화면으로 들어가면 탭바를 숨겨야 하므로 상위에서 상태를 들고 있습니다.
-    @State private var isAccountPagePresented = false
+    /// 계정 화면은 탭 콘텐츠를 통째로 대체합니다. 하위에서 상태를 바꾸면
+    /// 상위가 다시 그려지면서 화면 이동이 사라지기 때문입니다.
+    @State private var accountRoute: MoilAccountRoute?
 
     var body: some View {
         ZStack {
@@ -23,11 +24,20 @@ struct MoilTabNavigationView: View {
             } else {
                 tabContent
             }
+
+            // 계정 화면은 탭 화면 위로 오른쪽에서 밀려 들어옵니다.
+            if let accountRoute {
+                MoilAccountPage(route: accountRoute, onClose: { closeAccountPage() }, onLogout: onLogout)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(MoilColor.background.ignoresSafeArea())
+                    .transition(.move(edge: .trailing))
+                    .zIndex(2)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .moilTabScreenLayout(
             selected: selectedTab,
-            isTabBarVisible: !isJoiningProfile && !isCreatingGroup && !isAccountPagePresented,
+            isTabBarVisible: !isJoiningProfile && !isCreatingGroup && accountRoute == nil,
             onSelect: select
         )
     }
@@ -47,9 +57,15 @@ struct MoilTabNavigationView: View {
                 onLogout: onLogout,
                 onTabSelect: select,
                 showsTabBar: false,
-                isAccountPagePresented: $isAccountPagePresented
+                onAccountRoute: { route in
+                    withAnimation(.easeOut(duration: 0.18)) { accountRoute = route }
+                }
             )
         }
+    }
+
+    private func closeAccountPage() {
+        withAnimation(.easeIn(duration: 0.16)) { accountRoute = nil }
     }
 
     private func select(_ tab: MoilTab) {

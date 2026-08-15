@@ -28,12 +28,12 @@ struct GroupJoinCodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             MoilScreenHeader(title: "그룹 참여", subtitle: "초대 코드를 입력해주세요", onBack: backAction)
             VStack(alignment: .leading, spacing: 0) {
-            Text("초대 코드").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.bottom, 10)
-            TextField("FAM-0000", text: $code)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-                .tracking(1)
-                .moilField()
+            MoilFormStack {
+                MoilValidatedField(label: "초대 코드") {
+                    MoilTextField(placeholder: "FAM-0000", text: $code, autocapitalization: .characters, tracking: 1)
+                }
+            }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 .overlay { RoundedRectangle(cornerRadius: 14).stroke(error == nil ? Color.clear : MoilColor.error, lineWidth: 1) }
                 .onChange(of: code) { _, value in
                     let normalized = String(value.uppercased().prefix(64))
@@ -47,7 +47,7 @@ struct GroupJoinCodeView: View {
                     .padding(.top, 16)
             }
             Spacer()
-            Button(isVerified ? "다음" : "확인") {
+            MoilButton(title: isVerified ? "다음" : "확인", isEnabled: !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isVerifying) {
                 if isVerified { onNext() }
                 else {
                     Task {
@@ -66,15 +66,12 @@ struct GroupJoinCodeView: View {
                     }
                 }
             }
-            .font(MoilTypography.bold(16)).foregroundStyle(.white)
-            .frame(maxWidth: .infinity).frame(height: 54)
-            .background(code.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 14))
-            .disabled(code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isVerifying)
             .safeAreaPadding(.bottom, 12)
             }
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isVerifying)
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)

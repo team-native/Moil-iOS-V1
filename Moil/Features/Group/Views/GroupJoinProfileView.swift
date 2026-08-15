@@ -15,18 +15,16 @@ struct GroupJoinProfileView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
-                }
-                Text("프로필 설정").font(MoilTypography.bold(26))
-            }
-            .safeAreaPadding(.top, 16)
+            MoilInlineHeader(title: "프로필 설정", onBack: dismiss.callAsFunction)
+            VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text(groupStore.pendingInviteGroupName).font(MoilTypography.bold(14)); Text("구성원 \(groupStore.pendingInviteMemberCount)명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
                 .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
-            Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            TextField("닉네임 입력", text: $nickname).moilField()
+            MoilFormStack {
+                MoilValidatedField(label: "이 그룹에서 사용할 이름") {
+                    MoilTextField(placeholder: "닉네임 입력", text: $nickname)
+                }
+            }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 .onChange(of: nickname) { _, value in
                     if value.count > 10 { nickname = String(value.prefix(10)) }
                 }
@@ -38,25 +36,14 @@ struct GroupJoinProfileView: View {
             }
             Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            HStack(spacing: 14) {
-                ForEach(colors, id: \.self) { color in
-                    Button { selectedColor = color } label: {
-                        MoilAvatar(color: color, size: 40)
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
-                    }
-                }
-                Button { isAdditionalProfilePresented = true } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                }
-                .accessibilityLabel("프로필 추가")
-            }
+            Text("내 프로필 색 선택")
+                .font(MoilTypography.semibold(12))
+                .foregroundStyle(MoilColor.textTertiary)
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+                .padding(.bottom, 18)
+            MoilColorPicker(colors: colors, selection: $selectedColor, onAdd: { isAdditionalProfilePresented = true })
             Spacer()
-            Button("참여하기") {
+            MoilButton(title: "참여하기", isEnabled: isValidNickname && !isJoining) {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }
                 Task {
                     isJoining = true
@@ -69,13 +56,13 @@ struct GroupJoinProfileView: View {
                     }
                 }
             }
-                .disabled(!isValidNickname || isJoining)
-                .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(!isValidNickname || isJoining ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
+            .safeAreaPadding(.bottom, 12)
+            }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
-        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(MoilColor.background.ignoresSafeArea())
+        .moilLoading(isJoining)
         .alert("프로필 추가", isPresented: $isAdditionalProfilePresented) {
             Button("확인", role: .cancel) { }
         } message: {

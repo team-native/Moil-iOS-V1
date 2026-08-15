@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AuthFlowView: View {
+    @AppStorage(MoilThemeSetting.storageKey) private var theme = MoilThemeSetting.dark.rawValue
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
@@ -12,6 +13,7 @@ struct AuthFlowView: View {
     @State private var resetEmail = ""
     @State private var resetSessionId = ""
     @State private var hasRestoredSession = false
+
 
     var body: some View {
         Group {
@@ -50,7 +52,17 @@ struct AuthFlowView: View {
             MoilTabNavigationView(onLogout: logout)
         }
         }
+        // 로그인·회원가입까지 포함해 모든 화면이 사용자가 고른 테마를 따릅니다.
+        // 기본값은 다크이고, '시스템'을 고르면 기기 설정을 따릅니다.
+        .preferredColorScheme(MoilThemeSetting(rawValue: theme)?.colorScheme ?? .dark)
         .task { await restoreSession() }
+        // 토큰 재발급까지 실패해 세션이 끊기면 메인에 머물지 않고 로그인으로 돌아갑니다.
+        .onChange(of: sessionStore.accessToken) { _, token in
+            guard route == .main, token == nil else { return }
+            groupStore.reset()
+            eventStore.reset()
+            route = .login
+        }
     }
 
     private func login(email: String, password: String) async -> String? {
@@ -117,6 +129,8 @@ struct AuthFlowView: View {
         do {
             let tokens = try await sessionStore.service().confirmSignUp(sessionId: signUpSessionId, password: password, confirmation: confirmation)
             sessionStore.save(tokens)
+            // 로그인 응답에는 이름이 없어서, 회원가입 때 받은 이름을 기기에 저장해 씁니다.
+            MoilLocalAccount.name = signUpName
             try await groupStore.load(using: sessionStore.service())
             route = .main
             return nil
@@ -183,6 +197,8 @@ private struct LoginView: View {
     @State private var password = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+    /// 소셜 로그인 안내처럼 입력 칸과 상관없는 문구입니다.
+    @State private var noticeMessage: String?
 
     private var canSubmit: Bool {
         email.contains("@") && password.count >= 8
@@ -193,79 +209,99 @@ private struct LoginView: View {
             MoilColor.background
                 .ignoresSafeArea()
 
+            // 피그마: 컨테이너 좌우 24, 위 40, 아래 34
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    VStack(spacing: 6) {
-                        Image("MoilMascot")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 75, height: 74)
-                        Text("모일")
-                            .font(MoilTypography.bold(22))
-                            .foregroundStyle(MoilColor.textPrimary)
-                        Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                    }
+                Spacer(minLength: 0)
+
+                // 피그마: 마스코트 76x76.34, 아래 10
+                Image("MoilMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 76, height: 76.34)
+                    .padding(.bottom, 10)
+
+                // 피그마: 위 6 / 아래 2
+                Text("모일")
+                    .font(MoilTypography.bold(22))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.top, 6)
+                    .padding(.bottom, 2)
+
+                Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 6)
+                    .padding(.bottom, 2)
+                    // 피그마: 로고 블록 아래 36
                     .padding(.bottom, 36)
 
-                    VStack(spacing: 12) {
-                        AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                        AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                        HStack {
-                            Spacer()
-                            Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
-                                .font(MoilTypography.regular(13))
-                                .foregroundStyle(MoilColor.textSecondary)
-                        }
-                    }
+                MoilTextField(placeholder: "이메일", text: $email, contentType: .emailAddress)
+                    // 피그마: 이메일 칸 아래 12
+                    .padding(.bottom, 12)
+                    .onChange(of: email) { _, _ in errorMessage = nil }
 
-                    SocialLoginRow { provider in
-                        errorMessage = "\(provider) 로그인은 준비 중이에요."
-                    }
-                    .padding(.top, 44)
+                // 로그인 실패 문구는 다른 화면과 같이 입력 칸 바로 밑에 둡니다.
+                MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                    MoilTextField(placeholder: "비밀번호", text: $password, isSecure: true, contentType: .password)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
+                // 피그마: 비밀번호 블록 63, 칸 53
+                .padding(.bottom, 10)
+                .onChange(of: password) { _, _ in errorMessage = nil }
 
-                VStack(spacing: 14) {
-                        Button("로그인") {
-                            Task {
-                                isSubmitting = true
-                                errorMessage = await onLogin(email, password)
-                                isSubmitting = false
-                            }
-                        }
-                            .font(MoilTypography.bold(16))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .disabled(!canSubmit)
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(MoilTypography.regular(12))
-                                .foregroundStyle(MoilColor.error)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-
-                        Button {
-                            showingSignUp = true
-                        } label: {
-                            Text("계정이 없으신가요? ")
-                                .foregroundStyle(MoilColor.textSecondary)
-                            + Text("회원가입")
-                                .fontWeight(.bold)
-                                .foregroundStyle(MoilColor.primary)
-                        }
-                        .font(MoilTypography.regular(14))
+                HStack {
+                    Spacer(minLength: 0)
+                    Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
                 }
+                .padding(.top, 4)
+                .padding(.bottom, 2)
+
+                Spacer(minLength: 0)
+
+                SocialLoginRow { provider in
+                    noticeMessage = "\(provider) 로그인은 준비 중이에요."
+                }
+                // 피그마: 아이콘 아래 52에서 하단 블록 시작
+                .padding(.bottom, 52)
+
+                if let noticeMessage {
+                    Text(noticeMessage)
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 8)
+                }
+
+                // 피그마: 버튼 위 18 / 아래 17, 모서리 14
+                MoilButton(title: "로그인", isEnabled: canSubmit && !isSubmitting) {
+                    Task {
+                        isSubmitting = true
+                        errorMessage = await onLogin(email, password)
+                        isSubmitting = false
+                    }
+                }
+
+                // 피그마: 버튼과 14 간격, 위 3 / 아래 2
+                Button {
+                    showingSignUp = true
+                } label: {
+                    Text("계정이 없으신가요? ")
+                        .foregroundStyle(MoilColor.textSecondary)
+                    + Text("회원가입")
+                        .fontWeight(.bold)
+                        .foregroundStyle(MoilColor.primary)
+                }
+                .font(MoilTypography.regular(14))
+                .padding(.top, 17)
+                .padding(.bottom, 2)
             }
-            .safeAreaPadding(.top, 16)
-            .padding(.horizontal, 24)
-            .safeAreaPadding(.bottom, 12)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, 40)
+            .safeAreaPadding(.bottom, 34)
+            .frame(maxWidth: 402)
         }
+        .moilLoading(isSubmitting)
     }
 }
 
@@ -277,12 +313,13 @@ private struct SignUpInfoView: View {
     @State private var isSubmitting = false
     @State private var serverError: String?
 
+    /// 입력하는 즉시 형식을 판단합니다.
     private var emailIsValid: Bool {
-        email.isEmpty || (email.contains("@") && email.contains("."))
+        email.range(of: #"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$"#, options: .regularExpression) != nil
     }
 
     private var canProceed: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && !email.isEmpty && emailIsValid
+        !name.trimmingCharacters(in: .whitespaces).isEmpty && emailIsValid
     }
 
     private var emailState: MoilFieldState {
@@ -291,40 +328,32 @@ private struct SignUpInfoView: View {
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("회원가입")
-                        .font(MoilTypography.bold(28))
-                        .foregroundStyle(MoilColor.textPrimary)
-                        .safeAreaPadding(.top, 16)
-
-                    MoilValidatedField(label: "이름") {
-                        AuthTextField(title: "이름 입력", text: $name, contentType: .name)
-                    }
-                    .padding(.top, 20)
-
-                    MoilValidatedField(label: "이메일", state: emailState) {
-                        AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
-                    }
-                    .padding(.top, 18)
+        MoilAuthScaffold(title: "회원가입", onBack: onBack, isLoading: isSubmitting) {
+            MoilFormStack {
+                MoilValidatedField(label: "이름") {
+                    MoilTextField(placeholder: "이름 입력", text: $name, contentType: .name)
                 }
+                MoilValidatedField(label: "이메일", state: emailState) {
+                    MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
+                }
+            }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
 
-                Spacer()
-
-                MoilPrimaryButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
+            if let serverError {
+                Text(serverError)
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.error)
+                    .padding(.top, 8)
+            }
+        } bottom: {
+            VStack(spacing: 0) {
+                MoilAuthButton(title: "다음", isEnabled: canProceed && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
                         isSubmitting = false
                     }
                 }
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
-
                 Button(action: onBack) {
                     Text("이미 계정이 있으신가요? ")
                         .foregroundStyle(MoilColor.textSecondary)
@@ -333,11 +362,9 @@ private struct SignUpInfoView: View {
                         .foregroundStyle(MoilColor.primary)
                 }
                 .font(MoilTypography.regular(14))
-                .padding(.top, 14)
-                .safeAreaPadding(.bottom, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 17)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
         }
     }
 }
@@ -360,19 +387,20 @@ private struct PasswordResetEmailView: View {
                 .safeAreaPadding(.top, 16)
                 Text("가입한 이메일 주소로 인증번호를 보낼게요.")
                     .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary).padding(.top, 12)
-                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
+                MoilFormStack {
+                    MoilValidatedField(label: "이메일") {
+                        MoilTextField(placeholder: "moil@example", text: $email, contentType: .emailAddress)
+                    }
+                }
+                .padding(.top, MoilTabScreenMetrics.fieldSpacing)
                 if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
                 Spacer()
-                Button("인증번호 받기") {
+                MoilButton(title: "인증번호 받기", isEnabled: email.contains("@") && !isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
-                .font(MoilTypography.bold(16)).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).frame(height: 54)
-                .background(email.contains("@") ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                .clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!email.contains("@") || isSubmitting)
                 .safeAreaPadding(.bottom, 12)
             }
-            .padding(.horizontal, 24).frame(maxWidth: 402)
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding).frame(maxWidth: 402)
         }
     }
 }
@@ -387,127 +415,111 @@ private struct EmailVerificationView: View {
     @State private var serverError: String?
     @FocusState private var isCodeFieldFocused: Bool
     @State private var isCaretVisible = true
-    @State private var isEditingCode = true
 
     private var isComplete: Bool { code.count == 6 }
 
+    /// 서버 오류가 있으면 그 문구를, 없으면 입력 진행 상태를 코드 칸 바로 아래에 보여 줍니다.
     private var codeState: MoilFieldState {
+        if let serverError { return .failure(serverError) }
         guard !code.isEmpty else { return .neutral }
-        return isComplete ? .success("인증번호가 확인되었어요") : .failure("인증번호 6자리를 모두 입력해주세요")
+        return isComplete ? .success("인증번호가 확인되었어요") : .neutral
     }
 
-    /// 입력 중인 칸과 완료 상태를 테두리로 구분합니다.
-    private func codeBoxBorder(at index: Int) -> Color {
+    /// 피그마: 기본은 테두리 없음, 오류일 때 #CF4040, 완료되면 확인 색
+    private func boxBorder(at index: Int) -> Color {
+        if case .failure = codeState { return MoilColor.error }
         if isComplete { return MoilColor.success }
-        if index == code.count && !code.isEmpty { return MoilColor.primary }
-        return .clear
+        return index == code.count && isCodeFieldFocused ? MoilColor.primary : .clear
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
+        MoilAuthScaffold(
+            title: "이메일 인증",
+            subtitle: "\(email)로 전송된\n인증번호 6자리를 입력해주세요",
+            onBack: onBack,
+            isLoading: isSubmitting
+        ) {
+            // 피그마: 코드 칸 위 16, 칸 52x55, 간격 8, 모서리 12
+            HStack(spacing: 8) {
+                ForEach(0..<6, id: \.self) { index in
+                    ZStack {
+                        Text(code.character(at: index))
+                            .font(MoilTypography.bold(19))
                             .foregroundStyle(MoilColor.textPrimary)
+                        if index == code.count && isCodeFieldFocused {
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(MoilColor.textPrimary)
+                                .frame(width: 2, height: 24)
+                                .opacity(isCaretVisible ? 1 : 0)
+                                .accessibilityHidden(true)
+                        }
                     }
-                    Text("이메일 인증")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
+                    .frame(width: 52, height: 55)
+                    .background(MoilColor.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay { RoundedRectangle(cornerRadius: 12).stroke(boxBorder(at: index), lineWidth: 1) }
                 }
-                .safeAreaPadding(.top, 16)
-                Text("\(email)로 전송된 인증번호 6자리를 입력해주세요")
-                    .font(MoilTypography.regular(14))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 16)
+            .contentShape(Rectangle())
+            .onTapGesture { isCodeFieldFocused = true }
+            .background {
+                TextField("", text: $code)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused($isCodeFieldFocused)
+                    .opacity(0.001)
+                    .frame(width: 1, height: 1)
+            }
+            .onChange(of: code) { _, value in
+                code = String(value.filter(\.isNumber).prefix(6))
+                // 다시 입력하면 이전 오류 문구를 지웁니다.
+                serverError = nil
+            }
+            .onAppear {
+                isCodeFieldFocused = true
+                // 커서가 깜박이도록 반복 애니메이션을 겁니다.
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    isCaretVisible = false
+                }
+            }
+
+            // 피그마: 코드 칸 바로 아래에 상태 문구
+            if let message = codeState.message {
+                HStack(spacing: 6) {
+                    if codeState.isSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    Text(message).font(MoilTypography.bold(12))
+                }
+                .foregroundStyle(codeState.tint)
+                .padding(.top, 10)
+            }
+
+            if !resendMessage.isEmpty {
+                Text(resendMessage)
+                    .font(MoilTypography.regular(12))
                     .foregroundStyle(MoilColor.textSecondary)
-                    .padding(.top, 12)
-
-                HStack(spacing: 8) {
-                    ForEach(0..<6, id: \.self) { index in
-                        ZStack {
-                            Text(code.character(at: index))
-                                .font(MoilTypography.bold(19))
-                            if index == code.count && isEditingCode {
-                                RoundedRectangle(cornerRadius: 1)
-                                    .fill(Color.white)
-                                    .frame(width: 2, height: 24)
-                                    .opacity(isCaretVisible ? 1 : 0.28)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                            .frame(width: 52, height: 52)
-                            .background(MoilColor.surface)
-                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    isEditingCode = true
-                    isCodeFieldFocused = true
-                }
-                .background {
-                    TextField("", text: $code)
-                        .keyboardType(.numberPad)
-                        .textContentType(.oneTimeCode)
-                        .focused($isCodeFieldFocused)
-                        .opacity(0.001)
-                        .frame(width: 1, height: 1)
-                }
-                .onChange(of: code) { _, value in
-                    code = String(value.filter(\.isNumber).prefix(6))
-                    isEditingCode = code.count < 6
-                }
-                .onAppear {
-                    isEditingCode = true
-                    isCodeFieldFocused = true
-                    withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
-                        isCaretVisible = false
-                    }
-                }
-                .padding(.top, 16)
-
-                if let message = codeState.message {
-                    HStack(spacing: 6) {
-                        if codeState.isSuccess {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        Text(message).font(MoilTypography.bold(12))
-                    }
-                    .foregroundStyle(codeState.tint)
-                    .padding(.top, 10)
-                }
-
-                Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
-                    .font(MoilTypography.semibold(13))
-                    .foregroundStyle(MoilColor.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 18)
-                if !resendMessage.isEmpty {
-                    Text(resendMessage)
-                        .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
-                }
-
-                Spacer()
-                MoilPrimaryButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
+                    .padding(.top, 8)
+            }
+        } bottom: {
+            VStack(spacing: 0) {
+                MoilAuthButton(title: "다음", isEnabled: isComplete && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(code)
                         isSubmitting = false
                     }
                 }
-                    .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
+                // 피그마: 버튼 아래 22, SemiBold 13
+                Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
+                    .font(MoilTypography.semibold(13))
+                    .foregroundStyle(MoilColor.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 22)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
         }
     }
 }
@@ -542,122 +554,102 @@ private struct PasswordSetupView: View {
     }
 
     var body: some View {
-        ZStack {
-            MoilColor.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                    Text("비밀번호 설정")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
-                .safeAreaPadding(.top, 16)
+        MoilAuthScaffold(title: "비밀번호 설정", onBack: onBack, isLoading: isSubmitting) {
+            MoilFormStack {
                 MoilValidatedField(label: "비밀번호", state: passwordState) {
-                    AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
+                    MoilTextField(placeholder: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
                 }
-                .padding(.top, 20)
-
                 MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
-                    AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
+                    MoilTextField(placeholder: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
                 }
-                .padding(.top, 22)
-                Spacer()
-                Button(actionTitle) {
+            }
+            .padding(.top, MoilTabScreenMetrics.fieldSpacing)
+
+            if let serverError {
+                Text(serverError)
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.error)
+                    .padding(.top, 8)
+            }
+        } bottom: {
+            VStack(spacing: 0) {
+                MoilAuthButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch && !isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)
                         isSubmitting = false
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(passwordIsValid && passwordsMatch ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .disabled(!(passwordIsValid && passwordsMatch))
-                    .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
+                Button(action: onBack) {
+                    Text("이미 계정이 있으신가요? ")
+                        .foregroundStyle(MoilColor.textSecondary)
+                    + Text("로그인")
+                        .fontWeight(.bold)
+                        .foregroundStyle(MoilColor.primary)
                 }
-            }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 402)
-        }
-    }
-}
-
-private struct AuthTextField: View {
-    let title: String
-    @Binding var text: String
-    var isSecure = false
-    var contentType: UITextContentType?
-    @State private var isRevealed = false
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Group {
-                if isSecure && !isRevealed {
-                    SecureField(title, text: $text)
-                } else {
-                    TextField(title, text: $text)
-                }
-            }
-            .textContentType(contentType)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-
-            if isSecure {
-                Button { isRevealed.toggle() } label: {
-                    Image(systemName: isRevealed ? "eye" : "eye.slash")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundStyle(MoilColor.textTertiary)
-                }
-                .accessibilityLabel(isRevealed ? "비밀번호 숨기기" : "비밀번호 표시")
+                .font(MoilTypography.regular(14))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 17)
             }
         }
-        .moilField()
     }
 }
 
 /// 피그마 로그인 화면의 간편 로그인 영역입니다. 연동 전까지는 안내만 띄웁니다.
+/// 구분선과 아이콘 위치는 피그마 좌표를 그대로 씁니다.
 private struct SocialLoginRow: View {
     let onSelect: (String) -> Void
 
+    /// 피그마: 구분선 125x1, 좌측 x30 / 우측 x247, 텍스트와 각각 14 간격
+    private let dividerWidth: CGFloat = 125
+    /// 피그마: 아이콘 중심 x 97 / 201 / 303 → 간격 102, 아이콘 상자 38
+    private let iconBoxSize: CGFloat = 38
+    private let iconGap: CGFloat = 102 - 38
+
     var body: some View {
-        VStack(spacing: 22) {
-            HStack(spacing: 12) {
-                dividerLine
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                divider
                 Text("간편 로그인")
                     .font(MoilTypography.regular(13))
                     .foregroundStyle(MoilColor.textSecondary)
                     .fixedSize()
-                dividerLine
+                divider
             }
-            HStack(spacing: 46) {
-                socialButton("구글", image: "SocialGoogle")
-                socialButton("애플", image: "SocialApple")
-                socialButton("카카오", image: "SocialKakao")
+            .padding(.horizontal, -6)
+
+            HStack(spacing: iconGap) {
+                socialButton("구글") {
+                    Image("SocialGoogle").resizable().scaledToFit().frame(width: 34, height: 34)
+                }
+                socialButton("애플") {
+                    // 피그마 벡터는 흰 글리프여서 라이트 모드에서 보이지 않습니다. 같은 모양의 시스템 아이콘을 씁니다.
+                    Image(systemName: "apple.logo")
+                        .font(.system(size: 30))
+                        .foregroundStyle(MoilColor.textPrimary)
+                }
+                socialButton("카카오") {
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.898, blue: 0.0))
+                        .frame(width: 38, height: 38)
+                        .overlay {
+                            Image("SocialKakao").resizable().scaledToFit().frame(width: 22, height: 20.7)
+                        }
+                }
             }
+            .padding(.top, 39)
         }
     }
 
-    private var dividerLine: some View {
+    private var divider: some View {
         Rectangle()
             .fill(MoilColor.textTertiary.opacity(0.34))
-            .frame(height: 1)
+            .frame(width: dividerWidth, height: 1)
     }
 
-    private func socialButton(_ name: String, image: String) -> some View {
+    private func socialButton<Icon: View>(_ name: String, @ViewBuilder icon: () -> Icon) -> some View {
         Button { onSelect(name) } label: {
-            Image(image)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 38)
+            icon().frame(width: iconBoxSize, height: iconBoxSize)
         }
         .accessibilityLabel("\(name)로 로그인")
     }

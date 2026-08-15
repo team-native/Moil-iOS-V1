@@ -50,6 +50,10 @@ struct MoilAPIService {
         try await client.request("auth/delete-account", method: "POST", body: DeleteAccountRequest(email: email, password: password, leftData: leftData))
     }
 
+    func updateProfileName(_ name: String) async throws -> MoilProfile {
+        try await client.request("auth/profile", method: "PATCH", body: UpdateProfileRequest(name: name))
+    }
+
     func logout() async throws {
         let _: MoilEmptyResponse = try await client.request("auth/logout", method: "POST")
     }
@@ -138,6 +142,7 @@ private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: St
 private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }
 private struct ChangePasswordRequest: Encodable { let origin: String; let newpwd: String; let checkpwd: String }
 private struct DeleteAccountRequest: Encodable { let email: String; let password: String; let leftData: Bool }
+private struct UpdateProfileRequest: Encodable { let name: String }
 private struct CreateGroupRequest: Encodable { let name: String; let nickname: String; let colorId: String }
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
@@ -256,6 +261,11 @@ struct MoilRemoteMember: Decodable, Identifiable {
         colorId = try? container.string(for: [.colorId, .profileColor])
         isMe = (try? container.decode(Bool.self, forKey: .isMe)) ?? false
     }
+
+    /// 내 프로필이면 저장해 둔 내 이름을 먼저 보여 줍니다.
+    var displayName: String {
+        isMe ? MoilLocalAccount.displayName(fallback: nickname) : nickname
+    }
 }
 
 private struct MoilMemberList: Decodable {
@@ -287,10 +297,11 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let members: [MoilEventMember]
 
     private enum CodingKeys: String, CodingKey {
-        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location
+        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location, memo
     }
 
     init(from decoder: Decoder) throws {
@@ -308,11 +319,19 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         colorId = (try? container.decode(String.self, forKey: .colorId))
             ?? (try? container.decode(String.self, forKey: .profileColor))
             ?? members.first?.colorId
-        isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay)) ?? true
         startTime = try? container.decode(String.self, forKey: .startTime)
         endTime = try? container.decode(String.self, forKey: .endTime)
+        // 상세 응답에는 isAllDay가 없을 수 있어, 시작 시간 유무로 판단합니다.
+        isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay)) ?? (startTime == nil)
         location = try? container.decode(String.self, forKey: .location)
+        memo = try? container.decode(String.self, forKey: .memo)
     }
+}
+
+struct MoilProfile: Decodable {
+    let userId: Int?
+    let name: String
+    let email: String?
 }
 
 struct MoilEventMember: Decodable {
@@ -359,6 +378,7 @@ struct CreateEventRequest: Encodable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
@@ -369,6 +389,7 @@ struct UpdateEventRequest: Encodable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
