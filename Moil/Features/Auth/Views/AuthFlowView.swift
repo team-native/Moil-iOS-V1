@@ -22,7 +22,7 @@ struct AuthFlowView: View {
             LoginView(showingSignUp: Binding(
                 get: { route == .signUpInfo },
                 set: { route = $0 ? .signUpInfo : .login }
-            ), onLogin: login, onPasswordHelp: { route = .passwordResetEmail })
+            ), onLogin: login, onSocialLogin: startSocialLogin, onPasswordHelp: { route = .passwordResetEmail })
         case .signUpInfo:
             SignUpInfoView(
                 onBack: { route = .login },
@@ -63,6 +63,14 @@ struct AuthFlowView: View {
         } catch {
             return error.localizedDescription
         }
+    }
+
+    /// API 연동 전 화면 흐름을 확인하기 위한 임시 소셜 로그인입니다.
+    /// 백엔드 OAuth API가 준비되면 이 함수 내부만 실제 요청으로 교체합니다.
+    private func startSocialLogin(provider: String) async -> String? {
+        try? await Task.sleep(for: .milliseconds(650))
+        route = .main
+        return nil
     }
 
     private func restoreSession() async {
@@ -178,10 +186,12 @@ private enum AuthRoute {
 private struct LoginView: View {
     @Binding var showingSignUp: Bool
     let onLogin: (String, String) async -> String?
+    let onSocialLogin: (String) async -> String?
     let onPasswordHelp: () -> Void
     @State private var email = ""
     @State private var password = ""
     @State private var isSubmitting = false
+    @State private var isSocialLoginSubmitting = false
     @State private var errorMessage: String?
 
     private var canSubmit: Bool {
@@ -220,8 +230,12 @@ private struct LoginView: View {
                         }
                     }
 
-                    SocialLoginRow { provider in
-                        errorMessage = "\(provider) 로그인은 준비 중이에요."
+                    SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
+                        Task {
+                            isSocialLoginSubmitting = true
+                            errorMessage = await onSocialLogin(provider)
+                            isSocialLoginSubmitting = false
+                        }
                     }
                     .padding(.top, 44)
                 }
@@ -254,7 +268,7 @@ private struct LoginView: View {
                         } label: {
                             Text("계정이 없으신가요? ")
                                 .foregroundStyle(MoilColor.textSecondary)
-                            + Text("회원가입")
+                            Text("회원가입")
                                 .fontWeight(.bold)
                                 .foregroundStyle(MoilColor.primary)
                         }
@@ -265,8 +279,8 @@ private struct LoginView: View {
             .padding(.horizontal, 24)
             .safeAreaPadding(.bottom, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
     }
+}
 }
 
 private struct SignUpInfoView: View {
@@ -328,7 +342,7 @@ private struct SignUpInfoView: View {
                 Button(action: onBack) {
                     Text("이미 계정이 있으신가요? ")
                         .foregroundStyle(MoilColor.textSecondary)
-                    + Text("로그인")
+                    Text("로그인")
                         .fontWeight(.bold)
                         .foregroundStyle(MoilColor.primary)
                 }
@@ -627,6 +641,7 @@ private struct AuthTextField: View {
 /// 피그마 로그인 화면의 간편 로그인 영역입니다. 연동 전까지는 안내만 띄웁니다.
 private struct SocialLoginRow: View {
     let onSelect: (String) -> Void
+    var isLoading = false
 
     var body: some View {
         VStack(spacing: 22) {
@@ -638,10 +653,16 @@ private struct SocialLoginRow: View {
                     .fixedSize()
                 dividerLine
             }
-            HStack(spacing: 46) {
-                socialButton("구글", image: "SocialGoogle")
-                socialButton("애플", image: "SocialApple")
+            HStack(spacing: 11) {
+                socialButton("구글", image: "Social google")
+                socialButton("애플", image: "Social apple")
                 socialButton("카카오", image: "SocialKakao")
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView()
+                        .tint(MoilColor.primary)
+                }
             }
         }
     }
@@ -657,12 +678,17 @@ private struct SocialLoginRow: View {
             Image(image)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 38, height: 38)
+                .frame(width: 43, height: 43)
+                .frame(width: 43, height: 43)
         }
+        .disabled(isLoading)
         .accessibilityLabel("\(name)로 로그인")
     }
 }
 
 #Preview {
     AuthFlowView()
+        .environmentObject(MoilSessionStore())
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilEventStore())
 }
