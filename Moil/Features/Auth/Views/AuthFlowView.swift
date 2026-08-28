@@ -12,6 +12,7 @@ struct AuthFlowView: View {
     @State private var resetEmail = ""
     @State private var resetSessionId = ""
     @State private var hasRestoredSession = false
+    @State private var socialLogin = MoilSocialLoginCoordinator()
 
     var body: some View {
         Group {
@@ -65,12 +66,22 @@ struct AuthFlowView: View {
         }
     }
 
-    /// API 연동 전 화면 흐름을 확인하기 위한 임시 소셜 로그인입니다.
-    /// 백엔드 OAuth API가 준비되면 이 함수 내부만 실제 요청으로 교체합니다.
     private func startSocialLogin(provider: String) async -> String? {
-        try? await Task.sleep(for: .milliseconds(650))
-        route = .main
-        return nil
+        guard let provider = MoilSocialLoginProvider(buttonName: provider) else {
+            return "지원하지 않는 로그인 방식이에요."
+        }
+        do {
+            let tokens = try await socialLogin.login(provider: provider)
+            sessionStore.save(tokens)
+            try await groupStore.load(using: sessionStore.service())
+            route = .main
+            return nil
+        } catch {
+            // AuthenticationServices returns NSError code 1 when the user closes
+            // the system authentication sheet. It is an intentional cancellation.
+            if (error as NSError).code == 1 { return nil }
+            return error.localizedDescription
+        }
     }
 
     private func restoreSession() async {
@@ -638,7 +649,7 @@ private struct AuthTextField: View {
     }
 }
 
-/// 피그마 로그인 화면의 간편 로그인 영역입니다. 연동 전까지는 안내만 띄웁니다.
+/// 피그마 로그인 화면의 간편 로그인 영역입니다.
 private struct SocialLoginRow: View {
     let onSelect: (String) -> Void
     var isLoading = false

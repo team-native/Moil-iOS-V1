@@ -159,6 +159,11 @@ struct MoilTokenResponse: Decodable {
         case accessToken, refreshToken
     }
 
+    init(accessToken: String, refreshToken: String?) {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         accessToken = try container.decode(String.self, forKey: .accessToken)
