@@ -56,6 +56,10 @@ struct MemberView: View {
         selectedGroup?.inviteCode ?? ""
     }
 
+    private var inviteShareText: String {
+        "\(selectedGroup?.name ?? "Moil 그룹")에 초대합니다. Moil 앱에서 아래 초대 코드를 입력해 참여해주세요.\n\n초대 코드: \(inviteCode)"
+    }
+
     var body: some View {
         screenContent
     }
@@ -122,9 +126,7 @@ struct MemberView: View {
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $isSharingInvite) {
-                InviteShareView(inviteCode: inviteCode)
-                    .presentationDetents([.height(250)])
-                    .presentationDragIndicator(.visible)
+                SystemShareSheet(activityItems: [inviteShareText])
             }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
@@ -248,7 +250,13 @@ struct MemberView: View {
                 Divider()
                 AdminSettingRow(title: "멤버 권한 설정") { isEditingPermissions = true }
                 Divider()
-                AdminSettingRow(title: "소셜미디어로 초대 링크 공유") { isSharingInvite = true }
+                AdminSettingRow(title: "소셜미디어로 초대 코드 공유") {
+                    guard !inviteCode.isEmpty else {
+                        feedbackMessage = "초대 코드를 불러오지 못했어요."
+                        return
+                    }
+                    isSharingInvite = true
+                }
             }
             .background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 20))
         }
@@ -351,45 +359,14 @@ struct MemberView: View {
         .environmentObject(MoilSessionStore())
 }
 
-private struct InviteShareView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var copied = false
-    let inviteCode: String
+private struct SystemShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
 
-    private func copyInviteLink() {
-        UIPasteboard.general.string = inviteCode
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        copied = true
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            copied = false
-        }
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
     }
 
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("초대 링크 공유").font(MoilTypography.bold(18)).padding(.top, 12)
-            Text("친구에게 링크를 보내 그룹에 초대하세요")
-                .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
-            HStack(spacing: 24) {
-                ForEach([("메시지", "message.fill"), ("카카오톡", "bubble.left.and.bubble.right.fill"), ("링크 복사", "doc.on.doc")], id: \.0) { item in
-                    Button {
-                        copyInviteLink()
-                    } label: {
-                        VStack(spacing: 8) {
-                            Circle().fill(MoilColor.primary.opacity(0.12)).frame(width: 52, height: 52)
-                                .overlay { Image(systemName: item.1).foregroundStyle(MoilColor.primary) }
-                            Text(item.0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textPrimary)
-                        }
-                    }
-                }
-            }
-            Text(copied ? "초대 링크를 복사했습니다" : "")
-                .font(MoilTypography.regular(12)).foregroundStyle(MoilColor.primary)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity).background(MoilColor.surface)
-    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
 private struct GroupNameEditor: View {
