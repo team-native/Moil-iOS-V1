@@ -200,10 +200,19 @@ struct CalendarView: View {
                 day: scheduleDraftDay,
                 dateTitle: scheduleDraftDateTitle,
                 members: groupStore.members(for: groupStore.selectedGroupId)
-            ) { day, title, isAllDay, memberIDs in
-                createEvent(day: day, title: title, isAllDay: isAllDay, sharedMemberIDs: memberIDs)
+            ) { day, title, isAllDay, startTime, endTime, location, memo, memberIDs in
+                createEvent(
+                    day: day,
+                    title: title,
+                    isAllDay: isAllDay,
+                    startTime: startTime,
+                    endTime: endTime,
+                    location: location,
+                    memo: memo,
+                    sharedMemberIDs: memberIDs
+                )
             }
-                .presentationDetents([.height(463)])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDaySchedulePresented) {
@@ -333,7 +342,16 @@ struct CalendarView: View {
         }
     }
 
-    private func createEvent(day: Int, title: String, isAllDay: Bool, sharedMemberIDs: [String]) {
+    private func createEvent(
+        day: Int,
+        title: String,
+        isAllDay: Bool,
+        startTime: String?,
+        endTime: String?,
+        location: String?,
+        memo: String?,
+        sharedMemberIDs: [String]
+    ) {
         guard let groupId = groupStore.selectedGroupId, let groupID = Int(groupId) else {
             serverError = "그룹 정보를 불러오지 못했어요."
             return
@@ -357,9 +375,10 @@ struct CalendarView: View {
                     title: title,
                     date: date,
                     isAllDay: isAllDay,
-                    startTime: isAllDay ? nil : "09:00",
-                    endTime: isAllDay ? nil : "10:00",
-                    location: nil,
+                    startTime: isAllDay ? nil : startTime,
+                    endTime: isAllDay ? nil : endTime,
+                    location: location,
+                    memo: memo,
                     sharedMemberIds: memberIDs
                 ))
                 await loadEvents()
@@ -380,6 +399,7 @@ struct CalendarView: View {
                     startTime: event.startTime,
                     endTime: event.endTime,
                     location: event.location,
+                    memo: event.memo,
                     sharedMemberIds: sharedMemberIDs
                 )
                 try await sessionStore.service().updateEvent(id: event.id, request: request)
@@ -480,6 +500,7 @@ private struct CalendarEvent: Identifiable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let memberIDs: [Int]
 
     init?(remote: MoilRemoteEvent) {
@@ -495,6 +516,7 @@ private struct CalendarEvent: Identifiable {
         startTime = remote.startTime
         endTime = remote.endTime
         location = remote.location
+        memo = remote.memo
         memberIDs = remote.members.compactMap { $0.id.flatMap(Int.init) }
     }
 }
@@ -661,17 +683,29 @@ private struct ScheduleComposerView: View {
     let day: Int
     let dateTitle: String
     let members: [MoilRemoteMember]
-    let onSave: (Int, String, Bool, [String]) -> Void
+    let onSave: (Int, String, Bool, String?, String?, String?, String?, [String]) -> Void
     @State private var title = ""
+    @State private var isAllDay = false
+    @State private var startTime: Date
+    @State private var endTime: Date
+    @State private var location = ""
+    @State private var memo = ""
     @State private var selectedMemberIDs: Set<String>
 
-    init(day: Int, dateTitle: String, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
+    init(
+        day: Int,
+        dateTitle: String,
+        members: [MoilRemoteMember],
+        onSave: @escaping (Int, String, Bool, String?, String?, String?, String?, [String]) -> Void
+    ) {
         self.day = day
         self.dateTitle = dateTitle
         self.members = members
         self.onSave = onSave
         let currentUser = members.filter(\.isMe).map(\.id)
         _selectedMemberIDs = State(initialValue: Set(currentUser.isEmpty ? members.prefix(1).map(\.id) : currentUser))
+        _startTime = State(initialValue: Self.time(hour: 9))
+        _endTime = State(initialValue: Self.time(hour: 10))
     }
 
     private var trimmedTitle: String {
@@ -691,7 +725,16 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day, trimmedTitle, false, Array(selectedMemberIDs))
+                    onSave(
+                        day,
+                        trimmedTitle,
+                        isAllDay,
+                        isAllDay ? nil : Self.timeString(startTime),
+                        isAllDay ? nil : Self.timeString(endTime),
+                        location.nilIfBlank,
+                        memo.nilIfBlank,
+                        Array(selectedMemberIDs)
+                    )
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
@@ -702,42 +745,81 @@ private struct ScheduleComposerView: View {
             .padding(.top, 34)
             .padding(.bottom, 18)
 
-            TextField("일정 제목", text: $title)
-                .moilField()
-                .padding(.horizontal, 18)
-                .padding(.bottom, 8)
+            ScrollView {
+                VStack(spacing: 0) {
+                    TextField("일정 제목", text: $title)
+                        .moilField()
+                        .padding(.bottom, 8)
 
-            ScheduleRow(title: "날짜", value: dateTitle)
-            ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
-            ScheduleRow(title: "위치", value: "추가", secondary: true)
-            ScheduleRow(title: "메모", value: "추가", secondary: true)
+                    ScheduleRow(title: "날짜", value: dateTitle)
+                    Toggle("하루 종일", isOn: $isAllDay)
+                        .font(MoilTypography.regular(15))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .padding(.vertical, 15)
+                        .overlay(alignment: .bottom) { Divider() }
 
-            VStack(alignment: .leading, spacing: 18) {
-                Text("누구와 공유할까요")
-                    .font(MoilTypography.semibold(13))
-                    .foregroundStyle(MoilColor.textSecondary)
-                HStack(spacing: 14) {
-                    ForEach(members) { member in
-                        Button { toggle(member.id) } label: {
-                            VStack(spacing: 6) {
-                                MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
-                                    .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
-                                Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
+                    if !isAllDay {
+                        DatePicker("시작 시간", selection: $startTime, displayedComponents: .hourAndMinute)
+                            .font(MoilTypography.regular(15))
+                            .padding(.vertical, 12)
+                        DatePicker("종료 시간", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                            .font(MoilTypography.regular(15))
+                            .padding(.vertical, 12)
+                            .overlay(alignment: .bottom) { Divider() }
+                    }
+
+                    TextField("위치를 입력하세요", text: $location)
+                        .moilField()
+                        .padding(.top, 14)
+
+                    TextField("메모를 입력하세요", text: $memo, axis: .vertical)
+                        .moilField()
+                        .lineLimit(3...5)
+                        .padding(.top, 10)
+
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("누구와 공유할까요")
+                            .font(MoilTypography.semibold(13))
+                            .foregroundStyle(MoilColor.textSecondary)
+                        HStack(spacing: 14) {
+                            ForEach(members) { member in
+                                Button { toggle(member.id) } label: {
+                                    VStack(spacing: 6) {
+                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
+                                            .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
+                                        Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 24)
                 }
+                .padding(.horizontal, 18)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 18).padding(.top, 16)
-            Spacer()
         }
         .background(MoilColor.surface)
     }
 
     private func toggle(_ memberID: String) {
         if selectedMemberIDs.contains(memberID) { selectedMemberIDs.remove(memberID) } else { selectedMemberIDs.insert(memberID) }
+    }
+
+    private static func time(hour: Int) -> Date {
+        Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) ?? Date()
+    }
+
+    private static func timeString(_ date: Date) -> String {
+        date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let value = trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 }
 
@@ -802,9 +884,9 @@ private struct EventEditorView: View {
                 .font(MoilTypography.regular(15))
                 .foregroundStyle(MoilColor.textSecondary)
                 .padding(.top, 18)
-            Text("등록된 메모가 없어요.")
+            Text(event.memo ?? "등록된 메모가 없어요.")
                 .font(MoilTypography.regular(14))
-                .foregroundStyle(MoilColor.textTertiary)
+                .foregroundStyle(event.memo == nil ? MoilColor.textTertiary : MoilColor.textPrimary)
                 .padding(.top, 8)
             Spacer(minLength: 16)
             HStack(spacing: 12) {

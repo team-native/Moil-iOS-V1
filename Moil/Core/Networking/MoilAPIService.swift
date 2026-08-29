@@ -292,10 +292,11 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let members: [MoilEventMember]
 
     private enum CodingKeys: String, CodingKey {
-        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location
+        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location, memo, description
     }
 
     init(from decoder: Decoder) throws {
@@ -317,6 +318,8 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         startTime = try? container.decode(String.self, forKey: .startTime)
         endTime = try? container.decode(String.self, forKey: .endTime)
         location = try? container.decode(String.self, forKey: .location)
+        memo = (try? container.decode(String.self, forKey: .memo))
+            ?? (try? container.decode(String.self, forKey: .description))
     }
 }
 
@@ -364,6 +367,7 @@ struct CreateEventRequest: Encodable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
@@ -374,6 +378,7 @@ struct UpdateEventRequest: Encodable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
