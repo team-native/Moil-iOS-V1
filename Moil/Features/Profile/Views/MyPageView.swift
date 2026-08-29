@@ -134,6 +134,8 @@ struct MyPageView: View {
         .onChange(of: accountRoute) { _, route in
             isAccountPagePresented = route != nil
         }
+        // 단독 Preview와 전체 앱 모두에서 토글을 누르는 즉시 색상 스킴을 갱신합니다.
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }
 
@@ -150,6 +152,8 @@ struct MyPageView: View {
 
 #Preview("마이페이지") {
     MyPageView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
 }
 
 private enum AccountRoute: Hashable {

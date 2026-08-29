@@ -347,6 +347,8 @@ struct MemberView: View {
 
 #Preview("멤버 관리") {
     MemberView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
 }
 
 private struct InviteShareView: View {

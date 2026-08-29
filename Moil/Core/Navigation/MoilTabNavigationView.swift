@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MoilTabNavigationView: View {
     let onLogout: () -> Void
+    @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var selectedTab: MoilTab = .calendar
     @State private var isJoiningProfile = false
     @State private var isCreatingGroup = false
@@ -30,6 +31,7 @@ struct MoilTabNavigationView: View {
             isTabBarVisible: !isJoiningProfile && !isCreatingGroup && !isAccountPagePresented,
             onSelect: select
         )
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 
     @ViewBuilder
@@ -74,4 +76,6 @@ struct MoilTabNavigationView: View {
 #Preview("공통 탭 네비게이션") {
     MoilTabNavigationView(onLogout: {})
         .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
+        .environmentObject(MoilEventStore())
 }

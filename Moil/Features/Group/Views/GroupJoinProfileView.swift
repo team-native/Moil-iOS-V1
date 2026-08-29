@@ -108,4 +108,6 @@ private struct AvatarStack: View {
 
 #Preview("그룹 참여 프로필") {
     GroupJoinProfileView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
 }
