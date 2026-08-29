@@ -11,6 +11,7 @@ struct CalendarView: View {
     private let calendar = Calendar.current
     @State private var isGroupMenuPresented = false
     @State private var isScheduleComposerPresented = false
+    @State private var isDaySchedulePresented = false
     @State private var isScheduleSearchPresented = false
     @State private var scheduleDraftDay = 22
     @State private var isMemberViewPresented = false
@@ -44,11 +45,13 @@ struct CalendarView: View {
         return (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
     }
 
-    /// 월이 바뀌어도 기본 레이아웃이 같도록 항상 여섯 줄을 그립니다.
-    private let calendarRowCount = 6
+    /// 선택한 달이 실제로 차지하는 주 수만 표시합니다. Figma의 2026년 7월은 다섯 줄입니다.
+    private var calendarRowCount: Int {
+        Int(ceil(Double(leadingBlankDays + daysInMonth) / 7.0))
+    }
 
-    /// 일정이 많은 날은 이 높이보다 커지고, 늘어난 만큼 달력이 세로로 스크롤됩니다.
-    private let dayCellMinHeight: CGFloat = 92
+    private let dayCellHeight: CGFloat = 108
+    @State private var selectedDay = Calendar.current.component(.day, from: Date())
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
@@ -122,23 +125,8 @@ struct CalendarView: View {
                                     .foregroundStyle(MoilColor.textPrimary)
                                     if group.id != groupStore.groups.last?.id { Divider() }
                                 }
-                                Divider()
-                                Button {
-                                    isGroupMenuPresented = false
-                                    if let onCreateGroup {
-                                        onCreateGroup()
-                                    } else {
-                                        isCreateGroupPresented = true
-                                    }
-                                } label: {
-                                    Label("새 그룹 만들기", systemImage: "plus")
-                                        .font(MoilTypography.semibold(14))
-                                        .padding(.horizontal, 14)
-                                        .frame(height: 46)
-                                }
-                                .foregroundStyle(MoilColor.primary)
                             }
-                            .frame(width: 180)
+                            .frame(width: 193)
                             .background(MoilColor.surface)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
@@ -157,17 +145,15 @@ struct CalendarView: View {
                         Button { moveMonth(by: -1) } label: {
                             Image(systemName: "chevron.left")
                             .frame(width: 30, height: 30)
-                            .background(MoilColor.background)
+                            .background(MoilColor.surface)
                             .clipShape(Circle())
-                            .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         Button { moveMonth(by: 1) } label: {
                             Image(systemName: "chevron.right")
                             .frame(width: 30, height: 30)
-                            .background(MoilColor.background)
+                            .background(MoilColor.surface)
                             .clipShape(Circle())
-                            .overlay { Circle().stroke(MoilColor.textTertiary.opacity(0.35), lineWidth: 1) }
                         }
                         .foregroundStyle(MoilColor.textPrimary)
                         .padding(.leading, 6)
@@ -175,25 +161,25 @@ struct CalendarView: View {
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.vertical, 16)
                     LazyVGrid(columns: columns, spacing: 0) {
-                        ForEach(["일","월","화","수","목","금","토"], id: \.self) { Text($0).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary) }
+                        ForEach(["일","월","화","수","목","금","토"], id: \.self) {
+                            Text($0)
+                                .font(MoilTypography.semibold(12))
+                                .foregroundStyle(MoilColor.textSecondary)
+                        }
                     }
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.bottom, 9)
                     ScrollView(showsIndicators: false) {
                         let dayEvents = eventsByDay
-                        LazyVGrid(columns: columns, spacing: 16) {
+                        LazyVGrid(columns: columns, spacing: 9) {
                             ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
-                                let day = slot - leadingBlankDays + 1
-                                if (1...daysInMonth).contains(day) {
-                                    calendarDay(day, events: dayEvents[day] ?? [])
-                                } else {
-                                    Color.clear.frame(minHeight: dayCellMinHeight)
-                                }
+                                calendarSlot(slot, events: dayEvents)
                             }
                         }
-                        .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                         .padding(.bottom, 16)
                     }
+                    .frame(maxHeight: .infinity)
+                    .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                 }
             }
         }
@@ -220,13 +206,32 @@ struct CalendarView: View {
                 .presentationDetents([.height(463)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isDaySchedulePresented) {
+            DayScheduleSheet(
+                day: scheduleDraftDay,
+                dateTitle: scheduleDraftDateTitle,
+                events: eventsByDay[scheduleDraftDay] ?? [],
+                onAdd: {
+                    isDaySchedulePresented = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isScheduleComposerPresented = true
+                    }
+                },
+                onSelect: { event in
+                    isDaySchedulePresented = false
+                    Task { await selectEvent(event) }
+                }
+            )
+            .presentationDetents([.height(470)])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(item: $selectedEvent) { event in
             EventEditorView(event: event) { title in
                 updateEvent(event, title: title)
             } onDelete: {
                 deleteEvent(event)
             }
-            .presentationDetents([.height(300)])
+            .presentationDetents([.height(520)])
             .presentationDragIndicator(.visible)
         }
         .fullScreenCover(isPresented: $isMemberViewPresented) { MemberView(showsTabBar: false) }
@@ -303,6 +308,9 @@ struct CalendarView: View {
 
     private func moveMonth(by value: Int) {
         displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
+        selectedDay = calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+            ? calendar.component(.day, from: Date())
+            : 0
     }
 
     private var monthRequestValue: String {
@@ -398,27 +406,49 @@ struct CalendarView: View {
         }
     }
 
+    @ViewBuilder
+    private func calendarSlot(_ slot: Int, events: [Int: [CalendarEvent]]) -> some View {
+        let day = slot - leadingBlankDays + 1
+        if (1...daysInMonth).contains(day) {
+            calendarDay(day, events: events[day] ?? [])
+        } else {
+            let date = calendar.date(byAdding: .day, value: day - 1, to: firstDayOfDisplayedMonth) ?? displayedMonth
+            Text("\(calendar.component(.day, from: date))")
+                .font(MoilTypography.regular(16))
+                .foregroundStyle(MoilColor.textPrimary.opacity(0.32))
+                .frame(maxWidth: .infinity, minHeight: dayCellHeight, alignment: .top)
+        }
+    }
+
+    private var firstDayOfDisplayedMonth: Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
+    }
+
     private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
         Button {
             scheduleDraftDay = day
-            isScheduleComposerPresented = true
+            selectedDay = day
+            if events.isEmpty {
+                isScheduleComposerPresented = true
+            } else {
+                isDaySchedulePresented = true
+            }
         } label: {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
+                    .foregroundStyle(selectedDay == day ? Color.white : MoilColor.textPrimary)
                     .frame(width: 32, height: 32, alignment: .center)
+                    .background(selectedDay == day ? MoilColor.primary : .clear)
+                    .clipShape(Circle())
                 ForEach(events) { event in
                     eventChip(event)
                 }
                 Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: dayCellMinHeight, alignment: .top)
+            .frame(maxWidth: .infinity, minHeight: dayCellHeight, alignment: .top)
         }
         .buttonStyle(.plain)
-        .onLongPressGesture {
-            guard let event = events.first else { return }
-            Task { await selectEvent(event) }
-        }
     }
 
     private func eventChip(_ event: CalendarEvent) -> some View {
@@ -543,6 +573,87 @@ private enum MoilCalendarDate {
 
 #Preview("캘린더") {
     CalendarView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
+        .environmentObject(MoilEventStore())
+}
+
+private struct DayScheduleSheet: View {
+    let day: Int
+    let dateTitle: String
+    let events: [CalendarEvent]
+    let onAdd: () -> Void
+    let onSelect: (CalendarEvent) -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(dateTitle)
+                        .font(MoilTypography.bold(18))
+                    Text("• 오늘")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
+                }
+                Spacer()
+                Button(action: onAdd) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .regular))
+                        .frame(width: 48, height: 48)
+                        .background(MoilColor.textPrimary.opacity(0.12))
+                        .clipShape(Circle())
+                }
+                .foregroundStyle(MoilColor.textPrimary)
+                .accessibilityLabel("일정 추가")
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            ForEach(events) { event in
+                Button { onSelect(event) } label: {
+                    HStack(spacing: 14) {
+                        Circle().fill(event.color).frame(width: 10, height: 10)
+                        Text(event.isAllDay ? "하루 종일" : "\(event.startTime ?? "09:00")\n\(event.endTime ?? "")")
+                            .font(MoilTypography.regular(13))
+                            .foregroundStyle(MoilColor.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            .frame(width: 46, alignment: .leading)
+                        Text(event.title)
+                            .font(MoilTypography.bold(16))
+                            .foregroundStyle(MoilColor.textPrimary)
+                            .lineLimit(2)
+                        Spacer(minLength: 8)
+                        AvatarDots(count: max(event.memberIDs.count, 1))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(MoilColor.textPrimary)
+                    }
+                    .padding(.horizontal, 28)
+                    .frame(minHeight: 110)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider().padding(.horizontal, 28)
+            }
+            Spacer()
+        }
+        .background(MoilColor.surface)
+    }
+}
+
+private struct AvatarDots: View {
+    let count: Int
+    var body: some View {
+        HStack(spacing: -6) {
+            ForEach(0..<min(count, 3), id: \.self) { index in
+                Circle()
+                    .fill([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green][index])
+                    .frame(width: 26, height: 26)
+                    .overlay { Circle().stroke(MoilColor.surface, lineWidth: 2) }
+            }
+        }
+    }
 }
 
 private struct ScheduleComposerView: View {
@@ -552,7 +663,6 @@ private struct ScheduleComposerView: View {
     let members: [MoilRemoteMember]
     let onSave: (Int, String, Bool, [String]) -> Void
     @State private var title = ""
-    @State private var allDay = false
     @State private var selectedMemberIDs: Set<String>
 
     init(day: Int, dateTitle: String, members: [MoilRemoteMember], onSave: @escaping (Int, String, Bool, [String]) -> Void) {
@@ -581,7 +691,7 @@ private struct ScheduleComposerView: View {
                 Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
-                    onSave(day, trimmedTitle, allDay, Array(selectedMemberIDs))
+                    onSave(day, trimmedTitle, false, Array(selectedMemberIDs))
                     dismiss()
                 }
                     .font(MoilTypography.bold(16))
@@ -598,15 +708,9 @@ private struct ScheduleComposerView: View {
                 .padding(.bottom, 8)
 
             ScheduleRow(title: "날짜", value: dateTitle)
-            HStack {
-                Text("하루 종일").font(MoilTypography.regular(15))
-                Spacer()
-                Toggle("", isOn: $allDay).labelsHidden().tint(MoilColor.primary)
-            }
-            .padding(.horizontal, 18).frame(height: 50)
-            .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
             ScheduleRow(title: "시간", value: "오전 9:00 – 10:00")
             ScheduleRow(title: "위치", value: "추가", secondary: true)
+            ScheduleRow(title: "메모", value: "추가", secondary: true)
 
             VStack(alignment: .leading, spacing: 18) {
                 Text("누구와 공유할까요")
@@ -643,6 +747,7 @@ private struct EventEditorView: View {
     let onSave: (String) -> Void
     let onDelete: () -> Void
     @State private var title: String
+    @State private var isEditing = false
 
     init(event: CalendarEvent, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
         self.event = event
@@ -656,28 +761,87 @@ private struct EventEditorView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("일정 수정").font(MoilTypography.bold(20))
+                Label(event.owner, systemImage: "circle.fill")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(event.color)
                 Spacer()
-                Button("닫기", action: dismiss.callAsFunction).foregroundStyle(MoilColor.textSecondary)
+                Button(action: dismiss.callAsFunction) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundStyle(MoilColor.textSecondary)
             }
-            TextField("일정 제목", text: $title)
-                .moilField()
+            .padding(.bottom, 18)
+
+            if isEditing {
+                TextField("일정 제목", text: $title)
+                    .moilField()
+                    .padding(.bottom, 12)
+            } else {
+                Text(event.title)
+                    .font(MoilTypography.bold(24))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.bottom, 20)
+            }
+
+            DetailRow(icon: "calendar", title: formattedDate, value: event.isAllDay ? "하루 종일" : timeTitle)
+            DetailRow(icon: "location", title: event.location ?? "위치 없음", value: event.location == nil ? nil : "지도")
             HStack(spacing: 10) {
+                Image(systemName: "person.2")
+                    .foregroundStyle(MoilColor.textSecondary)
+                Text("참여자 \(max(event.memberIDs.count, 1))명")
+                    .font(MoilTypography.regular(15))
+                Spacer()
+                AvatarDots(count: max(event.memberIDs.count, 1))
+            }
+            .padding(.vertical, 16)
+            Divider()
+            Text("메모")
+                .font(MoilTypography.regular(15))
+                .foregroundStyle(MoilColor.textSecondary)
+                .padding(.top, 18)
+            Text("등록된 메모가 없어요.")
+                .font(MoilTypography.regular(14))
+                .foregroundStyle(MoilColor.textTertiary)
+                .padding(.top, 8)
+            Spacer(minLength: 16)
+            HStack(spacing: 12) {
+                Button(isEditing ? "저장" : "수정") {
+                    if isEditing { onSave(trimmedTitle); dismiss() }
+                    else { isEditing = true }
+                }
+                .disabled(isEditing && trimmedTitle.isEmpty)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .background(MoilColor.textPrimary.opacity(0.07)).clipShape(RoundedRectangle(cornerRadius: 12))
                 Button("삭제", role: .destructive) { onDelete(); dismiss() }
                     .frame(maxWidth: .infinity).frame(height: 48)
-                    .background(MoilColor.error.opacity(0.12)).clipShape(RoundedRectangle(cornerRadius: 12))
-                Button("저장") { onSave(trimmedTitle); dismiss() }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 48)
-                    .background(trimmedTitle.isEmpty ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .disabled(trimmedTitle.isEmpty)
+                    .background(MoilColor.error.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
-        .padding(20)
+        .foregroundStyle(MoilColor.textPrimary)
+        .padding(24)
         .background(MoilColor.surface)
+    }
+
+    private var formattedDate: String { event.date.replacingOccurrences(of: "-", with: ".") }
+    private var timeTitle: String { "\(event.startTime ?? "09:00") – \(event.endTime ?? "10:00")" }
+}
+
+private struct DetailRow: View {
+    let icon: String
+    let title: String
+    let value: String?
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).frame(width: 18).foregroundStyle(MoilColor.textSecondary)
+            Text(title).font(MoilTypography.regular(15)).foregroundStyle(MoilColor.textSecondary)
+            Spacer()
+            if let value { Text(value).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textTertiary) }
+        }
+        .padding(.vertical, 15)
+        .overlay(alignment: .bottom) { Divider() }
     }
 }
 

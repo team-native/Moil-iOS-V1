@@ -97,4 +97,6 @@ struct CreateGroupView: View {
 
 #Preview("새 그룹 만들기") {
     CreateGroupView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
 }

@@ -87,4 +87,6 @@ struct GroupJoinCodeView: View {
 
 #Preview("그룹 참여 코드") {
     GroupJoinCodeView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
 }
