@@ -292,17 +292,22 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let startTime: String?
     let endTime: String?
     let location: String?
+    let memo: String?
     let members: [MoilEventMember]
 
     private enum CodingKeys: String, CodingKey {
-        case id, eventId, title, date, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location
+        case id, eventId, title, date, startDate, endDate, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location, memo, description
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.string(for: [.id, .eventId])
         title = try container.decode(String.self, forKey: .title)
-        date = try container.decode(String.self, forKey: .date)
+        if let startDate = try? container.decode(String.self, forKey: .startDate) {
+            date = startDate
+        } else {
+            date = try container.decode(String.self, forKey: .date)
+        }
 
         members = (try? container.decode([MoilEventMember].self, forKey: .members))
             ?? (try? container.decode([MoilEventMember].self, forKey: .sharedMembers))
@@ -313,10 +318,24 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         colorId = (try? container.decode(String.self, forKey: .colorId))
             ?? (try? container.decode(String.self, forKey: .profileColor))
             ?? members.first?.colorId
-        isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay)) ?? true
-        startTime = try? container.decode(String.self, forKey: .startTime)
-        endTime = try? container.decode(String.self, forKey: .endTime)
+        let serverStartDate = try? container.decode(String.self, forKey: .startDate)
+        let serverEndDate = try? container.decode(String.self, forKey: .endDate)
+        startTime = (try? container.decode(String.self, forKey: .startTime))
+            ?? Self.time(from: serverStartDate)
+        endTime = (try? container.decode(String.self, forKey: .endTime))
+            ?? Self.time(from: serverEndDate)
+        isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay))
+            ?? (startTime == "00:00" && endTime == "00:00")
         location = try? container.decode(String.self, forKey: .location)
+        memo = (try? container.decode(String.self, forKey: .memo))
+            ?? (try? container.decode(String.self, forKey: .description))
+    }
+
+    private static func time(from dateTime: String?) -> String? {
+        guard let dateTime else { return nil }
+        let components = dateTime.split(separator: " ", maxSplits: 1)
+        guard components.count == 2 else { return nil }
+        return String(components[1].prefix(5))
     }
 }
 
@@ -359,21 +378,19 @@ private struct MoilEventList: Decodable {
 struct CreateEventRequest: Encodable {
     let groupId: Int
     let title: String
-    let date: String
-    let isAllDay: Bool
-    let startTime: String?
-    let endTime: String?
+    let startDate: String
+    let endDate: String
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
 struct UpdateEventRequest: Encodable {
     let title: String
-    let date: String
-    let isAllDay: Bool
-    let startTime: String?
-    let endTime: String?
+    let startDate: String
+    let endDate: String
     let location: String?
+    let memo: String?
     let sharedMemberIds: [Int]
 }
 
