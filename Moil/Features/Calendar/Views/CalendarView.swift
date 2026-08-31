@@ -212,7 +212,7 @@ struct CalendarView: View {
                     sharedMemberIDs: memberIDs
                 )
             }
-                .presentationDetents([.large])
+                .presentationDetents([.height(565)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDaySchedulePresented) {
@@ -368,15 +368,24 @@ struct CalendarView: View {
         }
         // 날짜만 있는 API 값은 Date(시간대)를 거치지 않아야 KST에서 전날로 밀리지 않습니다.
         let date = MoilCalendarDate.string(year: year, month: month, day: day)
+        let startDate = "\(date) \(isAllDay ? "00:00" : startTime ?? "09:00")"
+        let endDate: String
+        if isAllDay {
+            guard let nextDate = MoilCalendarDate.nextDayString(from: date) else {
+                serverError = "일정 종료 날짜를 만들지 못했어요."
+                return
+            }
+            endDate = "\(nextDate) 00:00"
+        } else {
+            endDate = "\(date) \(endTime ?? "10:00")"
+        }
         Task {
             do {
                 _ = try await sessionStore.service().createEvent(CreateEventRequest(
                     groupId: groupID,
                     title: title,
-                    date: date,
-                    isAllDay: isAllDay,
-                    startTime: isAllDay ? nil : startTime,
-                    endTime: isAllDay ? nil : endTime,
+                    startDate: startDate,
+                    endDate: endDate,
                     location: location,
                     memo: memo,
                     sharedMemberIds: memberIDs
@@ -390,14 +399,16 @@ struct CalendarView: View {
         guard let groupId = groupStore.selectedGroupId else { return }
         let currentUserIDs = groupStore.members(for: groupId).filter(\.isMe).compactMap { Int($0.id) }
         let sharedMemberIDs = event.memberIDs.isEmpty ? currentUserIDs : event.memberIDs
+        let startDate = "\(event.date) \(event.isAllDay ? "00:00" : event.startTime ?? "09:00")"
+        let endDate = event.isAllDay
+            ? "\(MoilCalendarDate.nextDayString(from: event.date) ?? event.date) 00:00"
+            : "\(event.date) \(event.endTime ?? "10:00")"
         Task {
             do {
                 let request = UpdateEventRequest(
                     title: title,
-                    date: event.date,
-                    isAllDay: event.isAllDay,
-                    startTime: event.startTime,
-                    endTime: event.endTime,
+                    startDate: startDate,
+                    endDate: endDate,
                     location: event.location,
                     memo: event.memo,
                     sharedMemberIds: sharedMemberIDs
@@ -557,6 +568,15 @@ private enum MoilCalendarDate {
         dateOnlyComponents(from: date)?.day
     }
 
+    static func nextDayString(from value: String) -> String? {
+        guard let components = dateOnlyComponents(from: value),
+              let date = calendar.date(from: DateComponents(year: components.year, month: components.month, day: components.day)),
+              let nextDay = calendar.date(byAdding: .day, value: 1, to: date) else { return nil }
+        let nextComponents = calendar.dateComponents([.year, .month, .day], from: nextDay)
+        guard let year = nextComponents.year, let month = nextComponents.month, let day = nextComponents.day else { return nil }
+        return string(year: year, month: month, day: day)
+    }
+
     private static func dateOnlyComponents(from value: String) -> (year: Int, month: Int, day: Int)? {
         // 서버가 `yyyy-MM-dd` 또는 `yyyy-MM-ddTHH:mm:ssZ`를 반환해도
         // 원문 날짜를 우선 사용해 UTC 변환으로 전날로 밀리는 일을 막습니다.
@@ -690,6 +710,8 @@ private struct ScheduleComposerView: View {
     @State private var endTime: Date
     @State private var location = ""
     @State private var memo = ""
+    @State private var inputTarget: ScheduleInputTarget?
+    @State private var isTimeEditorPresented = false
     @State private var selectedMemberIDs: Set<String>
 
     init(
@@ -752,30 +774,23 @@ private struct ScheduleComposerView: View {
                         .padding(.bottom, 8)
 
                     ScheduleRow(title: "날짜", value: dateTitle)
-                    Toggle("하루 종일", isOn: $isAllDay)
-                        .font(MoilTypography.regular(15))
-                        .foregroundStyle(MoilColor.textPrimary)
-                        .padding(.vertical, 15)
-                        .overlay(alignment: .bottom) { Divider() }
+                    ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isTimeEditorPresented = true
+                        }
 
-                    if !isAllDay {
-                        DatePicker("시작 시간", selection: $startTime, displayedComponents: .hourAndMinute)
-                            .font(MoilTypography.regular(15))
-                            .padding(.vertical, 12)
-                        DatePicker("종료 시간", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
-                            .font(MoilTypography.regular(15))
-                            .padding(.vertical, 12)
-                            .overlay(alignment: .bottom) { Divider() }
-                    }
+                    ScheduleRow(title: "위치", value: location.nilIfBlank ?? "추가", secondary: location.nilIfBlank == nil)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            inputTarget = .location
+                        }
 
-                    TextField("위치를 입력하세요", text: $location)
-                        .moilField()
-                        .padding(.top, 14)
-
-                    TextField("메모를 입력하세요", text: $memo, axis: .vertical)
-                        .moilField()
-                        .lineLimit(3...5)
-                        .padding(.top, 10)
+                    ScheduleRow(title: "메모", value: memo.nilIfBlank ?? "추가", secondary: memo.nilIfBlank == nil)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            inputTarget = .memo
+                        }
 
                     VStack(alignment: .leading, spacing: 18) {
                         Text("누구와 공유할까요")
@@ -801,6 +816,23 @@ private struct ScheduleComposerView: View {
             }
         }
         .background(MoilColor.surface)
+        .sheet(item: $inputTarget) { target in
+            ScheduleTextInputSheet(
+                title: target.title,
+                placeholder: target.placeholder,
+                text: target == .location ? $location : $memo,
+                allowsMultipleLines: target == .memo
+            )
+            .presentationDetents([target == .memo ? .medium : .height(260)])
+        }
+        .sheet(isPresented: $isTimeEditorPresented) {
+            ScheduleTimeInputSheet(
+                startTime: $startTime,
+                endTime: $endTime,
+                onClose: { isTimeEditorPresented = false }
+            )
+            .presentationDetents([.height(420)])
+        }
     }
 
     private func toggle(_ memberID: String) {
@@ -813,6 +845,136 @@ private struct ScheduleComposerView: View {
 
     private static func timeString(_ date: Date) -> String {
         date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+    }
+
+    private static func displayTimeRange(start: Date, end: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "a h:mm"
+        let endFormatter = DateFormatter()
+        endFormatter.locale = Locale(identifier: "ko_KR")
+        endFormatter.dateFormat = "h:mm"
+        return "\(formatter.string(from: start)) – \(endFormatter.string(from: end))"
+    }
+}
+
+private enum ScheduleInputTarget: Identifiable, Equatable {
+    case location
+    case memo
+
+    var id: Self { self }
+    var title: String { self == .location ? "위치" : "메모" }
+    var placeholder: String { self == .location ? "위치를 입력하세요" : "메모를 입력하세요" }
+}
+
+private struct ScheduleTextInputSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    let allowsMultipleLines: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("취소", action: dismiss.callAsFunction)
+                    .foregroundStyle(MoilColor.textSecondary)
+                Spacer()
+                Text(title).font(MoilTypography.semibold(16))
+                Spacer()
+                Button("완료", action: dismiss.callAsFunction)
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(MoilColor.primary)
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 28)
+            .padding(.bottom, 18)
+
+            TextField(placeholder, text: $text, axis: allowsMultipleLines ? .vertical : .horizontal)
+                .moilField()
+                .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
+                .padding(.horizontal, 18)
+            Spacer()
+        }
+        .background(MoilColor.surface)
+    }
+}
+
+private struct ScheduleTimeInputSheet: View {
+    @Binding var startTime: Date
+    @Binding var endTime: Date
+    let onClose: () -> Void
+    @State private var isEditingEndTime = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("취소", action: onClose)
+                    .foregroundStyle(MoilColor.textSecondary)
+                Spacer()
+                Text("시간").font(MoilTypography.semibold(16))
+                Spacer()
+                Button("완료", action: onClose)
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(MoilColor.primary)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 26)
+            .padding(.bottom, 8)
+
+            HStack(spacing: 10) {
+                timeOption(title: "시작 시간", value: displayTime(startTime), isSelected: !isEditingEndTime) {
+                    isEditingEndTime = false
+                }
+                timeOption(title: "종료 시간", value: displayTime(endTime), isSelected: isEditingEndTime) {
+                    isEditingEndTime = true
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 36)
+
+            Group {
+                if isEditingEndTime {
+                    DatePicker("종료 시간", selection: $endTime, in: startTime..., displayedComponents: .hourAndMinute)
+                } else {
+                    DatePicker("시작 시간", selection: $startTime, displayedComponents: .hourAndMinute)
+                }
+            }
+            .labelsHidden()
+            .datePickerStyle(.wheel)
+            .frame(height: 180)
+            .clipped()
+            .padding(.top, 16)
+            Spacer()
+        }
+        .background(MoilColor.surface)
+    }
+
+    private func timeOption(title: String, value: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(MoilTypography.regular(13))
+                Text(value).font(MoilTypography.semibold(17))
+            }
+            .foregroundStyle(isSelected ? MoilColor.textPrimary : MoilColor.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(isSelected ? MoilColor.textPrimary.opacity(0.12) : MoilColor.textPrimary.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? MoilColor.textSecondary.opacity(0.45) : .clear, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func displayTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "a h:mm"
+        return formatter.string(from: date)
     }
 }
 
