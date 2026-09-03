@@ -286,6 +286,7 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let id: String
     let title: String
     let date: String
+    let endDate: String?
     let ownerName: String?
     let colorId: String?
     let isAllDay: Bool
@@ -308,6 +309,7 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         } else {
             date = try container.decode(String.self, forKey: .date)
         }
+        endDate = try? container.decode(String.self, forKey: .endDate)
 
         members = (try? container.decode([MoilEventMember].self, forKey: .members))
             ?? (try? container.decode([MoilEventMember].self, forKey: .sharedMembers))
