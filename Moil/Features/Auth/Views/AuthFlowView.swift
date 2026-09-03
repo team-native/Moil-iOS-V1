@@ -77,9 +77,12 @@ struct AuthFlowView: View {
             route = .main
             return nil
         } catch {
-            // AuthenticationServices returns NSError code 1 when the user closes
-            // the system authentication sheet. It is an intentional cancellation.
-            if (error as NSError).code == 1 { return nil }
+            // 콜백 URL 설정 또는 서버 토큰 교환이 실패해도 AuthenticationServices가
+            // cancellation(코드 1)로 전달하는 경우가 있습니다. 이를 숨기면 사용자는
+            // 로그인 화면으로 되돌아오는 현상만 보게 되므로 오류를 표시합니다.
+#if DEBUG
+            print("[MoilAuth] \(provider.rawValue) login failed: \(error.localizedDescription)")
+#endif
             return error.localizedDescription
         }
     }
