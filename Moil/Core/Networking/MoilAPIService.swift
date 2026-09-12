@@ -1,4 +1,21 @@
 import Foundation
+import UIKit
+
+/// 서버(`ImageService`)는 파일 시그니처로 PNG/JPEG/WEBP만 허용하고 2MB를 넘으면 거부합니다.
+/// 아이폰 사진은 기본이 HEIC라서, `PhotosPicker`가 준 원본 데이터를 그대로 올리면 형식 거부로
+/// 실패할 수 있습니다. 항상 JPEG로 다시 인코딩하고, 필요하면 화질을 낮춰 용량 제한 안에 맞춥니다.
+enum MoilProfileImageEncoder {
+    static let maxUploadBytes = 2 * 1024 * 1024
+
+    static func jpegData(from image: UIImage) -> Data? {
+        for quality in [0.85, 0.6, 0.4, 0.25] {
+            if let data = image.jpegData(compressionQuality: quality), data.count <= maxUploadBytes {
+                return data
+            }
+        }
+        return image.jpegData(compressionQuality: 0.1)
+    }
+}
 
 struct MoilAPIService {
     private let client: MoilAPIClient
@@ -59,16 +76,29 @@ struct MoilAPIService {
         return response.groups
     }
 
-    func createGroup(name: String, nickname: String, colorId: String) async throws -> MoilRemoteGroup {
-        try await client.request("groups", method: "POST", body: CreateGroupRequest(name: name, nickname: nickname, colorId: colorId))
+    func createGroup(name: String, nickname: String, colorId: String?, imagePath: String? = nil) async throws -> MoilRemoteGroup {
+        try await client.request("groups", method: "POST", body: CreateGroupRequest(name: name, nickname: nickname, colorId: colorId, imagePath: imagePath))
     }
 
     func verifyInviteCode(_ inviteCode: String) async throws -> MoilInviteVerification {
         try await client.request("groups/join/verify", method: "POST", body: InviteCodeRequest(inviteCode: inviteCode))
     }
 
-    func joinGroup(inviteCode: String, nickname: String, colorId: String) async throws -> MoilRemoteGroup {
-        try await client.request("groups/join", method: "POST", body: JoinGroupRequest(inviteCode: inviteCode, nickname: nickname, colorId: colorId))
+    func joinGroup(inviteCode: String, nickname: String, colorId: String?, imagePath: String? = nil) async throws -> MoilRemoteGroup {
+        try await client.request("groups/join", method: "POST", body: JoinGroupRequest(inviteCode: inviteCode, nickname: nickname, colorId: colorId, imagePath: imagePath))
+    }
+
+    /// 프로필 이미지를 업로드하고, 그룹 생성/참여 요청에 실어 보낼 `imagePath`를 반환합니다.
+    /// 서버는 `colorId`를 함께 보내지 않으면 이 이미지에서 대표 색상을 자동으로 추출합니다.
+    func uploadProfileImage(data: Data, filename: String, mimeType: String) async throws -> String {
+        let response: MoilImageUploadResponse = try await client.upload(
+            "images",
+            fieldName: "image",
+            filename: filename,
+            mimeType: mimeType,
+            data: data
+        )
+        return response.imagePath
     }
 
     func groupDetail(groupId: String) async throws -> MoilRemoteGroup {
@@ -138,9 +168,10 @@ private struct VerifyCodeRequest: Encodable { let verifyId: String; let code: St
 private struct PasswordConfirmationRequest: Encodable { let sessionId: String; let password: String; let pwd: String }
 private struct ChangePasswordRequest: Encodable { let origin: String; let newpwd: String; let checkpwd: String }
 private struct DeleteAccountRequest: Encodable { let email: String; let password: String; let leftData: Bool }
-private struct CreateGroupRequest: Encodable { let name: String; let nickname: String; let colorId: String }
+private struct CreateGroupRequest: Encodable { let name: String; let nickname: String; let colorId: String?; let imagePath: String? }
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
-private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String }
+private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String?; let imagePath: String? }
+private struct MoilImageUploadResponse: Decodable { let imagePath: String }
 private struct NotificationRequest: Encodable { let enabled: Bool }
 private struct RenameGroupRequest: Encodable { let name: String }
 private struct TransferAdminRequest: Encodable { let targetUserId: Int }

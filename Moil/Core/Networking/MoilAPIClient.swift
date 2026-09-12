@@ -103,6 +103,78 @@ struct MoilAPIClient {
         }
 
         let (data, response) = try await session.data(for: request)
+        return try Self.parse(data: data, response: response, path: path, method: method)
+    }
+
+    /// 이미지 업로드처럼 JSON이 아닌 `multipart/form-data` 요청에 사용합니다.
+    /// 응답 처리(에러 메시지, envelope 언래핑)는 JSON 요청과 동일한 규칙을 따릅니다.
+    func upload<Response: Decodable>(
+        _ path: String,
+        fieldName: String,
+        filename: String,
+        mimeType: String,
+        data fileData: Data,
+        requiresAuthentication: Bool = true
+    ) async throws -> Response {
+        do {
+            return try await uploadOnce(
+                path,
+                fieldName: fieldName,
+                filename: filename,
+                mimeType: mimeType,
+                data: fileData,
+                requiresAuthentication: requiresAuthentication
+            )
+        } catch let error as MoilAPIError where requiresAuthentication && error.isAuthenticationFailure {
+            guard let tokenRefresher, await tokenRefresher() else { throw error }
+            return try await uploadOnce(
+                path,
+                fieldName: fieldName,
+                filename: filename,
+                mimeType: mimeType,
+                data: fileData,
+                requiresAuthentication: requiresAuthentication
+            )
+        }
+    }
+
+    private func uploadOnce<Response: Decodable>(
+        _ path: String,
+        fieldName: String,
+        filename: String,
+        mimeType: String,
+        data fileData: Data,
+        requiresAuthentication: Bool
+    ) async throws -> Response {
+        let url = MoilAPIConfiguration.baseURL.appendingPathComponent(path)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if requiresAuthentication, let token = tokenProvider(), !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (data, response) = try await session.data(for: request)
+        return try Self.parse(data: data, response: response, path: path, method: "POST")
+    }
+
+    private static func parse<Response: Decodable>(
+        data: Data,
+        response: URLResponse,
+        path: String,
+        method: String
+    ) throws -> Response {
         guard let httpResponse = response as? HTTPURLResponse else { throw MoilAPIError.invalidResponse }
 #if DEBUG
         print("[MoilAPI] \(method) /\(path) → \(httpResponse.statusCode)")
