@@ -64,16 +64,16 @@ final class MoilGroupStore: ObservableObject {
         }
     }
 
-    func create(name: String, nickname: String, colorId: String, using service: MoilAPIService) async throws {
-        let group = try await service.createGroup(name: name, nickname: nickname, colorId: colorId)
+    func create(name: String, nickname: String, colorId: String?, imagePath: String? = nil, using service: MoilAPIService) async throws {
+        let group = try await service.createGroup(name: name, nickname: nickname, colorId: colorId, imagePath: imagePath)
         let localGroup = MoilGroup(remote: group)
         groups.append(localGroup)
         selectedGroupId = localGroup.id
         _ = try? await loadMembers(groupId: localGroup.id, using: service)
     }
 
-    func join(inviteCode: String, nickname: String, colorId: String, using service: MoilAPIService) async throws {
-        let group = try await service.joinGroup(inviteCode: inviteCode, nickname: nickname, colorId: colorId)
+    func join(inviteCode: String, nickname: String, colorId: String?, imagePath: String? = nil, using service: MoilAPIService) async throws {
+        let group = try await service.joinGroup(inviteCode: inviteCode, nickname: nickname, colorId: colorId, imagePath: imagePath)
         let localGroup = MoilGroup(remote: group)
         // 참여 요청은 성공했는데 직후 목록 새로고침만 실패할 수 있습니다.
         // 그 경우에도 방금 받은 그룹을 즉시 화면 상태에 반영해야 빈 캘린더에 머물지 않습니다.
