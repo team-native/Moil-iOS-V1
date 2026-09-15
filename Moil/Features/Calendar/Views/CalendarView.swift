@@ -295,7 +295,14 @@ struct CalendarView: View {
         .fullScreenCover(isPresented: $isScheduleSearchPresented) {
             ScheduleSearchView(
                 groupId: groupStore.selectedGroupId,
-                month: monthRequestValue
+                month: monthRequestValue,
+                onSelect: { event in
+                    isScheduleSearchPresented = false
+                    selectedDay = event.day
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        Task { await selectEvent(event) }
+                    }
+                }
             )
         }
         .alert("서버 오류", isPresented: Binding(get: { serverError != nil }, set: { if !$0 { serverError = nil } })) {
@@ -1339,6 +1346,7 @@ private struct ScheduleSearchView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
     let groupId: String?
     let month: String
+    var onSelect: (CalendarEvent) -> Void = { _ in }
     @State private var query = ""
     @State private var errorMessage: String?
 
@@ -1379,22 +1387,26 @@ private struct ScheduleSearchView: View {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(filteredEvents) { event in
-                                HStack(spacing: 12) {
-                                    Circle().fill(event.color).frame(width: 10, height: 10)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(event.title).font(MoilTypography.semibold(16))
-                                        Text("\(event.date) · \(event.owner)")
-                                            .font(MoilTypography.regular(13))
-                                            .foregroundStyle(MoilColor.textSecondary)
+                                Button { onSelect(event) } label: {
+                                    HStack(spacing: 12) {
+                                        Circle().fill(event.color).frame(width: 10, height: 10)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(event.title).font(MoilTypography.semibold(16))
+                                            Text("\(event.date) · \(event.owner)")
+                                                .font(MoilTypography.regular(13))
+                                                .foregroundStyle(MoilColor.textSecondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(MoilColor.textTertiary)
                                     }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(MoilColor.textTertiary)
+                                    .padding(16)
+                                    .background(MoilColor.surface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
                                 }
-                                .padding(16)
-                                .background(MoilColor.surface)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .buttonStyle(.plain)
+                                .foregroundStyle(MoilColor.textPrimary)
                             }
                         }
                         .padding(16)
