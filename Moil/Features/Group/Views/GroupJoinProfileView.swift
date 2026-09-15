@@ -44,10 +44,12 @@ struct GroupJoinProfileView: View {
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             HStack(spacing: 14) {
-                ForEach(colors, id: \.self) { color in
-                    Button { selectColor(color) } label: {
-                        MoilAvatar(color: color, size: 40)
-                            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath == nil && selectedColor == color ? 2 : 0).padding(-5) }
+                if uploadedImagePath == nil {
+                    ForEach(colors, id: \.self) { color in
+                        Button { selectColor(color) } label: {
+                            MoilAvatar(color: color, size: 40)
+                                .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
+                        }
                     }
                 }
                 PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
@@ -74,11 +76,18 @@ struct GroupJoinProfileView: View {
                 }
                 .disabled(isUploadingImage)
                 .accessibilityLabel("프로필 사진 추가")
+                if uploadedImagePath != nil {
+                    Button("색상으로 변경") { selectColor(selectedColor) }
+                        .font(MoilTypography.regular(12))
+                        .foregroundStyle(MoilColor.textSecondary)
+                }
             }
-            Text("사진을 선택하면 사진에서 뽑은 색이 내 프로필 색이 돼요.")
-                .font(MoilTypography.regular(12))
-                .foregroundStyle(MoilColor.textSecondary)
-                .padding(.top, 8)
+            if uploadedImagePath == nil {
+                Text("사진을 선택하면 사진에서 뽑은 색이 내 프로필 색이 돼요.")
+                    .font(MoilTypography.regular(12))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 8)
+            }
             Spacer()
             Button("참여하기") {
                 guard let inviteCode = groupStore.pendingInviteCode else { return }
