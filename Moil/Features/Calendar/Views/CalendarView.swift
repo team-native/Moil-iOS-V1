@@ -22,6 +22,7 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
+    @State private var isMonthYearPickerPresented = false
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
 
@@ -141,10 +142,14 @@ struct CalendarView: View {
                     .safeAreaPadding(.top, MoilTabScreenMetrics.topPadding)
                     .zIndex(1)
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(monthTitle).font(MoilTypography.heavy(32))
-                            Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
+                        Button { isMonthYearPickerPresented = true } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(monthTitle).font(MoilTypography.heavy(32))
+                                Text(yearTitle).font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary)
+                            }
                         }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(MoilColor.textPrimary)
                         Spacer()
                         Button { moveMonth(by: -1) } label: {
                             Image(systemName: "chevron.left")
@@ -198,6 +203,21 @@ struct CalendarView: View {
                 case .profile: isMyPagePresented = true
                 }
             }
+        }
+        .sheet(isPresented: $isMonthYearPickerPresented) {
+            MonthYearPickerSheet(
+                displayedMonth: displayedMonth,
+                onSelect: { date in
+                    displayedMonth = date
+                    selectedDay = calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+                        ? calendar.component(.day, from: Date())
+                        : 0
+                    isMonthYearPickerPresented = false
+                },
+                onClose: { isMonthYearPickerPresented = false }
+            )
+                .presentationDetents([.height(420)])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isScheduleComposerPresented) {
             ScheduleComposerView(
@@ -975,6 +995,70 @@ private struct ScheduleTextInputSheet: View {
                 .moilField()
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
                 .padding(.horizontal, 18)
+            Spacer()
+        }
+        .background(MoilColor.surface)
+    }
+}
+
+private struct MonthYearPickerSheet: View {
+    let onSelect: (Date) -> Void
+    let onClose: () -> Void
+    @State private var selectedYear: Int
+    @State private var selectedMonth: Int
+
+    private let calendar: Calendar
+    private let years: [Int]
+
+    init(displayedMonth: Date, onSelect: @escaping (Date) -> Void, onClose: @escaping () -> Void) {
+        self.onSelect = onSelect
+        self.onClose = onClose
+        var koreanCalendar = Calendar(identifier: .gregorian)
+        koreanCalendar.locale = Locale(identifier: "ko_KR")
+        koreanCalendar.timeZone = .autoupdatingCurrent
+        calendar = koreanCalendar
+        let year = koreanCalendar.component(.year, from: displayedMonth)
+        _selectedYear = State(initialValue: year)
+        _selectedMonth = State(initialValue: koreanCalendar.component(.month, from: displayedMonth))
+        years = Array((year - 15)...(year + 15))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("취소", action: onClose)
+                    .foregroundStyle(MoilColor.textSecondary)
+                Spacer()
+                Text("연도 및 월").font(MoilTypography.semibold(16))
+                Spacer()
+                Button("완료") {
+                    if let date = calendar.date(from: DateComponents(year: selectedYear, month: selectedMonth, day: 1)) {
+                        onSelect(date)
+                    }
+                }
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(MoilColor.primary)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 26)
+            .padding(.bottom, 8)
+
+            HStack(spacing: 0) {
+                Picker("연도", selection: $selectedYear) {
+                    ForEach(years, id: \.self) { year in
+                        Text(String(year) + "년").tag(year)
+                    }
+                }
+                .pickerStyle(.wheel)
+                Picker("월", selection: $selectedMonth) {
+                    ForEach(1...12, id: \.self) { month in
+                        Text(String(month) + "월").tag(month)
+                    }
+                }
+                .pickerStyle(.wheel)
+            }
+            .labelsHidden()
+
             Spacer()
         }
         .background(MoilColor.surface)
