@@ -26,6 +26,9 @@ struct MemberView: View {
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
     @State private var isSavingNotification = false
+    /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
+    /// 여기서도 같은 설정값을 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
 
     private var selectedGroup: MoilGroup? {
         groupStore.groups.first { $0.id == selectedGroupId } ?? groupStore.selectedGroup
@@ -94,6 +97,7 @@ struct MemberView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background)
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .moilTabScreenLayout(selected: .members, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect { onTabSelect(tab); return }
             switch tab {
