@@ -9,19 +9,25 @@ struct EditMemberProfileView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
     let groupId: String
     @State private var nickname: String
-    @State private var selectedColor: Color
+    @State private var selectedColorId: String
     @State private var errorMessage: String?
     @State private var isSaving = false
     @State private var profileImagePickerItem: PhotosPickerItem?
     @State private var profileImagePreview: Image?
     @State private var uploadedImagePath: String?
     @State private var isUploadingImage = false
-    private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
+    /// (id, 표시색) 쌍으로 들고 있어야, 27종 팔레트 중 스와치에 없는 색이 미리 채워져도
+    /// 저장할 때 Color→id 역변환 없이 원래 id를 그대로 다시 보낼 수 있습니다.
+    private let colors: [(id: String, color: Color)] = [
+        ("GREEN", MoilAvatarColor.green),
+        ("VIOLET", MoilAvatarColor.purple),
+        ("MAGENTA", MoilAvatarColor.pink),
+    ]
 
     init(groupId: String, currentNickname: String, currentColorId: String?) {
         self.groupId = groupId
         _nickname = State(initialValue: currentNickname)
-        _selectedColor = State(initialValue: MoilAvatarColor.color(for: currentColorId))
+        _selectedColorId = State(initialValue: currentColorId?.uppercased() ?? "GREEN")
     }
 
     private var trimmedNickname: String {
@@ -49,10 +55,10 @@ struct EditMemberProfileView: View {
                 Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
                 HStack(spacing: 16) {
                     if uploadedImagePath == nil {
-                        ForEach(colors, id: \.self) { color in
-                            Button { selectColor(color) } label: {
-                                MoilAvatar(color: color, size: 46)
-                                    .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
+                        ForEach(colors, id: \.id) { entry in
+                            Button { selectColor(entry.id) } label: {
+                                MoilAvatar(color: entry.color, size: 46)
+                                    .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColorId == entry.id ? 2 : 0).padding(-5) }
                             }
                         }
                     }
@@ -81,7 +87,7 @@ struct EditMemberProfileView: View {
                     .disabled(isUploadingImage)
                     .accessibilityLabel("프로필 사진 추가")
                     if uploadedImagePath != nil {
-                        Button("색상으로 변경") { selectColor(selectedColor) }
+                        Button("색상으로 변경") { selectColor(selectedColorId) }
                             .font(MoilTypography.regular(13))
                             .foregroundStyle(MoilColor.textSecondary)
                     }
@@ -101,7 +107,7 @@ struct EditMemberProfileView: View {
                             try await groupStore.updateMyProfile(
                                 groupId: groupId,
                                 nickname: trimmedNickname,
-                                colorId: uploadedImagePath == nil ? MoilAvatarColor.id(for: selectedColor) : nil,
+                                colorId: uploadedImagePath == nil ? selectedColorId : nil,
                                 imagePath: uploadedImagePath,
                                 using: sessionStore.service()
                             )
@@ -142,8 +148,8 @@ struct EditMemberProfileView: View {
         }
     }
 
-    private func selectColor(_ color: Color) {
-        selectedColor = color
+    private func selectColor(_ id: String) {
+        selectedColorId = id
         uploadedImagePath = nil
         profileImagePreview = nil
         profileImagePickerItem = nil
