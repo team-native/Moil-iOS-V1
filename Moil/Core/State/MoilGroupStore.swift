@@ -108,6 +108,11 @@ final class MoilGroupStore: ObservableObject {
         return members
     }
 
+    func updateMyProfile(groupId: String, nickname: String, colorId: String?, imagePath: String? = nil, using service: MoilAPIService) async throws {
+        _ = try await service.updateMyProfile(groupId: groupId, nickname: nickname, colorId: colorId, imagePath: imagePath)
+        _ = try? await loadMembers(groupId: groupId, using: service)
+    }
+
     /// 그룹 응답에 색상이 없으면 그 그룹에서 내가 고른 색을 그룹 색으로 씁니다.
     private func applyMyColor(groupId: String, members: [MoilRemoteMember]) {
         guard let index = groups.firstIndex(where: { $0.id == groupId }),

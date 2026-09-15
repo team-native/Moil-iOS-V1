@@ -118,6 +118,12 @@ struct MoilAPIService {
         let _: MoilEmptyResponse = try await client.request("groups/\(groupId)/members/me", method: "DELETE")
     }
 
+    /// 그룹 안에서 내 닉네임/색상/사진을 수정합니다. imagePath를 보내고 colorId를 비우면
+    /// 서버가 사진에서 대표 색상을 자동 추출합니다(그룹 생성/참여와 동일한 규칙).
+    func updateMyProfile(groupId: String, nickname: String, colorId: String?, imagePath: String? = nil) async throws -> MoilUpdatedMemberProfile {
+        try await client.request("groups/\(groupId)/members/me", method: "PATCH", body: UpdateMemberProfileRequest(nickname: nickname, colorId: colorId, imagePath: imagePath))
+    }
+
     func renameGroup(groupId: String, name: String) async throws {
         try await client.request("groups/\(groupId)", method: "PATCH", body: RenameGroupRequest(name: name))
     }
@@ -172,6 +178,8 @@ private struct CreateGroupRequest: Encodable { let name: String; let nickname: S
 private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String?; let imagePath: String? }
 private struct MoilImageUploadResponse: Decodable { let imagePath: String }
+private struct UpdateMemberProfileRequest: Encodable { let nickname: String; let colorId: String?; let imagePath: String? }
+struct MoilUpdatedMemberProfile: Decodable { let nickname: String; let colorId: String?; let imagePath: String? }
 private struct NotificationRequest: Encodable { let enabled: Bool }
 private struct RenameGroupRequest: Encodable { let name: String }
 private struct TransferAdminRequest: Encodable { let targetUserId: Int }
