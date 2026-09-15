@@ -1004,11 +1004,11 @@ private struct ScheduleTextInputSheet: View {
 private struct MonthYearPickerSheet: View {
     let onSelect: (Date) -> Void
     let onClose: () -> Void
-    @State private var displayedYear: Int
+    @State private var selectedYear: Int
     @State private var selectedMonth: Int
 
     private let calendar: Calendar
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    private let years: [Int]
 
     init(displayedMonth: Date, onSelect: @escaping (Date) -> Void, onClose: @escaping () -> Void) {
         self.onSelect = onSelect
@@ -1017,8 +1017,10 @@ private struct MonthYearPickerSheet: View {
         koreanCalendar.locale = Locale(identifier: "ko_KR")
         koreanCalendar.timeZone = .autoupdatingCurrent
         calendar = koreanCalendar
-        _displayedYear = State(initialValue: koreanCalendar.component(.year, from: displayedMonth))
+        let year = koreanCalendar.component(.year, from: displayedMonth)
+        _selectedYear = State(initialValue: year)
         _selectedMonth = State(initialValue: koreanCalendar.component(.month, from: displayedMonth))
+        years = Array((year - 15)...(year + 15))
     }
 
     var body: some View {
@@ -1030,7 +1032,7 @@ private struct MonthYearPickerSheet: View {
                 Text("연도 및 월").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("완료") {
-                    if let date = calendar.date(from: DateComponents(year: displayedYear, month: selectedMonth, day: 1)) {
+                    if let date = calendar.date(from: DateComponents(year: selectedYear, month: selectedMonth, day: 1)) {
                         onSelect(date)
                     }
                 }
@@ -1039,46 +1041,27 @@ private struct MonthYearPickerSheet: View {
             }
             .padding(.horizontal, 28)
             .padding(.top, 26)
-            .padding(.bottom, 24)
+            .padding(.bottom, 8)
 
-            HStack {
-                Button { displayedYear -= 1 } label: { Image(systemName: "chevron.left") }
-                    .frame(width: 40, height: 40)
-                Spacer()
-                Text("\(displayedYear)년").font(MoilTypography.semibold(17))
-                Spacer()
-                Button { displayedYear += 1 } label: { Image(systemName: "chevron.right") }
-                    .frame(width: 40, height: 40)
-            }
-            .foregroundStyle(MoilColor.textPrimary)
-            .padding(.horizontal, 24)
-
-            LazyVGrid(columns: columns, spacing: 14) {
-                ForEach(1...12, id: \.self) { month in
-                    monthButton(month)
+            HStack(spacing: 0) {
+                Picker("연도", selection: $selectedYear) {
+                    ForEach(years, id: \.self) { year in
+                        Text(String(year) + "년").tag(year)
+                    }
                 }
+                .pickerStyle(.wheel)
+                Picker("월", selection: $selectedMonth) {
+                    ForEach(1...12, id: \.self) { month in
+                        Text(String(month) + "월").tag(month)
+                    }
+                }
+                .pickerStyle(.wheel)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
+            .labelsHidden()
 
             Spacer()
         }
         .background(MoilColor.surface)
-    }
-
-    private func monthButton(_ month: Int) -> some View {
-        let isSelected = selectedMonth == month
-        return Button {
-            selectedMonth = month
-        } label: {
-            Text("\(month)월")
-                .font(MoilTypography.regular(15))
-                .foregroundStyle(isSelected ? Color.white : MoilColor.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 46)
-                .background(isSelected ? MoilColor.primary : .clear)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
     }
 }
 
