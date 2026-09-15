@@ -12,3 +12,6 @@ Package.resolved
 
 # macOS
 .DS_Store
+
+# Firebase (contains project API keys — each dev drops their own copy in Moil/)
+GoogleService-Info.plist

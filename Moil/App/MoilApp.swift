@@ -22,6 +22,7 @@ struct MoilApp: App {
         UINavigationBar.appearance().compactAppearance = appearance
     }
 
+    @UIApplicationDelegateAdaptor(MoilAppDelegate.self) private var appDelegate
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @StateObject private var groupStore = MoilGroupStore()
     @StateObject private var sessionStore = MoilSessionStore()
@@ -34,6 +35,10 @@ struct MoilApp: App {
                 .environmentObject(groupStore)
                 .environmentObject(sessionStore)
                 .environmentObject(eventStore)
+                .onChange(of: sessionStore.isAuthenticated) { _, isAuthenticated in
+                    guard isAuthenticated else { return }
+                    MoilPushNotificationManager.shared.requestAuthorization()
+                }
         }
     }
 }
