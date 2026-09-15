@@ -26,7 +26,6 @@ struct MemberView: View {
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
     @State private var isSavingNotification = false
-    @State private var isEditingMyProfile = false
 
     private var selectedGroup: MoilGroup? {
         groupStore.groups.first { $0.id == selectedGroupId } ?? groupStore.selectedGroup
@@ -37,12 +36,8 @@ struct MemberView: View {
         return loaded.isEmpty ? groupStore.members(for: selectedGroup?.id) : loaded
     }
 
-    private var members: [(String, String, Color, Bool)] {
-        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId), $0.isMe) }
-    }
-
-    private var myColorId: String? {
-        currentMembers.first { $0.isMe }?.colorId
+    private var members: [(String, String, Color)] {
+        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
     }
 
     /// 그룹 응답의 역할을 먼저 쓰고, 멤버 응답이 도착하면 그쪽으로 확정합니다.
@@ -133,15 +128,6 @@ struct MemberView: View {
             .sheet(isPresented: $isSharingInvite) {
                 SystemShareSheet(activityItems: [inviteShareText])
             }
-            .sheet(isPresented: $isEditingMyProfile) {
-                if let groupId = selectedGroup?.id {
-                    EditMemberProfileView(
-                        groupId: groupId,
-                        currentNickname: currentMembers.first { $0.isMe }?.nickname ?? "",
-                        currentColorId: myColorId
-                    )
-                }
-            }
             .alert("알림", isPresented: Binding(get: { feedbackMessage != nil }, set: { if !$0 { feedbackMessage = nil } })) {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
             } message: {
@@ -196,10 +182,7 @@ struct MemberView: View {
             SectionTitle("구성원").padding(.bottom, 8)
             VStack(spacing: 0) {
                 ForEach(members.indices, id: \.self) { index in
-                    MemberRow(member: members[index]) {
-                        guard members[index].3 else { return }
-                        isEditingMyProfile = true
-                    }
+                    MemberRow(member: members[index])
                     if index < members.count - 1 { Divider().padding(.leading, 64) }
                 }
             }
@@ -617,28 +600,17 @@ private struct SectionTitle: View {
 }
 
 private struct MemberRow: View {
-    let member: (String, String, Color, Bool)
-    var onTap: (() -> Void)? = nil
+    let member: (String, String, Color)
     var body: some View {
-        Button(action: { onTap?() }) {
-            HStack(spacing: 12) {
-                MoilAvatar(color: member.2, size: 38)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(member.0).font(MoilTypography.semibold(15))
-                    Text(member.1).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary)
-                }
-                Spacer()
-                if member.3 {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(MoilColor.textTertiary)
-                } else {
-                    Circle().fill(member.2).frame(width: 8, height: 8)
-                }
+        HStack(spacing: 12) {
+            MoilAvatar(color: member.2, size: 38)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(member.0).font(MoilTypography.semibold(15))
+                Text(member.1).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary)
             }
-            .padding(.horizontal, 14).padding(.vertical, 10)
+            Spacer()
+            Circle().fill(member.2).frame(width: 8, height: 8)
         }
-        .buttonStyle(.plain)
-        .disabled(!member.3)
+        .padding(.horizontal, 14).padding(.vertical, 10)
     }
 }
