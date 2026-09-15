@@ -11,6 +11,7 @@ struct MyPageView: View {
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
     @State private var accountRoute: AccountRoute?
+    @State private var isEditingMyProfile = false
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
@@ -34,14 +35,28 @@ struct MyPageView: View {
         self.showsTabBar = showsTabBar
         self._isAccountPagePresented = isAccountPagePresented
     }
+    private var myMemberInSelectedGroup: MoilRemoteMember? {
+        groupStore.members(for: groupStore.selectedGroupId).first { $0.isMe }
+    }
+
     var body: some View {
         NavigationStack {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
-                    MoilAvatar(color: MoilAvatarColor.green, size: 56)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("나").font(MoilTypography.bold(21))
+                    MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
+                    Text(myMemberInSelectedGroup?.nickname ?? "나").font(MoilTypography.bold(21))
+                    Spacer()
+                    if groupStore.selectedGroupId != nil {
+                        Button { isEditingMyProfile = true } label: {
+                            Text("프로필 수정")
+                                .font(MoilTypography.semibold(13))
+                                .foregroundStyle(MoilColor.primary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 30)
+                                .background(MoilColor.primary.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
                 .padding(.bottom, 20)
@@ -94,6 +109,15 @@ struct MyPageView: View {
                 case .create: isJoinGroupPresented = true
                 case .profile: break
                 }
+            }
+        }
+        .sheet(isPresented: $isEditingMyProfile) {
+            if let groupId = groupStore.selectedGroupId {
+                EditMemberProfileView(
+                    groupId: groupId,
+                    currentNickname: myMemberInSelectedGroup?.nickname ?? "",
+                    currentColorId: myMemberInSelectedGroup?.colorId
+                )
             }
         }
         .fullScreenCover(isPresented: $isGroupDetailPresented) {
