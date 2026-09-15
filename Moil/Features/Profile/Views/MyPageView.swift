@@ -44,16 +44,29 @@ struct MyPageView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
+                    Button { isEditingMyProfile = true } label: {
+                        MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
+                            .overlay(alignment: .bottomTrailing) {
+                                if groupStore.selectedGroupId != nil {
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 21, height: 21)
+                                        .background(MoilColor.primary)
+                                        .clipShape(Circle())
+                                        .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(groupStore.selectedGroupId == nil)
                     VStack(alignment: .leading, spacing: 5) {
                         Text("나").font(MoilTypography.bold(21))
+                        if groupStore.selectedGroupId != nil {
+                            Text("프로필 수정").font(MoilTypography.regular(13)).foregroundStyle(MoilColor.textSecondary)
+                        }
                     }
                     Spacer()
-                    if groupStore.selectedGroupId != nil {
-                        Button("프로필 수정") { isEditingMyProfile = true }
-                            .font(MoilTypography.semibold(13))
-                            .foregroundStyle(MoilColor.primary)
-                    }
                 }
                 .padding(.bottom, 20)
 
