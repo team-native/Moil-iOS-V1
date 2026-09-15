@@ -45,7 +45,7 @@ struct MyPageView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 14) {
                     MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
-                    Text("나").font(MoilTypography.bold(21))
+                    Text(myMemberInSelectedGroup?.nickname ?? "나").font(MoilTypography.bold(21))
                     Spacer()
                     if groupStore.selectedGroupId != nil {
                         Button { isEditingMyProfile = true } label: {
