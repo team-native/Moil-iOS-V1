@@ -1002,16 +1002,15 @@ private struct ScheduleTextInputSheet: View {
 }
 
 private struct MonthYearPickerSheet: View {
-    let displayedMonth: Date
     let onSelect: (Date) -> Void
     let onClose: () -> Void
     @State private var displayedYear: Int
+    @State private var selectedMonth: Int
 
     private let calendar: Calendar
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
 
     init(displayedMonth: Date, onSelect: @escaping (Date) -> Void, onClose: @escaping () -> Void) {
-        self.displayedMonth = displayedMonth
         self.onSelect = onSelect
         self.onClose = onClose
         var koreanCalendar = Calendar(identifier: .gregorian)
@@ -1019,10 +1018,7 @@ private struct MonthYearPickerSheet: View {
         koreanCalendar.timeZone = .autoupdatingCurrent
         calendar = koreanCalendar
         _displayedYear = State(initialValue: koreanCalendar.component(.year, from: displayedMonth))
-    }
-
-    private var selectedComponents: DateComponents {
-        calendar.dateComponents([.year, .month], from: displayedMonth)
+        _selectedMonth = State(initialValue: koreanCalendar.component(.month, from: displayedMonth))
     }
 
     var body: some View {
@@ -1033,7 +1029,13 @@ private struct MonthYearPickerSheet: View {
                 Spacer()
                 Text("연도 및 월").font(MoilTypography.semibold(16))
                 Spacer()
-                Color.clear.frame(width: 32)
+                Button("완료") {
+                    if let date = calendar.date(from: DateComponents(year: displayedYear, month: selectedMonth, day: 1)) {
+                        onSelect(date)
+                    }
+                }
+                    .font(MoilTypography.bold(16))
+                    .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
             .padding(.top, 26)
@@ -1065,11 +1067,9 @@ private struct MonthYearPickerSheet: View {
     }
 
     private func monthButton(_ month: Int) -> some View {
-        let isSelected = selectedComponents.year == displayedYear && selectedComponents.month == month
+        let isSelected = selectedMonth == month
         return Button {
-            if let date = calendar.date(from: DateComponents(year: displayedYear, month: month, day: 1)) {
-                onSelect(date)
-            }
+            selectedMonth = month
         } label: {
             Text("\(month)월")
                 .font(MoilTypography.regular(15))
