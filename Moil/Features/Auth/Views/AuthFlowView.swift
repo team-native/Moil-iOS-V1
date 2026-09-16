@@ -667,9 +667,9 @@ private struct SocialLoginRow: View {
                     .fixedSize()
                 dividerLine
             }
-            HStack(spacing: 11) {
+            HStack(spacing: 16) {
                 socialButton("구글", image: "Social google")
-                socialButton("애플", image: "Social apple")
+                socialButton("애플", image: "Social apple", adaptiveTint: true)
                 socialButton("카카오", image: "SocialKakao")
             }
             .overlay {
@@ -687,14 +687,16 @@ private struct SocialLoginRow: View {
             .frame(height: 1)
     }
 
-    private let socialButtonSize: CGFloat = 52
+    private let socialButtonSize: CGFloat = 68
 
-    private func socialButton(_ name: String, image: String) -> some View {
+    private func socialButton(_ name: String, image: String, adaptiveTint: Bool = false) -> some View {
         Button { onSelect(name) } label: {
             Image(image)
+                .renderingMode(adaptiveTint ? .template : .original)
                 .resizable()
                 .scaledToFit()
                 .frame(width: socialButtonSize, height: socialButtonSize)
+                .foregroundStyle(adaptiveTint ? MoilColor.textPrimary : Color.primary)
         }
         .disabled(isLoading)
         .accessibilityLabel("\(name)로 로그인")
