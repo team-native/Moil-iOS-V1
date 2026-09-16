@@ -23,7 +23,7 @@ struct MoilApp: App {
     }
 
     @UIApplicationDelegateAdaptor(MoilAppDelegate.self) private var appDelegate
-    @AppStorage("moilDarkMode") private var isDarkMode = false
+    @AppStorage("moilDarkMode") private var isDarkMode = true
     @StateObject private var groupStore = MoilGroupStore()
     @StateObject private var sessionStore = MoilSessionStore()
     @StateObject private var eventStore = MoilEventStore()

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AuthFlowView: View {
+struct AuthFlowView: View { 
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
@@ -687,13 +687,14 @@ private struct SocialLoginRow: View {
             .frame(height: 1)
     }
 
+    private let socialButtonSize: CGFloat = 52
+
     private func socialButton(_ name: String, image: String) -> some View {
         Button { onSelect(name) } label: {
             Image(image)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 43, height: 43)
-                .frame(width: 43, height: 43)
+                .frame(width: socialButtonSize, height: socialButtonSize)
         }
         .disabled(isLoading)
         .accessibilityLabel("\(name)로 로그인")
