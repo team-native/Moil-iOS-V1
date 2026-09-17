@@ -1,14 +1,5 @@
 import SwiftUI
 
-/// 이어붙인 스크롤 달력에서, 화면 상단(coordinate space 기준 y=0)에 가장 가까운 달을
-/// 찾기 위해 각 달 구간의 y 오프셋을 모읍니다.
-private struct MonthTopOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: [Date: CGFloat] = [:]
-    static func reduce(value: inout [Date: CGFloat], nextValue: () -> [Date: CGFloat]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
-    }
-}
-
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
@@ -37,7 +28,9 @@ struct CalendarView: View {
     @State private var isMonthYearPickerPresented = false
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
-    @State private var scrollProxy: ScrollViewProxy?
+    /// ScrollView가 지금 어느 달의 상단에 걸려 있는지 나타내는 iOS 17+ 스크롤 포지션입니다.
+    /// 값을 프로그램적으로 바꾸면(버튼, 월 선택 등) 해당 달로 스크롤이 이동합니다.
+    @State private var scrollPositionMonth: Date?
     /// 스크롤 달력에 한 번에 올려 둘 달의 범위입니다. 월/년 선택 시트가 앞뒤 15년까지
     /// 고를 수 있게 하므로 그 범위를 그대로 맞춥니다. LazyVStack이라 화면 근처 달만
     /// 실제로 그려지므로 범위를 넓게 잡아도 성능에는 영향이 없습니다.
@@ -207,50 +200,27 @@ struct CalendarView: View {
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.bottom, 9)
                     // 아이폰 캘린더 앱처럼, 달을 하나씩 넘기는 대신 여러 달을 이어붙여
-                    // 계속 스크롤할 수 있게 합니다. 화면 상단에 걸린 달을 displayedMonth로
-                    // 추적해 제목과 이벤트 로딩에 사용합니다.
-                    ScrollViewReader { proxy in
-                        ScrollView(showsIndicators: false) {
-                            LazyVStack(spacing: 0) {
-                                ForEach(monthsWindow, id: \.self) { month in
-                                    monthSection(for: month)
-                                        .id(month)
-                                        .background(
-                                            GeometryReader { geometry in
-                                                Color.clear.preference(
-                                                    key: MonthTopOffsetPreferenceKey.self,
-                                                    value: [month: geometry.frame(in: .named("calendarScroll")).minY]
-                                                )
-                                            }
-                                        )
-                                }
-                            }
-                            .padding(.bottom, 16)
-                        }
-                        .coordinateSpace(name: "calendarScroll")
-                        .onPreferenceChange(MonthTopOffsetPreferenceKey.self) { offsets in
-                            if let closest = offsets.min(by: { abs($0.value) < abs($1.value) })?.key,
-                               !calendar.isDate(closest, equalTo: displayedMonth, toGranularity: .month) {
-                                displayedMonth = closest
+                    // 계속 스크롤할 수 있게 합니다. scrollPosition이 화면 상단에 걸린 달을
+                    // 자동으로 추적해 주므로, 제목/이벤트 로딩과 프로그램적 이동(버튼, 월 선택,
+                    // 검색 결과 선택) 모두 이 하나의 상태만 바꾸면 됩니다.
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(monthsWindow, id: \.self) { month in
+                                monthSection(for: month)
+                                    .id(month)
                             }
                         }
-                        .onAppear {
-                            scrollProxy = proxy
-                            // 처음 열렸을 때는 30년 치 달 목록의 맨 위(15년 전)가 아니라
-                            // 오늘이 속한 달에서 시작해야 합니다. ScrollViewReader는 LazyVStack이
-                            // 레이아웃을 마치기 전에 scrollTo를 호출하면 조용히 무시하는 경우가 있어,
-                            // 한 런루프 뒤로 미뤄 안정적으로 이동시킵니다.
-                            let target = monthsWindow.first { calendar.isDate($0, equalTo: displayedMonth, toGranularity: .month) }
-                            guard let target else { return }
-                            DispatchQueue.main.async {
-                                proxy.scrollTo(target, anchor: .top)
-                            }
-                            // LazyVStack 레이아웃이 아직 안 끝났으면 위 호출이 무시될 수 있어
-                            // 한 번 더 시도합니다.
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                proxy.scrollTo(target, anchor: .top)
-                            }
-                        }
+                        .scrollTargetLayout()
+                        .padding(.bottom, 16)
+                    }
+                    .scrollPosition(id: $scrollPositionMonth, anchor: .top)
+                    .onChange(of: scrollPositionMonth) { _, newValue in
+                        guard let newValue, !calendar.isDate(newValue, equalTo: displayedMonth, toGranularity: .month) else { return }
+                        displayedMonth = newValue
+                    }
+                    .onAppear {
+                        guard scrollPositionMonth == nil else { return }
+                        scrollPositionMonth = monthsWindow.first { calendar.isDate($0, equalTo: displayedMonth, toGranularity: .month) }
                     }
                     .frame(maxHeight: .infinity)
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
@@ -420,7 +390,7 @@ struct CalendarView: View {
     private func scrollToMonth(_ month: Date) {
         let target = monthsWindow.first { calendar.isDate($0, equalTo: month, toGranularity: .month) } ?? month
         withAnimation(.easeInOut(duration: 0.3)) {
-            scrollProxy?.scrollTo(target, anchor: .top)
+            scrollPositionMonth = target
         }
     }
 
