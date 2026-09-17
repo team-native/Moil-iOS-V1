@@ -189,6 +189,20 @@ struct CalendarView: View {
                     }
                     .frame(maxHeight: .infinity)
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                    // 아이폰 캘린더처럼 달력을 위아래로 끌어도 이전/다음 달로 이동할 수 있게 합니다.
+                    // ScrollView의 세로 스크롤과 충돌하지 않도록 simultaneousGesture로 붙이고,
+                    // 짧은 스크롤 동작과 구분되도록 임계값을 넉넉히 둡니다.
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 40)
+                            .onEnded { value in
+                                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                                if value.translation.height > 80 {
+                                    moveMonth(by: -1)
+                                } else if value.translation.height < -80 {
+                                    moveMonth(by: 1)
+                                }
+                            }
+                    )
                 }
             }
         }
