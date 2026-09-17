@@ -670,7 +670,7 @@ private struct SocialLoginRow: View {
             HStack(spacing: 16) {
                 socialButton("구글", image: "Social google")
                 socialButton("애플", image: "Social apple", adaptiveTint: true)
-                socialButton("카카오", image: "SocialKakao")
+                socialButton("카카오", image: "SocialKakao", inset: 16)
             }
             .overlay {
                 if isLoading {
@@ -689,12 +689,16 @@ private struct SocialLoginRow: View {
 
     private let socialButtonSize: CGFloat = 68
 
-    private func socialButton(_ name: String, image: String, adaptiveTint: Bool = false) -> some View {
+    /// 구글/애플 에셋은 캔버스 안에 여백이 이미 포함돼 있는 반면
+    /// 카카오 에셋은 원이 캔버스에 꽉 차 있어, 같은 프레임이면 카카오만 더 커 보입니다.
+    /// inset으로 그 여백 차이를 보정해 시각적 크기를 맞춥니다.
+    private func socialButton(_ name: String, image: String, adaptiveTint: Bool = false, inset: CGFloat = 0) -> some View {
         Button { onSelect(name) } label: {
             Image(image)
                 .renderingMode(adaptiveTint ? .template : .original)
                 .resizable()
                 .scaledToFit()
+                .padding(inset)
                 .frame(width: socialButtonSize, height: socialButtonSize)
                 .foregroundStyle(adaptiveTint ? MoilColor.textPrimary : Color.primary)
         }
