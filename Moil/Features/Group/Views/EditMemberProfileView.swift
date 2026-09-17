@@ -18,11 +18,18 @@ struct EditMemberProfileView: View {
     @State private var isUploadingImage = false
     /// (id, 표시색) 쌍으로 들고 있어야, 27종 팔레트 중 스와치에 없는 색이 미리 채워져도
     /// 저장할 때 Color→id 역변환 없이 원래 id를 그대로 다시 보낼 수 있습니다.
-    private let colors: [(id: String, color: Color)] = [
+    private let baseColors: [(id: String, color: Color)] = [
         ("GREEN", MoilAvatarColor.green),
         ("VIOLET", MoilAvatarColor.purple),
         ("MAGENTA", MoilAvatarColor.pink),
     ]
+
+    /// 현재 프로필 색이 기본 3색 스와치에 없으면(사진에서 자동 추출된 27종 팔레트 중 하나라면)
+    /// 맨 앞에 그 색을 추가해, 재진입했을 때 항상 현재 색이 선택 표시된 채로 보이게 합니다.
+    private var colors: [(id: String, color: Color)] {
+        guard !baseColors.contains(where: { $0.id == selectedColorId }) else { return baseColors }
+        return [(selectedColorId, MoilAvatarColor.color(for: selectedColorId))] + baseColors
+    }
 
     init(groupId: String, currentNickname: String, currentColorId: String?) {
         self.groupId = groupId
@@ -52,7 +59,7 @@ struct EditMemberProfileView: View {
                         .foregroundStyle(MoilColor.error)
                         .padding(.top, 6)
                 }
-                Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
+                Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 18)
                 HStack(spacing: 16) {
                     if uploadedImagePath == nil {
                         ForEach(colors, id: \.id) { entry in
