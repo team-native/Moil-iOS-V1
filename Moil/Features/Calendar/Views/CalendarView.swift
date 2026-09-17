@@ -207,9 +207,9 @@ struct CalendarView: View {
                                 }
                                 let threshold: CGFloat = 70
                                 if value.translation.height > threshold {
-                                    moveMonth(by: -1)
-                                } else if value.translation.height < -threshold {
                                     moveMonth(by: 1)
+                                } else if value.translation.height < -threshold {
+                                    moveMonth(by: -1)
                                 }
                                 withAnimation(.interactiveSpring()) { monthDragOffset = 0 }
                             }
