@@ -181,6 +181,10 @@ struct MoilAPIClient {
 #endif
         guard (200..<300).contains(httpResponse.statusCode) else {
             let message = (try? JSONDecoder.moil.decode(MoilServerError.self, from: data).message) ?? "요청에 실패했어요."
+#if DEBUG
+            let rawBody = String(data: data, encoding: .utf8) ?? "<empty>"
+            print("[MoilAPI] \(method) /\(path) → \(httpResponse.statusCode) FAILED\n  message: \(message)\n  body: \(rawBody)")
+#endif
             throw MoilAPIError.server(message: message, statusCode: httpResponse.statusCode)
         }
         if data.isEmpty, Response.self == MoilEmptyResponse.self {
