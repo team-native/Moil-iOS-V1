@@ -237,9 +237,17 @@ struct CalendarView: View {
                         .onAppear {
                             scrollProxy = proxy
                             // 처음 열렸을 때는 30년 치 달 목록의 맨 위(15년 전)가 아니라
-                            // 오늘이 속한 달에서 시작해야 하므로, 애니메이션 없이 바로 이동합니다.
+                            // 오늘이 속한 달에서 시작해야 합니다. ScrollViewReader는 LazyVStack이
+                            // 레이아웃을 마치기 전에 scrollTo를 호출하면 조용히 무시하는 경우가 있어,
+                            // 한 런루프 뒤로 미뤄 안정적으로 이동시킵니다.
                             let target = monthsWindow.first { calendar.isDate($0, equalTo: displayedMonth, toGranularity: .month) }
-                            if let target {
+                            guard let target else { return }
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(target, anchor: .top)
+                            }
+                            // LazyVStack 레이아웃이 아직 안 끝났으면 위 호출이 무시될 수 있어
+                            // 한 번 더 시도합니다.
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                                 proxy.scrollTo(target, anchor: .top)
                             }
                         }
