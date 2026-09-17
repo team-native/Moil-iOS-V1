@@ -1,5 +1,14 @@
 import SwiftUI
 
+/// 이어붙인 스크롤 달력에서, 화면 상단(coordinate space 기준 y=0)에 가장 가까운 달을
+/// 찾기 위해 각 달 구간의 y 오프셋을 모읍니다.
+private struct MonthTopOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: [Date: CGFloat] = [:]
+    static func reduce(value: inout [Date: CGFloat], nextValue: () -> [Date: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
 struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
@@ -14,6 +23,7 @@ struct CalendarView: View {
     @State private var isDaySchedulePresented = false
     @State private var isScheduleSearchPresented = false
     @State private var scheduleDraftDay = 22
+    @State private var scheduleDraftMonth = Date()
     @State private var isMemberViewPresented = false
     @State private var isMyPagePresented = false
     @State private var isCreateGroupPresented = false
@@ -21,43 +31,56 @@ struct CalendarView: View {
     @State private var isJoinProfilePresented = false
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
+    /// 스크롤로 화면 맨 위에 걸린 달입니다. 아이폰 캘린더 앱처럼 계속 스크롤해서 다음/이전 달로
+    /// 넘어가면, 화면 상단에 걸린 달을 기준으로 갱신됩니다(버튼으로 넘길 때도 이 값으로 스크롤).
     @State private var displayedMonth = Date()
-    @State private var monthDragOffset: CGFloat = 0
     @State private var isMonthYearPickerPresented = false
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
+    @State private var scrollProxy: ScrollViewProxy?
+    /// 스크롤 달력에 한 번에 올려 둘 달의 범위입니다. 월/년 선택 시트가 앞뒤 15년까지
+    /// 고를 수 있게 하므로 그 범위를 그대로 맞춥니다. LazyVStack이라 화면 근처 달만
+    /// 실제로 그려지므로 범위를 넓게 잡아도 성능에는 영향이 없습니다.
+    @State private var monthsWindow: [Date] = CalendarView.makeMonthsWindow()
+
+    private static func makeMonthsWindow() -> [Date] {
+        let calendar = Calendar.current
+        let firstOfThisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: Date())) ?? Date()
+        return (-180...180).compactMap { calendar.date(byAdding: .month, value: $0, to: firstOfThisMonth) }
+    }
 
     /// 날짜 칸마다 전체 목록을 다시 변환하지 않도록 한 번만 묶어 둡니다.
     @MainActor
-    private var eventsByDay: [Int: [CalendarEvent]] {
-        let events = eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue)
+    private func eventsByDay(for month: Date) -> [Int: [CalendarEvent]] {
+        let events = eventStore.events(groupId: groupStore.selectedGroupId, month: monthRequestValue(for: month))
             .compactMap(CalendarEvent.init(remote:))
         var result: [Int: [CalendarEvent]] = [:]
         for event in events {
-            for date in event.dates(in: displayedMonth) {
+            for date in event.dates(in: month) {
                 result[calendar.component(.day, from: date), default: []].append(event)
             }
         }
         return result
     }
 
-    private var daysInMonth: Int {
-        calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
+    private func daysInMonth(for month: Date) -> Int {
+        calendar.range(of: .day, in: .month, for: month)?.count ?? 30
     }
 
-    private var leadingBlankDays: Int {
-        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
-        let firstDay = calendar.date(from: DateComponents(year: components.year, month: components.month, day: 1)) ?? displayedMonth
+    private func leadingBlankDays(for month: Date) -> Int {
+        let components = calendar.dateComponents([.year, .month], from: month)
+        let firstDay = calendar.date(from: DateComponents(year: components.year, month: components.month, day: 1)) ?? month
         return (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
     }
 
     /// 선택한 달이 실제로 차지하는 주 수만 표시합니다. Figma의 2026년 7월은 다섯 줄입니다.
-    private var calendarRowCount: Int {
-        Int(ceil(Double(leadingBlankDays + daysInMonth) / 7.0))
+    private func calendarRowCount(for month: Date) -> Int {
+        Int(ceil(Double(leadingBlankDays(for: month) + daysInMonth(for: month)) / 7.0))
     }
 
     private let dayCellHeight: CGFloat = 108
     @State private var selectedDay = Calendar.current.component(.day, from: Date())
+    @State private var selectedDayMonth = Date()
 
     private var monthTitle: String {
         displayedMonth.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
@@ -65,6 +88,10 @@ struct CalendarView: View {
 
     private var yearTitle: String {
         displayedMonth.formatted(.dateTime.year().locale(Locale(identifier: "ko_KR")))
+    }
+
+    private func monthLabel(for month: Date) -> String {
+        month.formatted(.dateTime.month(.wide).locale(Locale(identifier: "ko_KR")))
     }
 
     var body: some View {
@@ -179,41 +206,46 @@ struct CalendarView: View {
                     }
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
                     .padding(.bottom, 9)
-                    ScrollView(showsIndicators: false) {
-                        let dayEvents = eventsByDay
-                        LazyVGrid(columns: columns, spacing: 9) {
-                            ForEach(0..<(calendarRowCount * 7), id: \.self) { slot in
-                                calendarSlot(slot, events: dayEvents)
+                    // 아이폰 캘린더 앱처럼, 달을 하나씩 넘기는 대신 여러 달을 이어붙여
+                    // 계속 스크롤할 수 있게 합니다. 화면 상단에 걸린 달을 displayedMonth로
+                    // 추적해 제목과 이벤트 로딩에 사용합니다.
+                    ScrollViewReader { proxy in
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(spacing: 0) {
+                                ForEach(monthsWindow, id: \.self) { month in
+                                    monthSection(for: month)
+                                        .id(month)
+                                        .background(
+                                            GeometryReader { geometry in
+                                                Color.clear.preference(
+                                                    key: MonthTopOffsetPreferenceKey.self,
+                                                    value: [month: geometry.frame(in: .named("calendarScroll")).minY]
+                                                )
+                                            }
+                                        )
+                                }
+                            }
+                            .padding(.bottom, 16)
+                        }
+                        .coordinateSpace(name: "calendarScroll")
+                        .onPreferenceChange(MonthTopOffsetPreferenceKey.self) { offsets in
+                            if let closest = offsets.min(by: { abs($0.value) < abs($1.value) })?.key,
+                               !calendar.isDate(closest, equalTo: displayedMonth, toGranularity: .month) {
+                                displayedMonth = closest
                             }
                         }
-                        .padding(.bottom, 16)
-                        .offset(y: monthDragOffset)
+                        .onAppear {
+                            scrollProxy = proxy
+                            // 처음 열렸을 때는 30년 치 달 목록의 맨 위(15년 전)가 아니라
+                            // 오늘이 속한 달에서 시작해야 하므로, 애니메이션 없이 바로 이동합니다.
+                            let target = monthsWindow.first { calendar.isDate($0, equalTo: displayedMonth, toGranularity: .month) }
+                            if let target {
+                                proxy.scrollTo(target, anchor: .top)
+                            }
+                        }
                     }
                     .frame(maxHeight: .infinity)
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                    // 아이폰 캘린더처럼 달력을 위아래로 끌면 손가락을 따라 실시간으로 움직이다가
-                    // 일정 거리를 넘으면 이전/다음 달로 넘어가고, 아니면 제자리로 돌아옵니다.
-                    // ScrollView의 세로 스크롤과 충돌하지 않도록 simultaneousGesture로 붙입니다.
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 10)
-                            .onChanged { value in
-                                guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                                monthDragOffset = value.translation.height * 0.6
-                            }
-                            .onEnded { value in
-                                guard abs(value.translation.height) > abs(value.translation.width) else {
-                                    withAnimation(.interactiveSpring()) { monthDragOffset = 0 }
-                                    return
-                                }
-                                let threshold: CGFloat = 70
-                                if value.translation.height > threshold {
-                                    moveMonth(by: 1)
-                                } else if value.translation.height < -threshold {
-                                    moveMonth(by: -1)
-                                }
-                                withAnimation(.interactiveSpring()) { monthDragOffset = 0 }
-                            }
-                    )
                 }
             }
         }
@@ -233,10 +265,7 @@ struct CalendarView: View {
             MonthYearPickerSheet(
                 displayedMonth: displayedMonth,
                 onSelect: { date in
-                    displayedMonth = date
-                    selectedDay = calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
-                        ? calendar.component(.day, from: Date())
-                        : 0
+                    scrollToMonth(date)
                     isMonthYearPickerPresented = false
                 },
                 onClose: { isMonthYearPickerPresented = false }
@@ -268,7 +297,7 @@ struct CalendarView: View {
             DayScheduleSheet(
                 day: scheduleDraftDay,
                 dateTitle: scheduleDraftDateTitle,
-                events: eventsByDay[scheduleDraftDay] ?? [],
+                events: eventsByDay(for: scheduleDraftMonth)[scheduleDraftDay] ?? [],
                 onAdd: {
                     isDaySchedulePresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -340,10 +369,14 @@ struct CalendarView: View {
         .fullScreenCover(isPresented: $isScheduleSearchPresented) {
             ScheduleSearchView(
                 groupId: groupStore.selectedGroupId,
-                month: monthRequestValue,
+                month: monthRequestValue(for: displayedMonth),
                 onSelect: { event in
                     isScheduleSearchPresented = false
-                    selectedDay = event.day
+                    if let eventMonth = MoilCalendarDate.date(from: event.date) {
+                        selectedDay = event.day
+                        selectedDayMonth = eventMonth
+                        scrollToMonth(eventMonth)
+                    }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         Task { await selectEvent(event) }
                     }
@@ -355,9 +388,8 @@ struct CalendarView: View {
         } message: {
             Text(serverError ?? "")
         }
-        .task(id: "\(groupStore.selectedGroupId ?? "")-\(monthRequestValue)") {
+        .task(id: groupStore.selectedGroupId ?? "") {
             await loadMemberProfiles()
-            await loadEvents()
         }
     }
 
@@ -372,30 +404,37 @@ struct CalendarView: View {
     }
 
     private func moveMonth(by value: Int) {
-        displayedMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) ?? displayedMonth
-        selectedDay = calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
-            ? calendar.component(.day, from: Date())
-            : 0
+        guard let target = calendar.date(byAdding: .month, value: value, to: displayedMonth) else { return }
+        scrollToMonth(target)
     }
 
-    private var monthRequestValue: String {
-        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
+    /// 버튼/월 선택 시트에서 특정 달로 넘어갈 때, 이어붙인 스크롤 달력에서 그 달까지 스크롤합니다.
+    private func scrollToMonth(_ month: Date) {
+        let target = monthsWindow.first { calendar.isDate($0, equalTo: month, toGranularity: .month) } ?? month
+        withAnimation(.easeInOut(duration: 0.3)) {
+            scrollProxy?.scrollTo(target, anchor: .top)
+        }
+    }
+
+    private func monthRequestValue(for month: Date) -> String {
+        let components = calendar.dateComponents([.year, .month], from: month)
         return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
     }
 
     private var scheduleDraftDateTitle: String {
-        let components = calendar.dateComponents([.month], from: displayedMonth)
+        let components = calendar.dateComponents([.month], from: scheduleDraftMonth)
         return "\(components.month ?? 1)월 \(scheduleDraftDay)일"
     }
 
     private var scheduleDraftDate: Date {
-        calendar.date(bySetting: .day, value: scheduleDraftDay, of: firstDayOfDisplayedMonth) ?? firstDayOfDisplayedMonth
+        let first = firstDay(of: scheduleDraftMonth)
+        return calendar.date(bySetting: .day, value: scheduleDraftDay, of: first) ?? first
     }
 
-    private func loadEvents() async {
+    private func loadEvents(for month: Date) async {
         guard let groupId = groupStore.selectedGroupId else { return }
         do {
-            try await eventStore.load(groupId: groupId, month: monthRequestValue, using: sessionStore.service())
+            try await eventStore.load(groupId: groupId, month: monthRequestValue(for: month), using: sessionStore.service())
         } catch {
             guard !error.isRequestCancellation else { return }
             serverError = error.localizedDescription
@@ -446,7 +485,7 @@ struct CalendarView: View {
                     memo: memo,
                     sharedMemberIds: memberIDs
                 ))
-                await loadEvents()
+                await loadEvents(for: scheduleDraftMonth)
             } catch { serverError = error.localizedDescription }
         }
     }
@@ -470,7 +509,7 @@ struct CalendarView: View {
                     sharedMemberIds: sharedMemberIDs
                 )
                 try await sessionStore.service().updateEvent(id: event.id, request: request)
-                await loadEvents()
+                await loadEvents(for: MoilCalendarDate.date(from: event.date) ?? displayedMonth)
             } catch { serverError = error.localizedDescription }
         }
     }
@@ -479,7 +518,7 @@ struct CalendarView: View {
         Task {
             do {
                 try await sessionStore.service().deleteEvent(id: event.id)
-                await loadEvents()
+                await loadEvents(for: MoilCalendarDate.date(from: event.date) ?? displayedMonth)
             } catch { serverError = error.localizedDescription }
         }
     }
@@ -493,13 +532,37 @@ struct CalendarView: View {
         }
     }
 
+    /// 이어붙인 스크롤 달력에서 달 하나를 나타내는 구간입니다. 첫 달이 아니면 위에
+    /// "11월" 같은 인라인 제목을 붙여 아이폰 캘린더 앱의 연속 스크롤과 같은 느낌을 줍니다.
     @ViewBuilder
-    private func calendarSlot(_ slot: Int, events: [Int: [CalendarEvent]]) -> some View {
-        let day = slot - leadingBlankDays + 1
-        if (1...daysInMonth).contains(day) {
-            calendarDay(day, events: events[day] ?? [])
+    private func monthSection(for month: Date) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !calendar.isDate(month, equalTo: monthsWindow.first ?? month, toGranularity: .month) {
+                Text(monthLabel(for: month))
+                    .font(MoilTypography.heavy(20))
+                    .foregroundStyle(MoilColor.textPrimary)
+                    .padding(.top, 20)
+                    .padding(.bottom, 9)
+            }
+            let dayEvents = eventsByDay(for: month)
+            LazyVGrid(columns: columns, spacing: 9) {
+                ForEach(0..<(calendarRowCount(for: month) * 7), id: \.self) { slot in
+                    calendarSlot(slot, month: month, events: dayEvents)
+                }
+            }
+        }
+        .task(id: "\(groupStore.selectedGroupId ?? "")-\(monthRequestValue(for: month))") {
+            await loadEvents(for: month)
+        }
+    }
+
+    @ViewBuilder
+    private func calendarSlot(_ slot: Int, month: Date, events: [Int: [CalendarEvent]]) -> some View {
+        let day = slot - leadingBlankDays(for: month) + 1
+        if (1...daysInMonth(for: month)).contains(day) {
+            calendarDay(day, month: month, events: events[day] ?? [])
         } else {
-            let date = calendar.date(byAdding: .day, value: day - 1, to: firstDayOfDisplayedMonth) ?? displayedMonth
+            let date = calendar.date(byAdding: .day, value: day - 1, to: firstDay(of: month)) ?? month
             Text("\(calendar.component(.day, from: date))")
                 .font(MoilTypography.regular(16))
                 .foregroundStyle(MoilColor.textPrimary.opacity(0.32))
@@ -507,14 +570,17 @@ struct CalendarView: View {
         }
     }
 
-    private var firstDayOfDisplayedMonth: Date {
-        calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
+    private func firstDay(of month: Date) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
-    private func calendarDay(_ day: Int, events: [CalendarEvent]) -> some View {
-        Button {
+    private func calendarDay(_ day: Int, month: Date, events: [CalendarEvent]) -> some View {
+        let isSelected = selectedDay == day && calendar.isDate(selectedDayMonth, equalTo: month, toGranularity: .month)
+        return Button {
             scheduleDraftDay = day
+            scheduleDraftMonth = month
             selectedDay = day
+            selectedDayMonth = month
             if events.isEmpty {
                 isScheduleComposerPresented = true
             } else {
@@ -524,12 +590,12 @@ struct CalendarView: View {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
-                    .foregroundStyle(selectedDay == day ? Color.white : MoilColor.textPrimary)
+                    .foregroundStyle(isSelected ? Color.white : MoilColor.textPrimary)
                     .frame(width: 32, height: 32, alignment: .center)
-                    .background(selectedDay == day ? MoilColor.primary : .clear)
+                    .background(isSelected ? MoilColor.primary : .clear)
                     .clipShape(Circle())
                 ForEach(events) { event in
-                    eventChip(event, day: day)
+                    eventChip(event, day: day, month: month)
                 }
                 Spacer(minLength: 0)
             }
@@ -538,8 +604,8 @@ struct CalendarView: View {
         .buttonStyle(.plain)
     }
 
-    private func eventChip(_ event: CalendarEvent, day: Int) -> some View {
-        let currentDate = calendar.date(bySetting: .day, value: day, of: firstDayOfDisplayedMonth) ?? firstDayOfDisplayedMonth
+    private func eventChip(_ event: CalendarEvent, day: Int, month: Date) -> some View {
+        let currentDate = calendar.date(bySetting: .day, value: day, of: firstDay(of: month)) ?? firstDay(of: month)
         let weekday = calendar.component(.weekday, from: currentDate)
         // 기간 일정은 주를 넘길 때마다 새로운 한 줄의 일정 바로 시작합니다.
         let startsSegment = event.starts(on: currentDate) || weekday == calendar.firstWeekday
