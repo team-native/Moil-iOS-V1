@@ -103,7 +103,7 @@ struct EditMemberProfileView: View {
                     Text("사진을 선택하면 사진에서 뽑은 색이 내 프로필 색이 돼요.")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
-                        .padding(.top, 10)
+                        .padding(.top, 18)
                 }
                 Spacer()
                 Button("저장하기") {
