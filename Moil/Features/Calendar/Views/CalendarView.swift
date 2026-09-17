@@ -22,6 +22,7 @@ struct CalendarView: View {
     @State private var isEmptyCalendarPresented = false
     @State private var shouldOpenCreateGroupAfterProfile = false
     @State private var displayedMonth = Date()
+    @State private var monthDragOffset: CGFloat = 0
     @State private var isMonthYearPickerPresented = false
     @State private var selectedEvent: CalendarEvent?
     @State private var serverError: String?
@@ -186,21 +187,31 @@ struct CalendarView: View {
                             }
                         }
                         .padding(.bottom, 16)
+                        .offset(y: monthDragOffset)
                     }
                     .frame(maxHeight: .infinity)
                     .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                    // 아이폰 캘린더처럼 달력을 위아래로 끌어도 이전/다음 달로 이동할 수 있게 합니다.
-                    // ScrollView의 세로 스크롤과 충돌하지 않도록 simultaneousGesture로 붙이고,
-                    // 짧은 스크롤 동작과 구분되도록 임계값을 넉넉히 둡니다.
+                    // 아이폰 캘린더처럼 달력을 위아래로 끌면 손가락을 따라 실시간으로 움직이다가
+                    // 일정 거리를 넘으면 이전/다음 달로 넘어가고, 아니면 제자리로 돌아옵니다.
+                    // ScrollView의 세로 스크롤과 충돌하지 않도록 simultaneousGesture로 붙입니다.
                     .simultaneousGesture(
-                        DragGesture(minimumDistance: 40)
-                            .onEnded { value in
+                        DragGesture(minimumDistance: 10)
+                            .onChanged { value in
                                 guard abs(value.translation.height) > abs(value.translation.width) else { return }
-                                if value.translation.height > 80 {
+                                monthDragOffset = value.translation.height * 0.6
+                            }
+                            .onEnded { value in
+                                guard abs(value.translation.height) > abs(value.translation.width) else {
+                                    withAnimation(.interactiveSpring()) { monthDragOffset = 0 }
+                                    return
+                                }
+                                let threshold: CGFloat = 70
+                                if value.translation.height > threshold {
                                     moveMonth(by: -1)
-                                } else if value.translation.height < -80 {
+                                } else if value.translation.height < -threshold {
                                     moveMonth(by: 1)
                                 }
+                                withAnimation(.interactiveSpring()) { monthDragOffset = 0 }
                             }
                     )
                 }
