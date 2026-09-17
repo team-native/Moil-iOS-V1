@@ -1,7 +1,6 @@
 {
   "images" : [
-    { "filename" : "SocialKakao.pdf", "idiom" : "universal", "scale" : "1x" }
+    { "filename" : "SocialKakao.png", "idiom" : "universal", "scale" : "1x" }
   ],
-  "properties" : { "preserves-vector-representation" : true },
   "info" : { "author" : "xcode", "version" : 1 }
 }
