@@ -24,13 +24,27 @@ final class MoilWatchConnectivityManager: NSObject {
     }
 
     func sync(accessToken: String?, refreshToken: String?, groupId: String?, isDarkMode: Bool) {
-        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+#if DEBUG
+            print("[MoilWatchSync] 전송 건너뜀 - supported: \(WCSession.isSupported()), activationState: \(WCSession.isSupported() ? "\(WCSession.default.activationState.rawValue)" : "-")")
+#endif
+            return
+        }
         var context: [String: Any] = [:]
         context["accessToken"] = accessToken
         context["refreshToken"] = refreshToken
         context["groupId"] = groupId
         context["isDarkMode"] = isDarkMode
-        try? WCSession.default.updateApplicationContext(context)
+        do {
+            try WCSession.default.updateApplicationContext(context)
+#if DEBUG
+            print("[MoilWatchSync] 전송함 - groupId: \(groupId ?? "nil"), isDarkMode: \(isDarkMode)")
+#endif
+        } catch {
+#if DEBUG
+            print("[MoilWatchSync] 전송 실패 - \(error.localizedDescription)")
+#endif
+        }
     }
 }
 

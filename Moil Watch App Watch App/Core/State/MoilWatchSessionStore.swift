@@ -63,6 +63,9 @@ final class MoilWatchSessionStore: NSObject, ObservableObject {
     }
 
     private func apply(accessToken: String?, refreshToken: String?, groupId: String?, isDarkMode: Bool?) {
+#if DEBUG
+        print("[MoilWatchSync] 받음 - groupId: \(groupId ?? "nil"), isDarkMode: \(isDarkMode.map(String.init) ?? "nil")")
+#endif
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         if let groupId { self.groupId = groupId }

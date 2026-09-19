@@ -160,6 +160,17 @@ struct MyPageView: View {
         }
         // 단독 Preview와 전체 앱 모두에서 토글을 누르는 즉시 색상 스킴을 갱신합니다.
         .preferredColorScheme(isDarkMode ? .dark : .light)
+        // 루트(MoilApp)의 @AppStorage onChange에만 맡기면 워치 동기화가 갱신되지 않는
+        // 경우가 있어(모달로 뜬 화면이 루트 Scene과 별개로 갱신되는 문제로 추정), 토글을
+        // 실제로 조작하는 이 화면에서도 직접 한 번 더 동기화를 트리거합니다.
+        .onChange(of: isDarkMode) { _, newValue in
+            MoilWatchConnectivityManager.shared.sync(
+                accessToken: sessionStore.accessToken,
+                refreshToken: sessionStore.refreshToken,
+                groupId: groupStore.selectedGroupId,
+                isDarkMode: newValue
+            )
+        }
         }
     }
 
