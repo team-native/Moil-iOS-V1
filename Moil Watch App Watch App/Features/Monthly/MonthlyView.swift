@@ -6,7 +6,6 @@ import WatchKit
 /// 아래로 계속 스크롤할 수 있게 합니다. LazyVStack이라 화면 근처 달만 실제로 그려지고,
 /// 각 달의 일정은 화면에 걸릴 때 그 달만 따로 불러옵니다.
 struct MonthlyView: View {
-    let legend: [FamilyMember]
     let colorForEvent: (MoilRemoteEvent) -> Color
     let loadEvents: (Date) async -> [MoilRemoteEvent]
 
@@ -16,12 +15,24 @@ struct MonthlyView: View {
 
     private let calendar = Calendar.current
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
+    private let weekdayHeaderHeight: CGFloat = 15
 
-    /// NavigationStack/ScrollView가 주는 여백 때문에 containerRelativeFrame이 실제
-    /// 화면보다 좁게 잡혀 달력 칸이 작아 보이는 문제가 있어, 실제 화면 폭을 기준으로
-    /// 7등분해 칸 크기를 직접 계산합니다. 워치마다 화면 크기가 달라 값도 자동으로 맞춰집니다.
-    private var cellWidth: CGFloat {
-        WKInterfaceDevice.current().screenBounds.width / 7
+    /// 스크롤 방식은 그대로 두고, 한 달(최대 6주)이 스크롤 없이 화면 안에 통째로
+    /// 들어오도록 칸 크기를 화면 폭/높이 둘 다에 맞춰 계산합니다. 요일 줄(고정)과 매
+    /// 달 제목 줄이 차지하는 만큼을 뺀 나머지를 6주로 나눈 값과, 화면 폭을 7로 나눈
+    /// 값 중 작은 쪽을 씁니다. 워치마다 화면 크기가 달라 값도 자동으로 맞춰집니다.
+    private var gridCellSize: CGFloat {
+        let bounds = WKInterfaceDevice.current().screenBounds
+        let widthBudget = bounds.width / 7
+        let perMonthTitleHeight: CGFloat = 30
+        let weekRowSpacing: CGFloat = 2 * 5
+        // 페이지 인디케이터(점)가 화면 맨 아래에 겹쳐 그려져 마지막 주가 가려지므로 여유를 더 둡니다.
+        let pageIndicatorMargin: CGFloat = 22
+        let heightBudget = max(
+            18,
+            (bounds.height - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin) / 6
+        )
+        return min(widthBudget, heightBudget)
     }
 
     private static func makeMonthsWindow() -> [Date] {
@@ -31,16 +42,19 @@ struct MonthlyView: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(monthsWindow, id: \.self) { month in
-                    monthSection(for: month)
-                        .id(month)
+        VStack(spacing: 2) {
+            weekdayHeader
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(monthsWindow, id: \.self) { month in
+                        monthSection(for: month)
+                            .id(month)
+                    }
                 }
+                .scrollTargetLayout()
             }
-            .scrollTargetLayout()
+            .scrollPosition(id: $scrollPositionMonth, anchor: .top)
         }
-        .scrollPosition(id: $scrollPositionMonth, anchor: .top)
         .onAppear {
             guard scrollPositionMonth == nil else { return }
             let today = Date()
@@ -52,31 +66,23 @@ struct MonthlyView: View {
     @ViewBuilder
     private func monthSection(for month: Date) -> some View {
         let isFirst = isFirstMonth(month)
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(monthTitle(for: month))
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(WatchColor.textPrimary)
                 Text(yearTitle(for: month))
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(WatchColor.textSecondary)
             }
-            .padding(.top, isFirst ? 0 : 16)
+            .padding(.top, isFirst ? 0 : 10)
 
-            if isFirst {
-                weekdayHeader
-            }
-
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 ForEach(Array(weeks(for: month).enumerated()), id: \.offset) { _, week in
                     HStack(spacing: 0) {
                         ForEach(week) { dayCell($0) }
                     }
                 }
-            }
-
-            if isFirst {
-                legendRow
             }
         }
         .task(id: monthKey(month)) {
@@ -85,28 +91,14 @@ struct MonthlyView: View {
         }
     }
 
+    /// 달마다 반복해서 그릴 필요가 없어 스크롤 영역 위에 한 번만 고정해 둡니다.
     private var weekdayHeader: some View {
         HStack(spacing: 0) {
             ForEach(weekdaySymbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.system(size: 8))
                     .foregroundStyle(WatchColor.textSecondary)
-                    .frame(width: cellWidth, height: 12)
-            }
-        }
-    }
-
-    private var legendRow: some View {
-        HStack(spacing: 8) {
-            ForEach(legend) { member in
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(member.color)
-                        .frame(width: 5, height: 5)
-                    Text(member.name)
-                        .font(.system(size: 8))
-                        .foregroundStyle(WatchColor.textSecondary)
-                }
+                    .frame(width: gridCellSize, height: weekdayHeaderHeight)
             }
         }
     }
@@ -124,7 +116,7 @@ struct MonthlyView: View {
                 }
             }
         }
-        .frame(width: cellWidth, height: cellWidth * 0.95)
+        .frame(width: gridCellSize, height: gridCellSize)
         .background(day.isToday ? Color("MemberRed") : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
@@ -186,7 +178,6 @@ struct MonthlyView: View {
 
 #Preview {
     MonthlyView(
-        legend: Array(MoilWatchSampleData.members.prefix(3)),
         colorForEvent: { _ in MoilWatchSampleData.members[0].color },
         loadEvents: { _ in [] }
     )

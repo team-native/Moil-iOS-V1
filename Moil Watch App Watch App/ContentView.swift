@@ -58,7 +58,6 @@ struct ContentView: View {
             .tag(0)
             NavigationStack {
                 MonthlyView(
-                    legend: Array(members.prefix(3)),
                     colorForEvent: { owner(for: $0).color },
                     loadEvents: { await loadEvents(for: $0) }
                 )
