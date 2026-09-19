@@ -8,13 +8,44 @@
 
 /* Begin PBXBuildFile section */
 		2B3D2ADE3059869B007F738E /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 2B3D2ADD3059869B007F738E /* FirebaseMessaging */; };
+		2BBE75DB305EC8FA00D911C8 /* Moil Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 2BBE75D1305EC8F900D911C8 /* Moil Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2BBE75D9305EC8FA00D911C8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E5B9F56E3015C4E400E19B7A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2BBE75D0305EC8F900D911C8;
+			remoteInfo = "Moil Watch App Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2BBE75DC305EC8FA00D911C8 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				2BBE75DB305EC8FA00D911C8 /* Moil Watch App Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		2BBE75D1305EC8F900D911C8 /* Moil Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Moil Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5B9F5763015C4E400E19B7A /* Moil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Moil.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		2BBE75D2305EC8F900D911C8 /* Moil Watch App Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Moil Watch App Watch App";
+			sourceTree = "<group>";
+		};
 		E5B9F5783015C4E400E19B7A /* Moil */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Moil;
@@ -23,6 +54,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2BBE75CE305EC8F900D911C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E5B9F5733015C4E400E19B7A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -38,6 +76,7 @@
 			isa = PBXGroup;
 			children = (
 				E5B9F5783015C4E400E19B7A /* Moil */,
+				2BBE75D2305EC8F900D911C8 /* Moil Watch App Watch App */,
 				E5B9F5773015C4E400E19B7A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				E5B9F5763015C4E400E19B7A /* Moil.app */,
+				2BBE75D1305EC8F900D911C8 /* Moil Watch App Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -53,6 +93,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2BBE75D0305EC8F900D911C8 /* Moil Watch App Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2BBE75DF305EC8FA00D911C8 /* Build configuration list for PBXNativeTarget "Moil Watch App Watch App" */;
+			buildPhases = (
+				2BBE75CD305EC8F900D911C8 /* Sources */,
+				2BBE75CE305EC8F900D911C8 /* Frameworks */,
+				2BBE75CF305EC8F900D911C8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				2BBE75D2305EC8F900D911C8 /* Moil Watch App Watch App */,
+			);
+			name = "Moil Watch App Watch App";
+			packageProductDependencies = (
+			);
+			productName = "Moil Watch App Watch App";
+			productReference = 2BBE75D1305EC8F900D911C8 /* Moil Watch App Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
 		E5B9F5753015C4E400E19B7A /* Moil */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E5B9F5813015C4E600E19B7A /* Build configuration list for PBXNativeTarget "Moil" */;
@@ -60,10 +122,12 @@
 				E5B9F5723015C4E400E19B7A /* Sources */,
 				E5B9F5733015C4E400E19B7A /* Frameworks */,
 				E5B9F5743015C4E400E19B7A /* Resources */,
+				2BBE75DC305EC8FA00D911C8 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				2BBE75DA305EC8FA00D911C8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E5B9F5783015C4E400E19B7A /* Moil */,
@@ -83,9 +147,12 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2610;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					2BBE75D0305EC8F900D911C8 = {
+						CreatedOnToolsVersion = 27.0;
+					};
 					E5B9F5753015C4E400E19B7A = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -109,11 +176,19 @@
 			projectRoot = "";
 			targets = (
 				E5B9F5753015C4E400E19B7A /* Moil */,
+				2BBE75D0305EC8F900D911C8 /* Moil Watch App Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		2BBE75CF305EC8F900D911C8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E5B9F5743015C4E400E19B7A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,6 +199,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2BBE75CD305EC8F900D911C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E5B9F5723015C4E400E19B7A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -133,7 +215,81 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2BBE75DA305EC8FA00D911C8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2BBE75D0305EC8F900D911C8 /* Moil Watch App Watch App */;
+			targetProxy = 2BBE75D9305EC8FA00D911C8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2BBE75DD305EC8FA00D911C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DZ9T8FU5CT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Moil Watch App";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.teamnative.Moil;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.teamnative.Moil.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		2BBE75DE305EC8FA00D911C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DZ9T8FU5CT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Moil Watch App";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.teamnative.Moil;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.teamnative.Moil.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
 		E5B9F57F3015C4E600E19B7A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -326,6 +482,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2BBE75DF305EC8FA00D911C8 /* Build configuration list for PBXNativeTarget "Moil Watch App Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2BBE75DD305EC8FA00D911C8 /* Debug */,
+				2BBE75DE305EC8FA00D911C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E5B9F5713015C4E400E19B7A /* Build configuration list for PBXProject "Moil" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
