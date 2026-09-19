@@ -69,11 +69,7 @@ struct ContentView: View {
                     colorForEvent: { owner(for: $0).color },
                     loadEvents: { await loadEvents(for: $0) }
                 )
-                // LazyVStack 안의 각 달 칸은 화면에 이미 그려지고 나면 SwiftUI가
-                // 캐시해 두고 잘 다시 안 그려서, WatchColor.isDarkMode를 바꿔도 이
-                // 화면만 한참 뒤에(다른 이유로 다시 그려질 때) 반영되는 문제가 있었습니다.
-                // 다크/라이트가 바뀌면 이 뷰 자체를 새로 만들어 확실히 새 색으로 그리게 합니다.
-                .id("\(resolvedGroupId ?? "")-\(sessionStore.isDarkMode)")
+                .id(resolvedGroupId)
             }
             .tag(1)
             NavigationStack {
@@ -106,6 +102,12 @@ struct ContentView: View {
             .tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .automatic))
+        // 실기기에서 다크/라이트가 바뀌어도 화면 밖에 있던 탭(특히 첫 번째 탭)이
+        // 예전 색 그대로 남아있는 문제가 보고됐습니다. 시뮬레이터로는 재현이 안 됐지만,
+        // 캘린더 화면에서 이미 확인된 것과 같은 종류의 문제로 보여(각 탭이 한 번 그려지고
+        // 나면 다시 안 그려짐), TabView 전체를 다크/라이트가 바뀔 때 통째로 새로 만들어
+        // 모든 탭이 확실히 새 색으로 그려지게 합니다.
+        .id(sessionStore.isDarkMode)
     }
 
     private var myProfile: FamilyMember? {
