@@ -56,7 +56,7 @@ struct ContentView: View {
                 .id(resolvedGroupId)
             }
             NavigationStack {
-                FamilyView(members: members, availability: todayAvailability)
+                FamilyView(members: members)
             }
             NavigationStack {
                 Group {
@@ -179,50 +179,6 @@ struct ContentView: View {
             attendees: attendees,
             attendingSummary: "\(attendees.count)명 참석"
         )
-    }
-
-    // MARK: - Family availability (오늘 일정 사이 빈 시간을 간단히 계산합니다)
-
-    private var todayAvailability: [AvailabilitySlot] {
-        let dayStart = 9 * 60
-        let dayEnd = 21 * 60
-        let busyRanges: [(Int, Int)] = todayItems.compactMap { item in
-            guard let minutes = minutes(from: item.time) else { return nil }
-            return (minutes, minutes + 60)
-        }.sorted { $0.0 < $1.0 }
-
-        var slots: [AvailabilitySlot] = []
-        var cursor = dayStart
-        for range in busyRanges {
-            if range.0 - cursor >= 30 {
-                slots.append(makeSlot(start: cursor, end: range.0))
-            }
-            cursor = max(cursor, range.1)
-        }
-        if dayEnd - cursor >= 30 {
-            slots.append(makeSlot(start: cursor, end: dayEnd, isOpenEnded: true))
-        }
-        return Array(slots.prefix(3))
-    }
-
-    private func minutes(from time: String) -> Int? {
-        let parts = time.split(separator: ":")
-        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return nil }
-        return hour * 60 + minute
-    }
-
-    private func makeSlot(start: Int, end: Int, isOpenEnded: Bool = false) -> AvailabilitySlot {
-        let range = isOpenEnded ? "\(timeString(start)) 이후" : "\(timeString(start))–\(timeString(end))"
-        return AvailabilitySlot(
-            id: "\(start)-\(end)",
-            timeRange: range,
-            summary: "\(members.count)명 모두",
-            indicatorColor: members.first?.color ?? WatchColor.textSecondary
-        )
-    }
-
-    private func timeString(_ minutes: Int) -> String {
-        String(format: "%02d:%02d", minutes / 60, minutes % 60)
     }
 
     // MARK: - Monthly

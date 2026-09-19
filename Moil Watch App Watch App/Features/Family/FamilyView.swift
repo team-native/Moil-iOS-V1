@@ -3,7 +3,6 @@ import SwiftUI
 /// 피그마 "Apple Watch · 가족" 화면입니다.
 struct FamilyView: View {
     let members: [FamilyMember]
-    let availability: [AvailabilitySlot]
 
     var body: some View {
         ScrollView {
@@ -14,12 +13,8 @@ struct FamilyView: View {
 
                 memberChips
 
-                Text("오늘 가능한 시간")
-                    .font(.system(size: 10))
-                    .foregroundStyle(WatchColor.textSecondary)
-
-                ForEach(availability) { slot in
-                    availabilityRow(slot)
+                ForEach(members) { member in
+                    memberRow(member)
                 }
             }
         }
@@ -45,18 +40,15 @@ struct FamilyView: View {
         }
     }
 
-    private func availabilityRow(_ slot: AvailabilitySlot) -> some View {
+    private func memberRow(_ member: FamilyMember) -> some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(slot.indicatorColor)
+                .fill(member.color)
                 .frame(width: 8, height: 8)
-            Text(slot.timeRange)
+            Text(member.name)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(WatchColor.textPrimary)
             Spacer(minLength: 0)
-            Text(slot.summary)
-                .font(.system(size: 9))
-                .foregroundStyle(WatchColor.textSecondary)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 8)
@@ -67,12 +59,5 @@ struct FamilyView: View {
 }
 
 #Preview {
-    FamilyView(
-        members: MoilWatchSampleData.members,
-        availability: [
-            AvailabilitySlot(id: "1", timeRange: "12:30–13:30", summary: "4명 모두", indicatorColor: MoilWatchSampleData.members[2].color),
-            AvailabilitySlot(id: "2", timeRange: "17:00–18:00", summary: "3명 가능", indicatorColor: MoilWatchSampleData.members[1].color),
-            AvailabilitySlot(id: "3", timeRange: "20:30 이후", summary: "4명 모두", indicatorColor: MoilWatchSampleData.members[3].color),
-        ]
-    )
+    FamilyView(members: MoilWatchSampleData.members)
 }
