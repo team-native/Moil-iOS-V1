@@ -10,6 +10,9 @@ struct ContentView: View {
     @State private var selectedItem: ScheduleItem?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    /// 가족일정을 가운데 두고, 오늘/캘린더를 양옆으로 스와이프해서 볼 수 있게 합니다.
+    /// 앱을 열 때마다 항상 가족일정이 먼저 보이도록 기본값을 가운데(1)로 둡니다.
+    @State private var selectedTab = 1
 
     private let calendar = Calendar.current
 
@@ -48,18 +51,7 @@ struct ContentView: View {
     }
 
     private var mainTabs: some View {
-        TabView {
-            NavigationStack {
-                MonthlyView(
-                    legend: Array(members.prefix(3)),
-                    colorForEvent: { owner(for: $0).color },
-                    loadEvents: { await loadEvents(for: $0) }
-                )
-                .id(resolvedGroupId)
-            }
-            NavigationStack {
-                FamilyView(members: members)
-            }
+        TabView(selection: $selectedTab) {
             NavigationStack {
                 Group {
                     if isLoading && remoteEvents.isEmpty && members.isEmpty {
@@ -85,6 +77,20 @@ struct ContentView: View {
                     }
                 }
             }
+            .tag(0)
+            NavigationStack {
+                FamilyView(members: members)
+            }
+            .tag(1)
+            NavigationStack {
+                MonthlyView(
+                    legend: Array(members.prefix(3)),
+                    colorForEvent: { owner(for: $0).color },
+                    loadEvents: { await loadEvents(for: $0) }
+                )
+                .id(resolvedGroupId)
+            }
+            .tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .automatic))
     }
