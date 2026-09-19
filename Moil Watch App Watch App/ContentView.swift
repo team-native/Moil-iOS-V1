@@ -69,7 +69,11 @@ struct ContentView: View {
                     colorForEvent: { owner(for: $0).color },
                     loadEvents: { await loadEvents(for: $0) }
                 )
-                .id(resolvedGroupId)
+                // LazyVStack 안의 각 달 칸은 화면에 이미 그려지고 나면 SwiftUI가
+                // 캐시해 두고 잘 다시 안 그려서, WatchColor.isDarkMode를 바꿔도 이
+                // 화면만 한참 뒤에(다른 이유로 다시 그려질 때) 반영되는 문제가 있었습니다.
+                // 다크/라이트가 바뀌면 이 뷰 자체를 새로 만들어 확실히 새 색으로 그리게 합니다.
+                .id("\(resolvedGroupId ?? "")-\(sessionStore.isDarkMode)")
             }
             .tag(1)
             NavigationStack {
