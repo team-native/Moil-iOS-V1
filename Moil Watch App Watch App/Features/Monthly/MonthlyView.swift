@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// 피그마 "Apple Watch · 월간" 화면입니다.
 /// 아이폰 앱(CalendarView)과 동일하게, 달을 하나씩 넘기는 대신 여러 달을 이어붙여
@@ -15,6 +16,13 @@ struct MonthlyView: View {
 
     private let calendar = Calendar.current
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
+
+    /// NavigationStack/ScrollView가 주는 여백 때문에 containerRelativeFrame이 실제
+    /// 화면보다 좁게 잡혀 달력 칸이 작아 보이는 문제가 있어, 실제 화면 폭을 기준으로
+    /// 7등분해 칸 크기를 직접 계산합니다. 워치마다 화면 크기가 달라 값도 자동으로 맞춰집니다.
+    private var cellWidth: CGFloat {
+        WKInterfaceDevice.current().screenBounds.width / 7
+    }
 
     private static func makeMonthsWindow() -> [Date] {
         let calendar = Calendar.current
@@ -83,8 +91,7 @@ struct MonthlyView: View {
                 Text(symbol)
                     .font(.system(size: 8))
                     .foregroundStyle(WatchColor.textSecondary)
-                    .containerRelativeFrame(.horizontal, count: 7, spacing: 0)
-                    .frame(height: 12)
+                    .frame(width: cellWidth, height: 12)
             }
         }
     }
@@ -117,8 +124,7 @@ struct MonthlyView: View {
                 }
             }
         }
-        .containerRelativeFrame(.horizontal, count: 7, spacing: 0)
-        .aspectRatio(0.95, contentMode: .fit)
+        .frame(width: cellWidth, height: cellWidth * 0.95)
         .background(day.isToday ? Color("MemberRed") : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
