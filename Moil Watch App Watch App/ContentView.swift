@@ -155,7 +155,8 @@ struct ContentView: View {
 
     private var todayItems: [ScheduleItem] {
         remoteEvents
-            .filter { $0.date == todayDateString }
+            // 여러 날에 걸친 일정은 시작일이 아니어도 오늘이 그 기간에 포함되면 보여줍니다.
+            .filter { $0.dateStrings().contains(todayDateString) }
             .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
             .map { event in
                 ScheduleItem(

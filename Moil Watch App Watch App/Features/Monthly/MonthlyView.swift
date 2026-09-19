@@ -73,6 +73,12 @@ struct MonthlyView: View {
             eventsByMonthKey = [:]
         }
         .background(WatchColor.background)
+        // 맨 위 시간 표시 쪽과 살짝 자연스럽게 이어지도록 아주 얇게 페이드를 줍니다.
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [WatchColor.background, WatchColor.background.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 10)
+                .allowsHitTesting(false)
+        }
     }
 
     @ViewBuilder
@@ -172,9 +178,12 @@ struct MonthlyView: View {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         var colorByDay: [Int: Color] = [:]
         for event in eventsByMonthKey[monthKey(month)] ?? [] {
-            guard let date = dateFormatter.date(from: event.date),
-                  calendar.isDate(date, equalTo: month, toGranularity: .month) else { continue }
-            colorByDay[calendar.component(.day, from: date)] = colorForEvent(event)
+            // 여러 날에 걸친 일정은 시작일뿐 아니라 겹치는 모든 날짜에 점을 표시합니다.
+            for dateString in event.dateStrings() {
+                guard let date = dateFormatter.date(from: dateString),
+                      calendar.isDate(date, equalTo: month, toGranularity: .month) else { continue }
+                colorByDay[calendar.component(.day, from: date)] = colorForEvent(event)
+            }
         }
 
         var cells: [MonthDay] = (0..<leadingBlankDays).map { MonthDay(id: -($0 + 1), day: nil, isToday: false, eventColor: nil) }

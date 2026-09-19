@@ -160,7 +160,7 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         } else {
             date = Self.dateOnly(from: try container.decode(String.self, forKey: .date))
         }
-        endDate = try? container.decode(String.self, forKey: .endDate)
+        endDate = (try? container.decode(String.self, forKey: .endDate)).map(Self.dateOnly)
         members = (try? container.decode([MoilEventMember].self, forKey: .members))
             ?? (try? container.decode([MoilEventMember].self, forKey: .sharedMembers))
             ?? []
@@ -193,6 +193,26 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     /// (아이폰 앱의 MoilCalendarDate.normalizedString과 같은 이유의 처리입니다.)
     private static func dateOnly(from value: String) -> String {
         String(value.prefix(10))
+    }
+}
+
+extension MoilRemoteEvent {
+    /// 일정이 여러 날에 걸쳐 있을 때 시작일에만 반응하지 않고 기간 전체("yyyy-MM-dd" 문자열)에
+    /// 반응하도록 합니다. 아이폰 앱 CalendarEvent.dates(in:)와 같은 이유의 처리입니다.
+    func dateStrings(calendar: Calendar = .current) -> [String] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let start = formatter.date(from: date) else { return [date] }
+        let end = endDate.flatMap { formatter.date(from: $0) } ?? start
+        guard end >= start else { return [date] }
+        var result: [String] = []
+        var cursor = start
+        while cursor <= end {
+            result.append(formatter.string(from: cursor))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return result
     }
 }
 
