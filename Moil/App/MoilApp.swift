@@ -41,6 +41,7 @@ struct MoilApp: App {
                 }
                 .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }
                 .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
+                .onChange(of: isDarkMode) { _, _ in syncWatch() }
                 .onAppear {
                     MoilWatchConnectivityManager.shared.onActivated = { syncWatch() }
                     MoilWatchConnectivityManager.shared.activate()
@@ -54,7 +55,8 @@ struct MoilApp: App {
         MoilWatchConnectivityManager.shared.sync(
             accessToken: sessionStore.accessToken,
             refreshToken: sessionStore.refreshToken,
-            groupId: groupStore.selectedGroupId
+            groupId: groupStore.selectedGroupId,
+            isDarkMode: isDarkMode
         )
     }
 }

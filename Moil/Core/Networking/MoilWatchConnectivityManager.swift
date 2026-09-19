@@ -23,12 +23,13 @@ final class MoilWatchConnectivityManager: NSObject {
         WCSession.default.activate()
     }
 
-    func sync(accessToken: String?, refreshToken: String?, groupId: String?) {
+    func sync(accessToken: String?, refreshToken: String?, groupId: String?, isDarkMode: Bool) {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
         var context: [String: Any] = [:]
         context["accessToken"] = accessToken
         context["refreshToken"] = refreshToken
         context["groupId"] = groupId
+        context["isDarkMode"] = isDarkMode
         try? WCSession.default.updateApplicationContext(context)
     }
 }

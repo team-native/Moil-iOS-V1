@@ -20,6 +20,7 @@ struct ContentView: View {
                 mainTabs
             }
         }
+        .preferredColorScheme(sessionStore.isDarkMode ? .dark : .light)
         .task(id: "\(sessionStore.accessToken ?? "")-\(sessionStore.groupId ?? "")") {
             await load()
         }

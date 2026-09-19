@@ -70,7 +70,7 @@ struct ScheduleDetailView: View {
     }
 
     private var attendButton: some View {
-        Text(isAttending ? "참석해요" : "참석할게요")
+        Text(isAttending ? "참석 완료" : "참석하기")
             .font(.system(size: 11, weight: .bold))
             .foregroundStyle(WatchColor.textPrimary)
             .frame(maxWidth: .infinity)
