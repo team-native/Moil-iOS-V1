@@ -18,23 +18,22 @@ struct MonthlyView: View {
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let weekdayHeaderHeight: CGFloat = 15
 
-    /// 스크롤 방식은 그대로 두고, 한 달(최대 6주)이 스크롤 없이 화면 안에 통째로
-    /// 들어오도록 칸 크기를 화면 폭/높이 둘 다에 맞춰 계산합니다. 요일 줄(고정)과 매
-    /// 달 제목 줄이 차지하는 만큼을 뺀 나머지를 6주로 나눈 값과, 화면 폭을 7로 나눈
-    /// 값 중 작은 쪽을 씁니다. 워치마다 화면 크기가 달라 값도 자동으로 맞춰집니다.
-    private var gridCellSize: CGFloat {
+    /// 칸 너비는 화면 폭을 7등분한 값으로 고정해 항상 화면을 꽉 채웁니다(왼쪽으로 쏠려
+    /// 오른쪽에 빈 공간이 남는 문제 방지). 높이만 따로, 한 달(최대 6주)이 스크롤 없이
+    /// 화면에 다 들어오도록 계산해서 너비보다 작아질 수는 있어도 너비를 줄이지는 않습니다.
+    private var cellWidth: CGFloat {
+        WKInterfaceDevice.current().screenBounds.width / 7
+    }
+
+    private var cellHeight: CGFloat {
         let bounds = WKInterfaceDevice.current().screenBounds
-        let widthBudget = bounds.width / 7
-        let topInset: CGFloat = 6 // 요일 줄이 화면 모서리 곡선에 안 잘리게 두는 여유
-        let perMonthTitleHeight: CGFloat = 30
+        let topInset: CGFloat = 2
+        let perMonthTitleHeight: CGFloat = 26
         let weekRowSpacing: CGFloat = 2 * 5
         // 페이지 인디케이터(점)가 화면 맨 아래에 겹쳐 그려져 마지막 주가 가려지므로 여유를 더 둡니다.
-        let pageIndicatorMargin: CGFloat = 22
-        let heightBudget = max(
-            18,
-            (bounds.height - topInset - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin) / 6
-        )
-        return min(widthBudget, heightBudget)
+        let pageIndicatorMargin: CGFloat = 20
+        let available = bounds.height - topInset - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin
+        return min(cellWidth, max(16, available / 6))
     }
 
     private static func makeMonthsWindow() -> [Date] {
@@ -46,7 +45,7 @@ struct MonthlyView: View {
     var body: some View {
         VStack(spacing: 2) {
             weekdayHeader
-                .padding(.top, 6)
+                .padding(.top, 2)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(monthsWindow, id: \.self) { month in
@@ -108,7 +107,7 @@ struct MonthlyView: View {
                 Text(symbol)
                     .font(.system(size: 8))
                     .foregroundStyle(WatchColor.textSecondary)
-                    .frame(width: gridCellSize, height: weekdayHeaderHeight)
+                    .frame(width: cellWidth, height: weekdayHeaderHeight)
             }
         }
     }
@@ -126,7 +125,7 @@ struct MonthlyView: View {
                 }
             }
         }
-        .frame(width: gridCellSize, height: gridCellSize)
+        .frame(width: cellWidth, height: cellHeight)
         .background(day.isToday ? Color("MemberRed") : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }

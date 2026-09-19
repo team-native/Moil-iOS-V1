@@ -156,9 +156,9 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         id = try container.string(for: [.id, .eventId])
         title = try container.decode(String.self, forKey: .title)
         if let startDate = try? container.decode(String.self, forKey: .startDate) {
-            date = startDate
+            date = Self.dateOnly(from: startDate)
         } else {
-            date = try container.decode(String.self, forKey: .date)
+            date = Self.dateOnly(from: try container.decode(String.self, forKey: .date))
         }
         endDate = try? container.decode(String.self, forKey: .endDate)
         members = (try? container.decode([MoilEventMember].self, forKey: .members))
@@ -186,6 +186,13 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         let components = dateTime.split(separator: " ", maxSplits: 1)
         guard components.count == 2 else { return nil }
         return String(components[1].prefix(5))
+    }
+
+    /// 서버가 `yyyy-MM-dd` 대신 `yyyy-MM-dd HH:mm:ss` 같은 전체 날짜시간 문자열을
+    /// 줄 때가 있어, 이후 코드가 항상 순수 날짜 문자열만 다루도록 앞 10글자로 자릅니다.
+    /// (아이폰 앱의 MoilCalendarDate.normalizedString과 같은 이유의 처리입니다.)
+    private static func dateOnly(from value: String) -> String {
+        String(value.prefix(10))
     }
 }
 
