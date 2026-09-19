@@ -7,6 +7,11 @@ import WatchConnectivity
 @MainActor
 final class MoilWatchConnectivityManager: NSObject {
     static let shared = MoilWatchConnectivityManager()
+    /// WCSession.activate()는 비동기라, activate() 직후 곧바로 sync를 호출하면
+    /// 아직 .activated 상태가 아니어서 조용히 무시될 수 있습니다(특히 이미 로그인된 채로
+    /// 앱을 다시 켠 경우, 그 이후로는 토큰이 바뀔 일이 없어 재시도 기회도 없었습니다).
+    /// 활성화가 실제로 끝난 시점에 한 번 더 보내도록 콜백을 둡니다.
+    var onActivated: (() -> Void)?
 
     private override init() {
         super.init()
@@ -29,7 +34,12 @@ final class MoilWatchConnectivityManager: NSObject {
 }
 
 extension MoilWatchConnectivityManager: WCSessionDelegate {
-    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: (any Error)?) { }
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: (any Error)?) {
+        guard activationState == .activated else { return }
+        Task { @MainActor in
+            MoilWatchConnectivityManager.shared.onActivated?()
+        }
+    }
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) { }
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
         session.activate()

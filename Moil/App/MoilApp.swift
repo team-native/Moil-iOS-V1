@@ -42,8 +42,8 @@ struct MoilApp: App {
                 .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }
                 .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
                 .onAppear {
+                    MoilWatchConnectivityManager.shared.onActivated = { syncWatch() }
                     MoilWatchConnectivityManager.shared.activate()
-                    syncWatch()
                 }
         }
     }
