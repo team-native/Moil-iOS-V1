@@ -4,6 +4,7 @@ struct ContentView: View {
     @StateObject private var sessionStore = MoilWatchSessionStore()
 
     @State private var groupName = ""
+    @State private var resolvedGroupId: String?
     @State private var members: [FamilyMember] = []
     @State private var remoteEvents: [MoilRemoteEvent] = []
     @State private var selectedItem: ScheduleItem?
@@ -13,14 +14,17 @@ struct ContentView: View {
     private let calendar = Calendar.current
 
     var body: some View {
-        Group {
+        // 자식 뷰들이 WatchColor.xxx를 읽기 전에, 이번 렌더링에서 쓸 다크/라이트 값을
+        // 먼저 맞춰 둡니다. watchOS는 Assets.xcassets의 다크 모드 색상을 자동으로
+        // 전환해 주지 않아(WatchColor.swift 참고) 코드에서 직접 전달해야 합니다.
+        WatchColor.isDarkMode = sessionStore.isDarkMode
+        return Group {
             if !sessionStore.isAuthenticated {
                 waitingForPhoneView
             } else {
                 mainTabs
             }
         }
-        .preferredColorScheme(sessionStore.isDarkMode ? .dark : .light)
         .task(id: "\(sessionStore.accessToken ?? "")-\(sessionStore.groupId ?? "")") {
             await load()
         }
@@ -43,6 +47,17 @@ struct ContentView: View {
 
     private var mainTabs: some View {
         TabView {
+            NavigationStack {
+                MonthlyView(
+                    legend: Array(members.prefix(3)),
+                    colorForEvent: { owner(for: $0).color },
+                    loadEvents: { await loadEvents(for: $0) }
+                )
+                .id(resolvedGroupId)
+            }
+            NavigationStack {
+                FamilyView(members: members, availability: todayAvailability)
+            }
             NavigationStack {
                 Group {
                     if isLoading && remoteEvents.isEmpty && members.isEmpty {
@@ -68,18 +83,6 @@ struct ContentView: View {
                     }
                 }
             }
-            NavigationStack {
-                FamilyView(members: members, availability: todayAvailability)
-            }
-            NavigationStack {
-                MonthlyView(
-                    monthTitle: monthTitle,
-                    yearTitle: yearTitle,
-                    weekdaySymbols: ["일", "월", "화", "수", "목", "금", "토"],
-                    weeks: monthWeeks,
-                    legend: Array(members.prefix(3))
-                )
-            }
         }
         .tabViewStyle(.page(indexDisplayMode: .automatic))
     }
@@ -97,6 +100,7 @@ struct ContentView: View {
                 return
             }
             groupName = group.name
+            resolvedGroupId = group.id
             async let membersTask = service.members(groupId: group.id)
             async let eventsTask = service.events(groupId: group.id, month: monthRequestValue)
             let (remoteMembers, events) = try await (membersTask, eventsTask)
@@ -228,48 +232,16 @@ struct ContentView: View {
         return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
     }
 
-    private var monthTitle: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월"
-        return formatter.string(from: Date())
-    }
-
-    private var yearTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy"
-        return formatter.string(from: Date())
-    }
-
-    private var monthWeeks: [[MonthDay]] {
-        let today = Date()
-        guard
-            let monthInterval = calendar.dateInterval(of: .month, for: today),
-            let daysInMonth = calendar.range(of: .day, in: .month, for: today)?.count
-        else { return [] }
-
-        let firstWeekday = calendar.component(.weekday, from: monthInterval.start)
-        let leadingBlankDays = (firstWeekday - calendar.firstWeekday + 7) % 7
-        let todayDay = calendar.component(.day, from: today)
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        var colorByDay: [Int: Color] = [:]
-        for event in remoteEvents {
-            guard let date = dateFormatter.date(from: event.date),
-                  calendar.isDate(date, equalTo: today, toGranularity: .month) else { continue }
-            let day = calendar.component(.day, from: date)
-            colorByDay[day] = owner(for: event).color
+    /// 연속 스크롤 달력이 화면에 걸린 달을 하나씩 불러올 때 사용합니다.
+    private func loadEvents(for month: Date) async -> [MoilRemoteEvent] {
+        guard let resolvedGroupId else { return [] }
+        let components = calendar.dateComponents([.year, .month], from: month)
+        let monthValue = String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+        do {
+            return try await sessionStore.service().events(groupId: resolvedGroupId, month: monthValue)
+        } catch {
+            return []
         }
-
-        var cells: [MonthDay] = (0..<leadingBlankDays).map { MonthDay(id: -($0 + 1), day: nil, isToday: false, eventColor: nil) }
-        cells += (1...daysInMonth).map { day in
-            MonthDay(id: day, day: day, isToday: day == todayDay, eventColor: colorByDay[day])
-        }
-        while cells.count % 7 != 0 {
-            cells.append(MonthDay(id: -(1000 + cells.count), day: nil, isToday: false, eventColor: nil))
-        }
-        return stride(from: 0, to: cells.count, by: 7).map { Array(cells[$0..<$0 + 7]) }
     }
 }
 
