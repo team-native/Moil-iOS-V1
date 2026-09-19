@@ -39,6 +39,24 @@ struct MoilApp: App {
                     guard isAuthenticated else { return }
                     MoilPushNotificationManager.shared.requestAuthorization()
                 }
+                .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }
+                .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
+                .onChange(of: isDarkMode) { _, _ in syncWatch() }
+                .onAppear {
+                    MoilWatchConnectivityManager.shared.onActivated = { syncWatch() }
+                    MoilWatchConnectivityManager.shared.activate()
+                }
         }
+    }
+
+    /// 워치는 자체 로그인 화면이 없으므로, 아이폰의 로그인 세션과 선택된 그룹을
+    /// 바뀔 때마다 워치로 넘겨 그대로 이어서 서버에 접속할 수 있게 합니다.
+    private func syncWatch() {
+        MoilWatchConnectivityManager.shared.sync(
+            accessToken: sessionStore.accessToken,
+            refreshToken: sessionStore.refreshToken,
+            groupId: groupStore.selectedGroupId,
+            isDarkMode: isDarkMode
+        )
     }
 }

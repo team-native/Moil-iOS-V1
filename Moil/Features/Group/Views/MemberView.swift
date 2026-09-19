@@ -168,6 +168,14 @@ struct MemberView: View {
                     Button(group.name) {
                         selectedGroupId = group.id
                         groupStore.selectGroup(group.id)
+                        // 루트(MoilApp)의 onChange가 늦게 반응하는 경우를 대비해
+                        // 그룹을 고르는 이 지점에서도 바로 워치 동기화를 트리거합니다.
+                        MoilWatchConnectivityManager.shared.sync(
+                            accessToken: sessionStore.accessToken,
+                            refreshToken: sessionStore.refreshToken,
+                            groupId: group.id,
+                            isDarkMode: isDarkMode
+                        )
                     }
                     .font(MoilTypography.semibold(13))
                     .foregroundStyle(selectedGroup?.id == group.id ? .white : MoilColor.textSecondary)
