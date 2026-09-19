@@ -9,6 +9,7 @@ struct MonthlyView: View {
     let colorForEvent: (MoilRemoteEvent) -> Color
     let loadEvents: (Date) async -> [MoilRemoteEvent]
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var monthsWindow: [Date] = MonthlyView.makeMonthsWindow()
     @State private var scrollPositionMonth: Date?
     @State private var eventsByMonthKey: [String: [MoilRemoteEvent]] = [:]
@@ -24,13 +25,14 @@ struct MonthlyView: View {
     private var gridCellSize: CGFloat {
         let bounds = WKInterfaceDevice.current().screenBounds
         let widthBudget = bounds.width / 7
+        let topInset: CGFloat = 6 // 요일 줄이 화면 모서리 곡선에 안 잘리게 두는 여유
         let perMonthTitleHeight: CGFloat = 30
         let weekRowSpacing: CGFloat = 2 * 5
         // 페이지 인디케이터(점)가 화면 맨 아래에 겹쳐 그려져 마지막 주가 가려지므로 여유를 더 둡니다.
         let pageIndicatorMargin: CGFloat = 22
         let heightBudget = max(
             18,
-            (bounds.height - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin) / 6
+            (bounds.height - topInset - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin) / 6
         )
         return min(widthBudget, heightBudget)
     }
@@ -44,6 +46,7 @@ struct MonthlyView: View {
     var body: some View {
         VStack(spacing: 2) {
             weekdayHeader
+                .padding(.top, 6)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(monthsWindow, id: \.self) { month in
@@ -59,6 +62,13 @@ struct MonthlyView: View {
             guard scrollPositionMonth == nil else { return }
             let today = Date()
             scrollPositionMonth = monthsWindow.first { calendar.isDate($0, equalTo: today, toGranularity: .month) }
+        }
+        // 이미 불러온 달은 다시 요청하지 않게 캐시해 두는데, 그러면 아이폰에서 새로
+        // 추가한 일정이 워치를 다시 열어도 안 보일 수 있어 화면이 다시 활성화될 때마다
+        // 캐시를 비워 화면에 걸린 달들이 새로 로딩되게 합니다.
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            eventsByMonthKey = [:]
         }
         .background(WatchColor.background)
     }

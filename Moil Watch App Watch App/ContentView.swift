@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var sessionStore = MoilWatchSessionStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var groupName = ""
     @State private var resolvedGroupId: String?
@@ -30,6 +31,13 @@ struct ContentView: View {
         }
         .task(id: "\(sessionStore.accessToken ?? "")-\(sessionStore.groupId ?? "")") {
             await load()
+        }
+        // 손목을 내렸다 다시 올리는 정도로는 앱이 사라지지 않아 위 task가 다시 안 돌 수
+        // 있어서, 화면이 다시 활성화될 때마다(워치 앱을 다시 열 때마다) 최신 일정을
+        // 새로 받아오도록 합니다. 아이폰에서 방금 추가한 일정이 바로 반영되게 하기 위함입니다.
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await load() }
         }
     }
 
