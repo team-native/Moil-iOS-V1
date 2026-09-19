@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 /// 피그마 "Apple Watch · 일정 상세" 화면입니다.
 struct ScheduleDetailView: View {
@@ -53,19 +54,22 @@ struct ScheduleDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 13))
     }
 
+    /// 참석자가 많아 화면 너비를 넘어가도 잘리지 않도록, 이 줄만 옆으로 스크롤할 수 있게 합니다.
     private var rsvpRow: some View {
-        HStack(spacing: 6) {
-            ForEach(event.attendees) { attendee in
-                Text(attendee.initial)
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(WatchColor.textPrimary)
-                    .frame(width: 26, height: 26)
-                    .background(attendee.color)
-                    .clipShape(RoundedRectangle(cornerRadius: 13))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(event.attendees) { attendee in
+                    Text(attendee.initial)
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(WatchColor.textPrimary)
+                        .frame(width: 26, height: 26)
+                        .background(attendee.color)
+                        .clipShape(RoundedRectangle(cornerRadius: 13))
+                }
+                Text(event.attendingSummary)
+                    .font(.system(size: 10))
+                    .foregroundStyle(WatchColor.textSecondary)
             }
-            Text(event.attendingSummary)
-                .font(.system(size: 10))
-                .foregroundStyle(WatchColor.textSecondary)
         }
     }
 
@@ -79,6 +83,7 @@ struct ScheduleDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .onTapGesture(count: 2) {
                 isAttending = true
+                WKInterfaceDevice.current().play(.success)
             }
     }
 }

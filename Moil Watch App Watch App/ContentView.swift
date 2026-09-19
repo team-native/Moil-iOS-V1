@@ -32,9 +32,7 @@ struct ContentView: View {
 
     private var waitingForPhoneView: some View {
         VStack(spacing: 8) {
-            Image(systemName: "iphone.and.arrow.forward")
-                .font(.system(size: 22))
-                .foregroundStyle(WatchColor.textSecondary)
+            moilMascot(size: 44)
             Text("아이폰의 Moil 앱에서\n로그인하면 자동으로 연결돼요")
                 .multilineTextAlignment(.center)
                 .font(.system(size: 12))
@@ -43,6 +41,10 @@ struct ContentView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WatchColor.background)
+    }
+
+    private func moilMascot(size: CGFloat, pulsing: Bool = false) -> some View {
+        MoilMascotView(size: size, pulsing: pulsing)
     }
 
     private var mainTabs: some View {
@@ -61,7 +63,7 @@ struct ContentView: View {
             NavigationStack {
                 Group {
                     if isLoading && remoteEvents.isEmpty && members.isEmpty {
-                        ProgressView().tint(WatchColor.textSecondary)
+                        moilMascot(size: 36, pulsing: true)
                     } else if let errorMessage {
                         Text(errorMessage)
                             .font(.system(size: 11))
@@ -198,6 +200,29 @@ struct ContentView: View {
         } catch {
             return []
         }
+    }
+}
+
+/// 로딩/연결 대기 화면에서 공통으로 쓰는 Moil 마스코트입니다. 시스템 스피너나 기본
+/// SF Symbol 대신 브랜드 로고를 보여줘 워치 로딩 화면이 기본 아이콘처럼 보이지 않게 합니다.
+private struct MoilMascotView: View {
+    let size: CGFloat
+    var pulsing = false
+
+    @State private var isPulsing = false
+
+    var body: some View {
+        Image("MoilMascot")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .opacity(pulsing && isPulsing ? 0.55 : 1)
+            .onAppear {
+                guard pulsing else { return }
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                    isPulsing = true
+                }
+            }
     }
 }
 
