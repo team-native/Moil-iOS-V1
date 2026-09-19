@@ -61,7 +61,7 @@ struct ContentView: View {
     private var mainTabs: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                FamilyView(members: members)
+                FamilyView(groupName: groupName, members: members, availability: [])
             }
             .tag(0)
             NavigationStack {
@@ -90,10 +90,12 @@ struct ContentView: View {
                             groupName: groupName,
                             dateTitle: todayTitle,
                             items: todayItems,
+                            myProfile: myProfile,
                             onSelect: { selectedItem = $0 }
                         )
                     }
                 }
+                .animation(.easeInOut(duration: 0.25), value: isLoading)
                 .background(WatchColor.background)
                 .navigationDestination(item: $selectedItem) { item in
                     if let detail = eventDetail(for: item) {
@@ -104,6 +106,10 @@ struct ContentView: View {
             .tag(2)
         }
         .tabViewStyle(.page(indexDisplayMode: .automatic))
+    }
+
+    private var myProfile: FamilyMember? {
+        members.first { $0.isMe }
     }
 
     private func load() async {

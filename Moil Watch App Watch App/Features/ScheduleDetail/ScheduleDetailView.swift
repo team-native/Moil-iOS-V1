@@ -11,7 +11,7 @@ struct ScheduleDetailView: View {
             VStack(alignment: .leading, spacing: 9) {
                 Text("\(event.owner.name) 일정")
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(WatchColor.textPrimary)
+                    .foregroundStyle(WatchColor.onAccent)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
                     .background(event.owner.color)
@@ -61,7 +61,7 @@ struct ScheduleDetailView: View {
                 ForEach(event.attendees) { attendee in
                     Text(attendee.initial)
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(WatchColor.textPrimary)
+                        .foregroundStyle(WatchColor.onAccent)
                         .frame(width: 26, height: 26)
                         .background(attendee.color)
                         .clipShape(RoundedRectangle(cornerRadius: 13))
@@ -76,7 +76,7 @@ struct ScheduleDetailView: View {
     private var attendButton: some View {
         Text(isAttending ? "참석 완료" : "참석하기")
             .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(WatchColor.textPrimary)
+            .foregroundStyle(WatchColor.onAccent)
             .frame(maxWidth: .infinity)
             .frame(height: 36)
             .background(event.owner.color)

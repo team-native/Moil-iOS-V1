@@ -23,4 +23,8 @@ enum WatchColor {
     static var textSecondary: Color {
         isDarkMode ? Color(red: 0.608, green: 0.596, blue: 0.569) : Color(red: 0.365, green: 0.341, blue: 0.318)
     }
+
+    /// 멤버 색상 칩, 참석 버튼, 오늘 날짜 강조처럼 채도 높은 배경 위에 올라가는 글자용입니다.
+    /// 배경 자체가 이미 색이 있어 다크/화이트 모드를 따라가면 안 되므로 항상 흰색으로 고정합니다.
+    static let onAccent = Color.white
 }

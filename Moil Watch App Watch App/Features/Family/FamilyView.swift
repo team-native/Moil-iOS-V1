@@ -2,21 +2,32 @@ import SwiftUI
 
 /// 피그마 "Apple Watch · 가족" 화면입니다.
 struct FamilyView: View {
+    let groupName: String
     let members: [FamilyMember]
+    /// 백엔드 API가 아직 없어 항상 빈 배열입니다. 연결되면 이 화면은 그대로 두고
+    /// ContentView에서 실제 값을 채워 넣기만 하면 됩니다.
+    let availability: [AvailabilitySlot]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text("가족 일정")
+                Text(groupName)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(WatchColor.textPrimary)
 
                 memberChips
 
-                ForEach(members) { member in
-                    memberRow(member)
+                if !availability.isEmpty {
+                    Text("오늘 가능한 시간")
+                        .font(.system(size: 10))
+                        .foregroundStyle(WatchColor.textSecondary)
+
+                    ForEach(availability) { slot in
+                        availabilityRow(slot)
+                    }
                 }
             }
+            .padding(.horizontal, 4)
         }
         .background(WatchColor.background)
     }
@@ -28,7 +39,7 @@ struct FamilyView: View {
                 ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
                     Text(member.initial)
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(WatchColor.textPrimary)
+                        .foregroundStyle(WatchColor.onAccent)
                         .frame(width: 30, height: 30)
                         .background(member.color)
                         .clipShape(RoundedRectangle(cornerRadius: 15))
@@ -43,15 +54,18 @@ struct FamilyView: View {
         }
     }
 
-    private func memberRow(_ member: FamilyMember) -> some View {
+    private func availabilityRow(_ slot: AvailabilitySlot) -> some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(member.color)
+                .fill(slot.indicatorColor)
                 .frame(width: 8, height: 8)
-            Text(member.name)
+            Text(slot.timeRange)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(WatchColor.textPrimary)
             Spacer(minLength: 0)
+            Text(slot.summary)
+                .font(.system(size: 9))
+                .foregroundStyle(WatchColor.textSecondary)
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 8)
@@ -62,5 +76,5 @@ struct FamilyView: View {
 }
 
 #Preview {
-    FamilyView(members: MoilWatchSampleData.members)
+    FamilyView(groupName: "우리 가족", members: MoilWatchSampleData.members, availability: [])
 }

@@ -5,6 +5,7 @@ struct TodayView: View {
     let groupName: String
     let dateTitle: String
     let items: [ScheduleItem]
+    let myProfile: FamilyMember?
     let onSelect: (ScheduleItem) -> Void
 
     private var nextItem: ScheduleItem? { items.first }
@@ -28,6 +29,7 @@ struct TodayView: View {
                     .font(.system(size: 9))
                     .foregroundStyle(WatchColor.textSecondary)
             }
+            .padding(.horizontal, 4)
         }
         .background(WatchColor.background)
     }
@@ -43,6 +45,20 @@ struct TodayView: View {
                     .foregroundStyle(WatchColor.textPrimary)
             }
             Spacer(minLength: 0)
+            profileCircle
+        }
+    }
+
+    @ViewBuilder
+    private var profileCircle: some View {
+        if let myProfile {
+            Text(myProfile.initial)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(WatchColor.onAccent)
+                .frame(width: 28, height: 28)
+                .background(myProfile.color)
+                .clipShape(Circle())
+        } else {
             Circle()
                 .fill(WatchColor.surface)
                 .frame(width: 28, height: 28)
@@ -97,6 +113,7 @@ struct TodayView: View {
             ScheduleItem(id: "2", time: "18:30", title: "나 팀 회의", owner: MoilWatchSampleData.members[2]),
             ScheduleItem(id: "3", time: "20:00", title: "저녁 약속", owner: MoilWatchSampleData.members[0]),
         ],
+        myProfile: MoilWatchSampleData.members[2],
         onSelect: { _ in }
     )
 }

@@ -126,7 +126,7 @@ struct MonthlyView: View {
             if let value = day.day {
                 Text("\(value)")
                     .font(.system(size: 10, weight: day.isToday ? .semibold : .regular))
-                    .foregroundStyle(WatchColor.textPrimary)
+                    .foregroundStyle(day.isToday ? WatchColor.onAccent : WatchColor.textPrimary)
                 if let eventColor = day.eventColor {
                     Circle()
                         .fill(eventColor)
