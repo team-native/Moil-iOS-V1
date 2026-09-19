@@ -11,7 +11,7 @@ struct FamilyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                Text(groupName)
+                Text("\(groupName)일정")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(WatchColor.textPrimary)
 
