@@ -18,11 +18,13 @@ struct MonthlyView: View {
     private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
     private let weekdayHeaderHeight: CGFloat = 15
 
-    /// 칸 너비는 화면 폭을 7등분한 값으로 고정해 항상 화면을 꽉 채웁니다(왼쪽으로 쏠려
-    /// 오른쪽에 빈 공간이 남는 문제 방지). 높이만 따로, 한 달(최대 6주)이 스크롤 없이
-    /// 화면에 다 들어오도록 계산해서 너비보다 작아질 수는 있어도 너비를 줄이지는 않습니다.
+    /// 실기기(특히 Ultra처럼 모서리가 많이 둥근 화면)에서는 맨 오른쪽 열(토요일)
+    /// 숫자가 곡선 모서리에 걸려 잘려 보였습니다. 화면 양쪽에 살짝 여유를 두고 그
+    /// 안에서 7등분해, 맨 왼쪽·오른쪽 칸도 곡선에 닿지 않게 합니다.
+    private let horizontalSafetyMargin: CGFloat = 12
+
     private var cellWidth: CGFloat {
-        WKInterfaceDevice.current().screenBounds.width / 7
+        (WKInterfaceDevice.current().screenBounds.width - horizontalSafetyMargin) / 7
     }
 
     private var cellHeight: CGFloat {
@@ -30,8 +32,8 @@ struct MonthlyView: View {
         let topInset: CGFloat = 2
         let perMonthTitleHeight: CGFloat = 26
         let weekRowSpacing: CGFloat = 2 * 5
-        // 페이지 인디케이터(점)가 화면 맨 아래에 겹쳐 그려져 마지막 주가 가려지므로 여유를 더 둡니다.
-        let pageIndicatorMargin: CGFloat = 20
+        // 페이지 인디케이터(점)와 화면 아래쪽 곡선 모서리에 마지막 주가 가려지므로 여유를 넉넉히 둡니다.
+        let pageIndicatorMargin: CGFloat = 28
         let available = bounds.height - topInset - weekdayHeaderHeight - perMonthTitleHeight - weekRowSpacing - pageIndicatorMargin
         return min(cellWidth, max(16, available / 6))
     }
@@ -57,6 +59,7 @@ struct MonthlyView: View {
             }
             .scrollPosition(id: $scrollPositionMonth, anchor: .top)
         }
+        .padding(.horizontal, horizontalSafetyMargin / 2)
         .onAppear {
             guard scrollPositionMonth == nil else { return }
             let today = Date()
