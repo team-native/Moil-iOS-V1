@@ -4,9 +4,6 @@ import SwiftUI
 struct FamilyView: View {
     let groupName: String
     let members: [FamilyMember]
-    /// 백엔드 API가 아직 없어 항상 빈 배열입니다. 연결되면 이 화면은 그대로 두고
-    /// ContentView에서 실제 값을 채워 넣기만 하면 됩니다.
-    let availability: [AvailabilitySlot]
 
     var body: some View {
         ScrollView {
@@ -16,16 +13,6 @@ struct FamilyView: View {
                     .foregroundStyle(WatchColor.textPrimary)
 
                 memberChips
-
-                if !availability.isEmpty {
-                    Text("오늘 가능한 시간")
-                        .font(.system(size: 10))
-                        .foregroundStyle(WatchColor.textSecondary)
-
-                    ForEach(availability) { slot in
-                        availabilityRow(slot)
-                    }
-                }
             }
             .padding(.horizontal, 4)
         }
@@ -53,28 +40,8 @@ struct FamilyView: View {
             }
         }
     }
-
-    private func availabilityRow(_ slot: AvailabilitySlot) -> some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(slot.indicatorColor)
-                .frame(width: 8, height: 8)
-            Text(slot.timeRange)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(WatchColor.textPrimary)
-            Spacer(minLength: 0)
-            Text(slot.summary)
-                .font(.system(size: 9))
-                .foregroundStyle(WatchColor.textSecondary)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(WatchColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
 }
 
 #Preview {
-    FamilyView(groupName: "우리 가족", members: MoilWatchSampleData.members, availability: [])
+    FamilyView(groupName: "우리 가족", members: MoilWatchSampleData.members)
 }

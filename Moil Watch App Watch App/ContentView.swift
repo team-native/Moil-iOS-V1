@@ -61,7 +61,7 @@ struct ContentView: View {
     private var mainTabs: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                FamilyView(groupName: groupName, members: members, availability: [])
+                FamilyView(groupName: groupName, members: members)
             }
             .tag(0)
             NavigationStack {
@@ -95,7 +95,10 @@ struct ContentView: View {
                 .background(WatchColor.background)
                 .navigationDestination(item: $selectedItem) { item in
                     if let detail = eventDetail(for: item) {
-                        ScheduleDetailView(event: detail)
+                        ScheduleDetailView(
+                            event: detail,
+                            loadAvailability: { await loadAvailability(eventId: detail.id, date: detail.date) }
+                        )
                     }
                 }
             }
@@ -201,6 +204,7 @@ struct ContentView: View {
             id: event.id,
             owner: owner(for: event),
             title: event.title,
+            date: event.date,
             dateLabel: dateLabel,
             timeLocationLabel: timeLocationParts.joined(separator: " · "),
             attendeeCountLabel: "가족 \(event.members.count)명",
@@ -226,6 +230,13 @@ struct ContentView: View {
         } catch {
             return []
         }
+    }
+
+    // MARK: - Availability
+
+    /// 가족이 아이폰 앱에서 등록한 가능 시간대를 읽기 전용으로 불러옵니다.
+    private func loadAvailability(eventId: String, date: String) async -> MoilAvailabilitySummary? {
+        try? await sessionStore.service().availabilitySummary(eventId: eventId, date: date)
     }
 }
 
