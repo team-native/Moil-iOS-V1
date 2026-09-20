@@ -1520,6 +1520,9 @@ private struct ScheduleSearchView: View {
     var onSelect: (CalendarEvent) -> Void = { _ in }
     @State private var query = ""
     @State private var errorMessage: String?
+    /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
+    /// 여기서도 같은 설정값을 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
 
     private var events: [CalendarEvent] {
         eventStore.events(groupId: groupId, month: month).compactMap(CalendarEvent.init(remote:))
@@ -1596,6 +1599,7 @@ private struct ScheduleSearchView: View {
                 }
             }
         }
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .task(id: "\(groupId ?? "")-\(month)") {
             guard let groupId else { return }
             do {

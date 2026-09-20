@@ -32,10 +32,6 @@ struct ScheduleDetailView: View {
 
                 attendButton
 
-                Text("두 번 탭해 응답")
-                    .font(.system(size: 9))
-                    .foregroundStyle(WatchColor.textSecondary)
-
                 availabilitySection
             }
         }
@@ -84,17 +80,19 @@ struct ScheduleDetailView: View {
     }
 
     private var attendButton: some View {
-        Text(isAttending ? "참석 완료" : "참석하기")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(WatchColor.onAccent)
-            .frame(maxWidth: .infinity)
-            .frame(height: 36)
-            .background(event.owner.color)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .onTapGesture(count: 2) {
-                isAttending = true
-                WKInterfaceDevice.current().play(.success)
-            }
+        Button {
+            isAttending.toggle()
+            WKInterfaceDevice.current().play(isAttending ? .success : .click)
+        } label: {
+            Text(isAttending ? "취소하기" : "참석하기")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(isAttending ? WatchColor.textPrimary : WatchColor.onAccent)
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
+                .background(isAttending ? WatchColor.surface : event.owner.color)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder

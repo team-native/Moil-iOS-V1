@@ -5,6 +5,9 @@ struct GroupDetailView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var eventStore: MoilEventStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
+    /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
+    /// 여기서도 같은 설정값을 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
 
     @State private var members: [MoilRemoteMember] = []
     @State private var monthEventCount = 0
@@ -97,6 +100,7 @@ struct GroupDetailView: View {
             .padding(.bottom, 32)
         }
         .background(MoilColor.groupDetailBackground.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .task(id: groupID) {
             await loadDetail()
         }

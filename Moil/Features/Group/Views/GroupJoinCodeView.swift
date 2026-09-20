@@ -11,6 +11,9 @@ struct GroupJoinCodeView: View {
     @State private var error: String?
     @State private var isVerified = false
     @State private var isVerifying = false
+    /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
+    /// 여기서도 같은 설정값을 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
 
     init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
         self.onNext = onNext
@@ -75,6 +78,7 @@ struct GroupJoinCodeView: View {
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
         .background(MoilColor.background.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
                 onTabSelect(tab)
