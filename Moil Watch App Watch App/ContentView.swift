@@ -94,7 +94,6 @@ struct ContentView: View {
                         )
                     }
                 }
-                .animation(.easeInOut(duration: 0.25), value: isLoading)
                 .background(WatchColor.background)
                 .navigationDestination(item: $selectedItem) { item in
                     if let detail = eventDetail(for: item) {
