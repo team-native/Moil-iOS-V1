@@ -3,6 +3,10 @@ import SwiftUI
 struct EmptyCalendarView: View {
     var onJoin: () -> Void = { }
     var onCreate: () -> Void = { }
+    /// fullScreenCover로 뜨는 경우도 있어, 루트(MoilApp)의 preferredColorScheme를
+    /// 항상 물려받지 않을 수 있는 걸 여기서도 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 24)
@@ -39,6 +43,7 @@ struct EmptyCalendarView: View {
         }
         .padding(.horizontal, 32)
         .background(MoilColor.background.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }
 

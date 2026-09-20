@@ -15,6 +15,9 @@ struct GroupJoinProfileView: View {
     @State private var uploadedImagePath: String?
     @State private var isUploadingImage = false
     private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
+    /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
+    /// 여기서도 같은 설정값을 직접 적용합니다.
+    @AppStorage("moilDarkMode") private var isDarkMode = false
     init(onComplete: @escaping () -> Void = {}) { self.onComplete = onComplete }
 
     var body: some View {
@@ -115,6 +118,7 @@ struct GroupJoinProfileView: View {
         }
         .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())
+        .preferredColorScheme(isDarkMode ? .dark : .light)
         .onChange(of: profileImagePickerItem) { _, item in
             guard let item else { return }
             uploadProfileImage(item)
