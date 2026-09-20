@@ -11,6 +11,9 @@ struct ContentView: View {
     @State private var selectedItem: ScheduleItem?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    /// 가족일정 탭에 보여줄 "오늘 가능한 시간"입니다. 가능 시간 API가 일정 단위라
+    /// 오늘의 가장 가까운 일정을 기준으로 조회합니다.
+    @State private var familyAvailability: MoilAvailabilitySummary?
     /// 캘린더를 가운데 두고, 가족일정/오늘을 양옆으로 스와이프해서 볼 수 있게 합니다.
     /// 앱을 열 때마다 항상 캘린더가 먼저 보이도록 기본값을 가운데(1)로 둡니다.
     @State private var selectedTab = 1
@@ -61,7 +64,7 @@ struct ContentView: View {
     private var mainTabs: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                FamilyView(groupName: groupName, members: members)
+                FamilyView(groupName: groupName, members: members, availability: familyAvailability)
             }
             .tag(0)
             NavigationStack {
@@ -137,6 +140,7 @@ struct ContentView: View {
             members = remoteMembers.map(FamilyMember.init(remote:))
             remoteEvents = events
             errorMessage = nil
+            await loadFamilyAvailability()
         } catch {
             guard !error.isRequestCancellation else { return }
             errorMessage = error.localizedDescription
@@ -237,6 +241,23 @@ struct ContentView: View {
     /// 가족이 아이폰 앱에서 등록한 가능 시간대를 읽기 전용으로 불러옵니다.
     private func loadAvailability(eventId: String, date: String) async -> MoilAvailabilitySummary? {
         try? await sessionStore.service().availabilitySummary(eventId: eventId, date: date)
+    }
+
+    /// 가능 시간 API가 일정 단위라, 가족일정 탭에서는 오늘 가장 가까운 일정을 기준으로
+    /// "오늘 가능한 시간"을 보여줍니다. 오늘 일정이 없으면 표시하지 않습니다.
+    private var nextTodayEvent: MoilRemoteEvent? {
+        remoteEvents
+            .filter { $0.dateStrings().contains(todayDateString) }
+            .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
+            .first
+    }
+
+    private func loadFamilyAvailability() async {
+        guard let event = nextTodayEvent else {
+            familyAvailability = nil
+            return
+        }
+        familyAvailability = await loadAvailability(eventId: event.id, date: todayDateString)
     }
 }
 

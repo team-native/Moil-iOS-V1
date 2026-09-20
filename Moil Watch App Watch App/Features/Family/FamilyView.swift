@@ -4,6 +4,9 @@ import SwiftUI
 struct FamilyView: View {
     let groupName: String
     let members: [FamilyMember]
+    /// 오늘 가장 가까운 일정 기준으로 가족이 등록한 가능 시간대입니다(읽기 전용).
+    /// 오늘 일정이 없거나 아직 아무도 등록하지 않았으면 nil입니다.
+    let availability: MoilAvailabilitySummary?
 
     var body: some View {
         ScrollView {
@@ -13,6 +16,16 @@ struct FamilyView: View {
                     .foregroundStyle(WatchColor.textPrimary)
 
                 memberChips
+
+                if let availability, !availability.timeSlots.isEmpty {
+                    Text("오늘 가능한 시간")
+                        .font(.system(size: 10))
+                        .foregroundStyle(WatchColor.textSecondary)
+
+                    ForEach(availability.timeSlots) { slot in
+                        availabilityRow(slot)
+                    }
+                }
             }
             .padding(.horizontal, 4)
         }
@@ -40,8 +53,28 @@ struct FamilyView: View {
             }
         }
     }
+
+    private func availabilityRow(_ slot: MoilAvailabilitySummarySlot) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(slot.isAvailableForEveryone ? Color("MemberGreen") : WatchColor.textSecondary)
+                .frame(width: 8, height: 8)
+            Text("\(slot.startTime)–\(slot.endTime)")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(WatchColor.textPrimary)
+            Spacer(minLength: 0)
+            Text(slot.isAvailableForEveryone ? "모두 가능" : "\(slot.availableCount)명 가능")
+                .font(.system(size: 9))
+                .foregroundStyle(WatchColor.textSecondary)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(WatchColor.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
 }
 
 #Preview {
-    FamilyView(groupName: "우리 가족", members: MoilWatchSampleData.members)
+    FamilyView(groupName: "우리 가족", members: MoilWatchSampleData.members, availability: nil)
 }
