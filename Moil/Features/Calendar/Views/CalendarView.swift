@@ -1380,6 +1380,7 @@ private struct EventEditorView: View {
     let onDelete: () -> Void
     @State private var title: String
     @State private var isEditing = false
+    @State private var isAvailabilityPresented = false
 
     init(event: CalendarEvent, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
         self.event = event
@@ -1429,6 +1430,20 @@ private struct EventEditorView: View {
                 AvatarDots(count: max(event.memberIDs.count, 1))
             }
             .padding(.vertical, 16)
+            Button {
+                isAvailabilityPresented = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "clock")
+                    Text("가능 시간 입력")
+                        .font(MoilTypography.regular(15))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+            }
+            .foregroundStyle(MoilColor.textPrimary)
+            .padding(.bottom, 16)
             Divider()
             Text("메모")
                 .font(MoilTypography.regular(15))
@@ -1455,6 +1470,9 @@ private struct EventEditorView: View {
         .foregroundStyle(MoilColor.textPrimary)
         .padding(24)
         .background(MoilColor.surface)
+        .sheet(isPresented: $isAvailabilityPresented) {
+            EventAvailabilityView(eventId: event.id, eventTitle: event.title, date: event.date)
+        }
     }
 
     private var formattedDate: String { event.date.replacingOccurrences(of: "-", with: ".") }

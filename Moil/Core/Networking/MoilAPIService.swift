@@ -157,6 +157,39 @@ struct MoilAPIService {
     func deleteEvent(id: String) async throws {
         let _: MoilEmptyResponse = try await client.request("events/\(id)", method: "DELETE")
     }
+
+    /// 그 날짜에 내가 이미 등록해 둔 시간대를 전부 교체합니다(부분 추가/삭제 아님).
+    func saveAvailability(eventId: String, date: String, timeSlots: [MoilAvailabilityTimeSlot]) async throws {
+        try await client.request(
+            "events/\(eventId)/availability",
+            method: "PUT",
+            body: SaveAvailabilityRequest(date: date, timeSlots: timeSlots)
+        )
+    }
+
+    func myAvailability(eventId: String, date: String) async throws -> MoilMyAvailability {
+        try await client.request(
+            "events/\(eventId)/availability/me",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "date", value: date)]
+        )
+    }
+
+    func availabilitySummary(eventId: String, date: String) async throws -> MoilAvailabilitySummary {
+        try await client.request(
+            "events/\(eventId)/availability/summary",
+            method: "GET",
+            queryItems: [URLQueryItem(name: "date", value: date)]
+        )
+    }
+
+    func deleteAvailability(eventId: String, date: String) async throws {
+        let _: MoilEmptyResponse = try await client.request(
+            "events/\(eventId)/availability",
+            method: "DELETE",
+            queryItems: [URLQueryItem(name: "date", value: date)]
+        )
+    }
 }
 
 enum VerificationStep: String, Codable { case signUp = "SIGNUP", reset = "RESET" }
@@ -453,5 +486,81 @@ private extension KeyedDecodingContainer {
             if let integer = try? decode(Int.self, forKey: key) { return String(integer) }
         }
         throw MoilAPIError.decoding
+    }
+
+    func stringArray(for key: Key) -> [String] {
+        if let ints = try? decode([Int].self, forKey: key) { return ints.map(String.init) }
+        return (try? decode([String].self, forKey: key)) ?? []
+    }
+}
+
+// MARK: - 일정 가능 시간대
+
+struct MoilAvailabilityTimeSlot: Codable, Identifiable, Hashable {
+    var id: String { "\(startTime)-\(endTime)" }
+    let startTime: String
+    let endTime: String
+}
+
+private struct SaveAvailabilityRequest: Encodable {
+    let date: String
+    let timeSlots: [MoilAvailabilityTimeSlot]
+}
+
+struct MoilMyAvailability: Decodable {
+    let eventId: String
+    let date: String
+    let userId: String
+    let timeSlots: [MoilAvailabilityTimeSlot]
+
+    private enum CodingKeys: String, CodingKey { case eventId, date, userId, timeSlots }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventId = try container.string(for: [.eventId])
+        date = try container.decode(String.self, forKey: .date)
+        userId = try container.string(for: [.userId])
+        timeSlots = (try? container.decode([MoilAvailabilityTimeSlot].self, forKey: .timeSlots)) ?? []
+    }
+}
+
+struct MoilAvailabilitySummarySlot: Decodable, Identifiable {
+    var id: String { "\(startTime)-\(endTime)" }
+    let startTime: String
+    let endTime: String
+    let availableCount: Int
+    let availableMemberIds: [String]
+    let isAvailableForEveryone: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case startTime, endTime, availableCount, availableMemberIds, isAvailableForEveryone
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startTime = try container.decode(String.self, forKey: .startTime)
+        endTime = try container.decode(String.self, forKey: .endTime)
+        availableCount = (try? container.decode(Int.self, forKey: .availableCount)) ?? 0
+        availableMemberIds = container.stringArray(for: .availableMemberIds)
+        isAvailableForEveryone = (try? container.decode(Bool.self, forKey: .isAvailableForEveryone)) ?? false
+    }
+}
+
+struct MoilAvailabilitySummary: Decodable {
+    let eventId: String
+    let date: String
+    let participantCount: Int
+    let respondedCount: Int
+    let timeSlots: [MoilAvailabilitySummarySlot]
+
+    private enum CodingKeys: String, CodingKey { case eventId, date, participantCount, respondedCount, timeSlots }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventId = try container.string(for: [.eventId])
+        date = try container.decode(String.self, forKey: .date)
+        participantCount = (try? container.decode(Int.self, forKey: .participantCount)) ?? 0
+        respondedCount = (try? container.decode(Int.self, forKey: .respondedCount)) ?? 0
+        timeSlots = (try? container.decode([MoilAvailabilitySummarySlot].self, forKey: .timeSlots)) ?? []
     }
 }
