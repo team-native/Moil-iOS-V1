@@ -108,13 +108,7 @@ struct MemberView: View {
             }
         }
         .overlay {
-            if isEditingGroupName {
-                GroupNameEditor(name: $groupNameDraft) {
-                    Task { await renameSelectedGroup() }
-                } onCancel: {
-                    isEditingGroupName = false
-                }
-            } else if isTransferringAdmin {
+            if isTransferringAdmin {
                 AdministratorTransferEditor(selection: $newAdministrator, candidates: currentMembers) {
                     Task { await transferAdministrator() }
                 } onCancel: {
@@ -136,6 +130,13 @@ struct MemberView: View {
                 Button("확인", role: .cancel) { feedbackMessage = nil }
             } message: {
                 Text(feedbackMessage ?? "")
+            }
+            // 커스텀 카드 대신 iOS 기본 텍스트 입력 알림을 그대로 써서 시스템 팝업(리퀴드
+            // 글래스) 디자인이 그대로 적용되게 합니다.
+            .alert("그룹 이름 변경", isPresented: $isEditingGroupName) {
+                TextField("그룹 이름", text: $groupNameDraft)
+                Button("취소", role: .cancel) { }
+                Button("저장") { Task { await renameSelectedGroup() } }
             }
             .fullScreenCover(isPresented: $isJoinGroupPresented) {
                 GroupJoinCodeView(onNext: {
@@ -381,45 +382,6 @@ private struct SystemShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
-private struct GroupNameEditor: View {
-    @Binding var name: String
-    let onSave: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.42).ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 16) {
-                Text("그룹 이름 변경")
-                    .font(MoilTypography.bold(18))
-                TextField("그룹 이름", text: $name)
-                    .moilField()
-                HStack(spacing: 8) {
-                    Button("취소", action: onCancel)
-                        .font(MoilTypography.semibold(14))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(MoilColor.surface)
-                        .overlay { RoundedRectangle(cornerRadius: 10).stroke(MoilColor.textTertiary.opacity(0.3), lineWidth: 1) }
-                    Button("저장", action: onSave)
-                        .font(MoilTypography.semibold(14))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 46)
-                        .background(MoilColor.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-            .padding(20)
-            .frame(maxWidth: 320)
-            .background(MoilColor.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .padding(.horizontal, 32)
-        }
-    }
-}
-
 private struct AdministratorTransferEditor: View {
     @Binding var selection: String?
     let candidates: [MoilRemoteMember]
@@ -576,6 +538,7 @@ private struct PermissionEditorView: View {
                 .frame(height: 56)
                 if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
             }
+            Spacer(minLength: 0)
             Button("완료") {
                 onSave(members.compactMap { member in
                     guard let userId = Int(member.id) else { return nil }
