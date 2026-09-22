@@ -56,6 +56,16 @@ struct CalendarView: View {
         return result
     }
 
+    /// 참여자 동그라미가 정해진 임의의 색이 아니라 실제 멤버(내 프로필 포함)의 색을
+    /// 그대로 보여주도록, 일정의 참여자 ID를 실제 그룹 멤버와 맞춰봅니다.
+    private func avatarColors(for event: CalendarEvent) -> [Color] {
+        let members = groupStore.members(for: groupStore.selectedGroupId)
+        let memberIDStrings = Set(event.memberIDs.map(String.init))
+        let matched = members.filter { memberIDStrings.contains($0.id) }
+        let resolved = matched.isEmpty ? members : matched
+        return resolved.prefix(3).map { MoilAvatarColor.color(for: $0.colorId) }
+    }
+
     private func daysInMonth(for month: Date) -> Int {
         calendar.range(of: .day, in: .month, for: month)?.count ?? 30
     }
@@ -276,6 +286,7 @@ struct CalendarView: View {
                 day: scheduleDraftDay,
                 dateTitle: scheduleDraftDateTitle,
                 events: eventsByDay(for: scheduleDraftMonth)[scheduleDraftDay] ?? [],
+                avatarColors: avatarColors(for:),
                 onAdd: {
                     isDaySchedulePresented = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -291,7 +302,7 @@ struct CalendarView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedEvent) { event in
-            EventEditorView(event: event) { title in
+            EventEditorView(event: event, avatarColors: avatarColors(for: event)) { title in
                 updateEvent(event, title: title)
             } onDelete: {
                 deleteEvent(event)
@@ -572,14 +583,20 @@ struct CalendarView: View {
                     .frame(width: 32, height: 32, alignment: .center)
                     .background(isSelected ? MoilColor.primary : .clear)
                     .clipShape(Circle())
-                ForEach(events) { event in
-                    eventChip(event, day: day, month: month)
+                // 일정이 여러 개 쌓일 때는 서로 더 붙어 보이도록 간격을 좁게 둡니다.
+                VStack(spacing: 2) {
+                    ForEach(events) { event in
+                        eventChip(event, day: day, month: month)
+                    }
                 }
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, minHeight: dayCellHeight, alignment: .top)
         }
-        .buttonStyle(.plain)
+        // 날짜를 탭했을 때 선택 표시는 날짜 동그라미에만 나타나야 하는데, 기본 버튼 스타일은
+        // 탭하는 순간 라벨 전체(일정 칩까지)가 같이 옅어지는 눌림 효과를 줘서 일정도
+        // "선택된 것처럼" 보였습니다. 눌림 효과를 없애 날짜만 반응하게 합니다.
+        .buttonStyle(NoPressHighlightButtonStyle())
     }
 
     private func eventChip(_ event: CalendarEvent, day: Int, month: Date) -> some View {
@@ -607,6 +624,14 @@ struct CalendarView: View {
             )
     }
 
+}
+
+/// 기본 Button 눌림 효과(라벨 전체가 옅어짐)를 없애, 날짜 칸을 탭해도 그 안의
+/// 일정 칩들은 반응하지 않고 우리가 직접 그리는 선택 표시(날짜 동그라미)만 보이게 합니다.
+private struct NoPressHighlightButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+    }
 }
 
 private struct CalendarEvent: Identifiable {
@@ -778,6 +803,7 @@ private struct DayScheduleSheet: View {
     let day: Int
     let dateTitle: String
     let events: [CalendarEvent]
+    let avatarColors: (CalendarEvent) -> [Color]
     let onAdd: () -> Void
     let onSelect: (CalendarEvent) -> Void
 
@@ -820,7 +846,7 @@ private struct DayScheduleSheet: View {
                             .foregroundStyle(MoilColor.textPrimary)
                             .lineLimit(2)
                         Spacer(minLength: 8)
-                        AvatarDots(count: max(event.memberIDs.count, 1))
+                        AvatarDots(colors: avatarColors(event))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(MoilColor.textPrimary)
@@ -839,12 +865,12 @@ private struct DayScheduleSheet: View {
 }
 
 private struct AvatarDots: View {
-    let count: Int
+    let colors: [Color]
     var body: some View {
         HStack(spacing: -6) {
-            ForEach(0..<min(count, 3), id: \.self) { index in
+            ForEach(Array(colors.prefix(3).enumerated()), id: \.offset) { _, color in
                 Circle()
-                    .fill([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green][index])
+                    .fill(color)
                     .frame(width: 26, height: 26)
                     .overlay { Circle().stroke(MoilColor.surface, lineWidth: 2) }
             }
@@ -865,8 +891,9 @@ private struct ScheduleComposerView: View {
     @State private var location = ""
     @State private var memo = ""
     @State private var inputTarget: ScheduleInputTarget?
-    @State private var isTimeEditorPresented = false
-    @State private var isDateEditorPresented = false
+    /// 날짜·시간 입력을 별도 시트로 새로 띄우면 그 시트 높이가 더 작아서 팝업이 순간
+    /// 낮아지는 것처럼 보였습니다. 대신 같은 고정 높이 시트 안에서 내용만 바꿔 보여줍니다.
+    @State private var composerMode: ComposerMode = .form
     @State private var selectedMemberIDs: Set<String>
 
     init(
@@ -893,12 +920,41 @@ private struct ScheduleComposerView: View {
     }
 
     var body: some View {
+        Group {
+            switch composerMode {
+            case .form:
+                formContent
+            case .date:
+                ScheduleDateRangeInputSheet(
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    onClose: { composerMode = .form }
+                )
+            case .time:
+                ScheduleTimeInputSheet(
+                    startTime: $startTime,
+                    endTime: $endTime,
+                    onClose: { composerMode = .form }
+                )
+            }
+        }
+        .background(MoilColor.surface)
+        .sheet(item: $inputTarget) { target in
+            ScheduleTextInputSheet(
+                title: target.title,
+                placeholder: target.placeholder,
+                text: target == .location ? $location : $memo,
+                allowsMultipleLines: target == .memo
+            )
+            .presentationDetents([target == .memo ? .medium : .height(260)])
+        }
+    }
+
+    private var formContent: some View {
         VStack(spacing: 0) {
             HStack {
                 Button("취소", action: dismiss.callAsFunction)
                     .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("새 일정").font(MoilTypography.semibold(16))
                 Spacer()
                 Button("저장") {
                     onSave(
@@ -926,17 +982,23 @@ private struct ScheduleComposerView: View {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
                         .moilField()
+                        .overlay {
+                            // 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
+                            // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
+                        }
                         .padding(.bottom, 8)
 
                     ScheduleRow(title: "날짜", value: Self.displayDateRange(start: startDate, end: endDate))
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            isDateEditorPresented = true
+                            composerMode = .date
                         }
                     ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            isTimeEditorPresented = true
+                            composerMode = .time
                         }
 
                     ScheduleRow(title: "위치", value: location.nilIfBlank ?? "추가", secondary: location.nilIfBlank == nil)
@@ -974,32 +1036,6 @@ private struct ScheduleComposerView: View {
                 .padding(.horizontal, 18)
             }
         }
-        .background(MoilColor.surface)
-        .sheet(item: $inputTarget) { target in
-            ScheduleTextInputSheet(
-                title: target.title,
-                placeholder: target.placeholder,
-                text: target == .location ? $location : $memo,
-                allowsMultipleLines: target == .memo
-            )
-            .presentationDetents([target == .memo ? .medium : .height(260)])
-        }
-        .sheet(isPresented: $isTimeEditorPresented) {
-            ScheduleTimeInputSheet(
-                startTime: $startTime,
-                endTime: $endTime,
-                onClose: { isTimeEditorPresented = false }
-            )
-            .presentationDetents([.height(420)])
-        }
-        .sheet(isPresented: $isDateEditorPresented) {
-            ScheduleDateRangeInputSheet(
-                startDate: $startDate,
-                endDate: $endDate,
-                onClose: { isDateEditorPresented = false }
-            )
-            .presentationDetents([.height(420)])
-        }
     }
 
     private func toggle(_ memberID: String) {
@@ -1033,6 +1069,12 @@ private struct ScheduleComposerView: View {
             ? formatter.string(from: start)
             : "\(formatter.string(from: start)) – \(formatter.string(from: normalizedEnd))"
     }
+}
+
+private enum ComposerMode {
+    case form
+    case date
+    case time
 }
 
 private enum ScheduleInputTarget: Identifiable, Equatable {
@@ -1376,14 +1418,16 @@ private extension String {
 private struct EventEditorView: View {
     @Environment(\.dismiss) private var dismiss
     let event: CalendarEvent
+    let avatarColors: [Color]
     let onSave: (String) -> Void
     let onDelete: () -> Void
     @State private var title: String
     @State private var isEditing = false
     @State private var isAvailabilityPresented = false
 
-    init(event: CalendarEvent, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
+    init(event: CalendarEvent, avatarColors: [Color], onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
         self.event = event
+        self.avatarColors = avatarColors
         self.onSave = onSave
         self.onDelete = onDelete
         _title = State(initialValue: event.title)
@@ -1427,7 +1471,7 @@ private struct EventEditorView: View {
                 Text("참여자 \(max(event.memberIDs.count, 1))명")
                     .font(MoilTypography.regular(15))
                 Spacer()
-                AvatarDots(count: max(event.memberIDs.count, 1))
+                AvatarDots(colors: avatarColors)
             }
             .padding(.vertical, 16)
             Button {
