@@ -33,6 +33,10 @@ struct FamilyView: View {
     }
 
     /// 가족 수가 화면 너비보다 많아도 잘리지 않도록, 이 줄만 옆으로 스크롤할 수 있게 합니다.
+    /// 세로 ScrollView 안에 가로 ScrollView가 중첩돼 있으면 watchOS가 디지털 크라운
+    /// 입력을 어느 스크롤뷰로 보낼지 헷갈려 해서, 화면을 만지기도 전에 크라운만 돌려도
+    /// 이 줄이 옆으로 밀려 보이는 문제가 있었습니다. 이 줄은 크라운 포커스를 받지 않게
+    /// 막아 크라운은 항상 바깥 세로 스크롤만 움직이게 합니다(가로 스크롤은 손가락으로는 그대로 됨).
     private var memberChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
@@ -52,6 +56,7 @@ struct FamilyView: View {
                 }
             }
         }
+        .focusable(false)
     }
 
     private func availabilityRow(_ slot: MoilAvailabilitySummarySlot) -> some View {
