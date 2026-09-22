@@ -61,11 +61,11 @@ struct ScheduleDetailView: View {
     }
 
     /// 참석자가 많아 화면 너비를 넘어가도 잘리지 않도록, 이 줄만 옆으로 스크롤할 수 있게 합니다.
-    /// 바깥 세로 ScrollView 안에 중첩돼 있어서 화면에 들어가자마자 크라운을 돌리면 이 줄이
-    /// 먼저 크라운 포커스를 가져가 옆으로 밀렸습니다(가족일정 탭 멤버 줄과 같은 원인).
-    /// 크라운 포커스를 받지 않게 막아 크라운은 항상 바깥 세로 스크롤만 움직이게 합니다.
+    /// ScrollView는 `.focusable(false)`를 줘도 크라운에 반응해(크라운 연결이 SwiftUI 포커스가
+    /// 아니라 ScrollView 자체에 있음) 화면에 들어가자마자 크라운만 돌려도 이 줄이 밀렸습니다.
+    /// 크라운이 아예 닿을 수 없는 손가락 드래그 전용 스크롤로 대체합니다.
     private var rsvpRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        CrownSafeHorizontalScroll {
             HStack(spacing: 6) {
                 ForEach(event.attendees) { attendee in
                     Text(attendee.initial)
@@ -80,7 +80,7 @@ struct ScheduleDetailView: View {
                     .foregroundStyle(WatchColor.textSecondary)
             }
         }
-        .focusable(false)
+        .frame(height: 26)
     }
 
     private var attendButton: some View {
