@@ -319,6 +319,11 @@ private struct AccountDeletionView: View {
 private extension View {
     func accountField() -> some View {
         moilField()
+            // 배경과 구분이 잘 안 돼 입력칸이 흐릿하게 보였어서 옅은 외곽선을 더해줍니다.
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
+            }
     }
 
     func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {
