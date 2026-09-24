@@ -36,6 +36,19 @@ struct MoilWatchAPIService {
         return response.events
     }
 
+    /// 내 참석 여부를 서버에 저장합니다. 참석하면 PUT, 취소하면 응답 자체를 삭제(DELETE)합니다.
+    func setAttendance(eventId: String, attending: Bool) async throws {
+        if attending {
+            let _: MoilEmptyResponse = try await client.request(
+                "events/\(eventId)/attendance",
+                method: "PUT",
+                body: AttendanceRequest(status: "ATTENDING")
+            )
+        } else {
+            let _: MoilEmptyResponse = try await client.request("events/\(eventId)/attendance", method: "DELETE")
+        }
+    }
+
     /// 가족이 등록한 가능 시간대를 읽기 전용으로 보여줍니다. 등록은 아이폰 앱에서만 합니다.
     func availabilitySummary(eventId: String, date: String) async throws -> MoilAvailabilitySummary {
         try await client.request(
@@ -44,6 +57,10 @@ struct MoilWatchAPIService {
             queryItems: [URLQueryItem(name: "date", value: date)]
         )
     }
+}
+
+private struct AttendanceRequest: Encodable {
+    let status: String
 }
 
 private struct RefreshTokenRequest: Encodable {
@@ -155,9 +172,13 @@ struct MoilRemoteEvent: Decodable, Identifiable {
     let endTime: String?
     let location: String?
     let members: [MoilEventMember]
+    /// "ATTENDING" / "DECLINED" / nil(응답 안 함). 서버가 내 응답만 내려줍니다.
+    let myAttendanceStatus: String?
+    /// 참석을 누른 사람 수(일정 참여 대상 수가 아님).
+    let attendingCount: Int?
 
     private enum CodingKeys: String, CodingKey {
-        case id, eventId, title, date, startDate, endDate, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location
+        case id, eventId, title, date, startDate, endDate, ownerName, nickname, colorId, profileColor, members, sharedMembers, isAllDay, startTime, endTime, location, myAttendanceStatus, attendingCount
     }
 
     init(from decoder: Decoder) throws {
@@ -188,6 +209,8 @@ struct MoilRemoteEvent: Decodable, Identifiable {
         isAllDay = (try? container.decode(Bool.self, forKey: .isAllDay))
             ?? (startTime == "00:00" && endTime == "00:00")
         location = try? container.decode(String.self, forKey: .location)
+        myAttendanceStatus = try? container.decode(String.self, forKey: .myAttendanceStatus)
+        attendingCount = try? container.decode(Int.self, forKey: .attendingCount)
     }
 
     private static func time(from dateTime: String?) -> String? {

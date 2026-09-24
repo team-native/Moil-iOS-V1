@@ -7,9 +7,25 @@ struct ScheduleDetailView: View {
     /// 가족이 아이폰 앱에서 등록한 가능 시간대를 읽기 전용으로 불러옵니다. 워치에서는
     /// 등록하지 않고 결과만 보여줍니다.
     let loadAvailability: () async -> MoilAvailabilitySummary?
+    /// 참석(true)/취소(false)를 서버에 저장하고 성공 여부를 돌려줍니다.
+    let setAttending: (Bool) async -> Bool
 
-    @State private var isAttending = false
+    @State private var isAttending: Bool
+    @State private var attendingCount: Int
+    @State private var isSubmitting = false
     @State private var availability: MoilAvailabilitySummary?
+
+    init(
+        event: EventDetail,
+        loadAvailability: @escaping () async -> MoilAvailabilitySummary?,
+        setAttending: @escaping (Bool) async -> Bool
+    ) {
+        self.event = event
+        self.loadAvailability = loadAvailability
+        self.setAttending = setAttending
+        _isAttending = State(initialValue: event.isAttending)
+        _attendingCount = State(initialValue: event.attendingCount)
+    }
 
     var body: some View {
         ScrollView {
@@ -75,7 +91,7 @@ struct ScheduleDetailView: View {
                         .background(attendee.color)
                         .clipShape(RoundedRectangle(cornerRadius: 13))
                 }
-                Text(event.attendingSummary)
+                Text("\(attendingCount)명 참석")
                     .font(.system(size: 10))
                     .foregroundStyle(WatchColor.textSecondary)
             }
@@ -85,8 +101,7 @@ struct ScheduleDetailView: View {
 
     private var attendButton: some View {
         Button {
-            isAttending.toggle()
-            WKInterfaceDevice.current().play(isAttending ? .success : .click)
+            toggleAttendance()
         } label: {
             Text(isAttending ? "취소하기" : "참석하기")
                 .font(.system(size: 11, weight: .bold))
@@ -97,6 +112,26 @@ struct ScheduleDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+    }
+
+    /// 화면은 바로 바꾸고 서버 저장은 뒤에서 합니다. 저장에 실패하면 원래 상태로 되돌리고
+    /// 실패 진동을 줍니다. 저장 중에는 추가 탭을 무시해 요청이 겹치지 않게 합니다.
+    private func toggleAttendance() {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        let target = !isAttending
+        isAttending = target
+        attendingCount = max(0, attendingCount + (target ? 1 : -1))
+        WKInterfaceDevice.current().play(target ? .success : .click)
+        Task {
+            let succeeded = await setAttending(target)
+            if !succeeded {
+                isAttending = !target
+                attendingCount = max(0, attendingCount + (target ? -1 : 1))
+                WKInterfaceDevice.current().play(.failure)
+            }
+            isSubmitting = false
+        }
     }
 
     @ViewBuilder
@@ -141,9 +176,11 @@ struct ScheduleDetailView: View {
                 timeLocationLabel: "오후 6:30 · 우리집",
                 attendeeCountLabel: "가족 4명",
                 attendees: Array(MoilWatchSampleData.members.prefix(3)),
-                attendingSummary: "3명 참석"
+                isAttending: false,
+                attendingCount: 3
             ),
-            loadAvailability: { nil }
+            loadAvailability: { nil },
+            setAttending: { _ in true }
         )
     }
 }
