@@ -25,9 +25,12 @@ struct TodayView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Text("위로 스크롤해 전체 일정 보기")
-                    .font(.system(size: 9))
-                    .foregroundStyle(WatchColor.textSecondary)
+                if items.isEmpty {
+                    Text("오늘은 일정이 없어요")
+                        .font(.system(size: 11))
+                        .foregroundStyle(WatchColor.textSecondary)
+                        .padding(.top, 8)
+                }
             }
             .padding(.horizontal, 4)
         }
