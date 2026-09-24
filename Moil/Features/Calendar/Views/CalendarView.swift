@@ -302,7 +302,11 @@ struct CalendarView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedEvent) { event in
-            EventEditorView(event: event, avatarColors: avatarColors(for: event)) { title in
+            EventEditorView(
+                event: event,
+                avatarColors: avatarColors(for: event),
+                onSetAttendance: { await setAttendance(for: event, attending: $0) }
+            ) { title in
                 updateEvent(event, title: title)
             } onDelete: {
                 deleteEvent(event)
@@ -503,6 +507,18 @@ struct CalendarView: View {
         }
     }
 
+    /// 참석/취소를 서버에 저장하고 성공 여부를 돌려줍니다. 실패하면 알림을 띄웁니다.
+    private func setAttendance(for event: CalendarEvent, attending: Bool) async -> Bool {
+        do {
+            try await sessionStore.service().setAttendance(eventId: event.id, attending: attending)
+            await loadEvents(for: MoilCalendarDate.date(from: event.date) ?? displayedMonth)
+            return true
+        } catch {
+            serverError = error.localizedDescription
+            return false
+        }
+    }
+
     private func deleteEvent(_ event: CalendarEvent) {
         Task {
             do {
@@ -651,6 +667,8 @@ private struct CalendarEvent: Identifiable {
     let location: String?
     let memo: String?
     let memberIDs: [Int]
+    let isAttending: Bool
+    let attendingCount: Int
 
     init?(remote: MoilRemoteEvent) {
         guard let normalizedDate = MoilCalendarDate.normalizedString(from: remote.date),
@@ -672,6 +690,8 @@ private struct CalendarEvent: Identifiable {
         location = remote.location
         memo = remote.memo
         memberIDs = remote.members.compactMap { $0.id.flatMap(Int.init) }
+        isAttending = remote.myAttendanceStatus == "ATTENDING"
+        attendingCount = remote.attendingCount ?? 0
     }
 
     func dates(in month: Date) -> [Date] {
@@ -1431,18 +1451,50 @@ private struct EventEditorView: View {
     @Environment(\.dismiss) private var dismiss
     let event: CalendarEvent
     let avatarColors: [Color]
+    /// 참석(true)/취소(false)를 서버에 저장하고 성공 여부를 돌려줍니다.
+    let onSetAttendance: (Bool) async -> Bool
     let onSave: (String) -> Void
     let onDelete: () -> Void
     @State private var title: String
     @State private var isEditing = false
     @State private var isAvailabilityPresented = false
+    @State private var isAttending: Bool
+    @State private var attendingCount: Int
+    @State private var isSubmittingAttendance = false
 
-    init(event: CalendarEvent, avatarColors: [Color], onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
+    init(
+        event: CalendarEvent,
+        avatarColors: [Color],
+        onSetAttendance: @escaping (Bool) async -> Bool,
+        onSave: @escaping (String) -> Void,
+        onDelete: @escaping () -> Void
+    ) {
         self.event = event
         self.avatarColors = avatarColors
+        self.onSetAttendance = onSetAttendance
         self.onSave = onSave
         self.onDelete = onDelete
         _title = State(initialValue: event.title)
+        _isAttending = State(initialValue: event.isAttending)
+        _attendingCount = State(initialValue: event.attendingCount)
+    }
+
+    /// 화면은 바로 바꾸고 서버 저장은 뒤에서 합니다. 실패하면 원래 상태로 되돌리고,
+    /// 저장 중에는 추가 탭을 무시해 요청이 겹치지 않게 합니다.
+    private func toggleAttendance() {
+        guard !isSubmittingAttendance else { return }
+        isSubmittingAttendance = true
+        let target = !isAttending
+        isAttending = target
+        attendingCount = max(0, attendingCount + (target ? 1 : -1))
+        Task {
+            let succeeded = await onSetAttendance(target)
+            if !succeeded {
+                isAttending = !target
+                attendingCount = max(0, attendingCount + (target ? -1 : 1))
+            }
+            isSubmittingAttendance = false
+        }
     }
 
     private var trimmedTitle: String {
@@ -1486,6 +1538,23 @@ private struct EventEditorView: View {
                 AvatarDots(colors: avatarColors)
             }
             .padding(.vertical, 16)
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(MoilColor.textSecondary)
+                Text("참석 \(attendingCount)명")
+                    .font(MoilTypography.regular(15))
+                Spacer()
+                Button(action: toggleAttendance) {
+                    Text(isAttending ? "취소하기" : "참석하기")
+                        .font(MoilTypography.semibold(13))
+                        .foregroundStyle(isAttending ? MoilColor.textPrimary : Color.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 32)
+                        .background(isAttending ? MoilColor.textPrimary.opacity(0.1) : MoilColor.primary)
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.bottom, 16)
             Button {
                 isAvailabilityPresented = true
             } label: {
