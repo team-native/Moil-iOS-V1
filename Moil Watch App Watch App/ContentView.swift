@@ -11,10 +11,9 @@ struct ContentView: View {
     @State private var selectedItem: ScheduleItem?
     @State private var isLoading = false
     @State private var errorMessage: String?
-    /// 가족일정 탭에 보여줄 "오늘 가능한 시간"입니다. 가능 시간 API가 일정 단위라
-    /// 오늘의 가장 가까운 일정을 기준으로 조회합니다.
-    @State private var familyAvailability: MoilAvailabilitySummary?
-    /// 캘린더를 가운데 두고, 가족일정/오늘을 양옆으로 스와이프해서 볼 수 있게 합니다.
+    /// 다가오는 일정(내일부터 7일)이 다음 달로 넘어가는 주에만 채워지는 다음 달 일정입니다.
+    @State private var nextMonthEvents: [MoilRemoteEvent] = []
+    /// 캘린더를 가운데 두고, 다가오는 일정/오늘을 양옆으로 스와이프해서 볼 수 있게 합니다.
     /// 앱을 열 때마다 항상 캘린더가 먼저 보이도록 기본값을 가운데(1)로 둡니다.
     @State private var selectedTab = 1
 
@@ -64,7 +63,7 @@ struct ContentView: View {
     private var mainTabs: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                FamilyView(groupName: groupName, members: members, availability: familyAvailability)
+                UpcomingView(groupName: groupName, days: upcomingDays)
             }
             .tag(0)
             NavigationStack {
@@ -138,8 +137,8 @@ struct ContentView: View {
             let (remoteMembers, events) = try await (membersTask, eventsTask)
             members = remoteMembers.map(FamilyMember.init(remote:))
             remoteEvents = events
+            nextMonthEvents = await loadNextMonthEventsIfNeeded(groupId: group.id)
             errorMessage = nil
-            await loadFamilyAvailability()
         } catch {
             guard !error.isRequestCancellation else { return }
             errorMessage = error.localizedDescription
@@ -235,28 +234,56 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Upcoming
+
+    private static let upcomingDayCount = 7
+
+    private var upcomingDates: [Date] {
+        (1...Self.upcomingDayCount).compactMap { calendar.date(byAdding: .day, value: $0, to: calendar.startOfDay(for: Date())) }
+    }
+
+    /// 내일부터 7일 중 일정이 있는 날만 날짜별로 묶습니다. 이번 달과 (필요하면) 다음 달 일정을 함께 봅니다.
+    private var upcomingDays: [UpcomingDay] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let labelFormatter = DateFormatter()
+        labelFormatter.locale = Locale(identifier: "ko_KR")
+        labelFormatter.dateFormat = "E · M/d"
+        let allEvents = remoteEvents + nextMonthEvents.filter { next in !remoteEvents.contains { $0.id == next.id } }
+
+        return upcomingDates.compactMap { date in
+            let key = dateFormatter.string(from: date)
+            let items = allEvents
+                .filter { $0.dateStrings().contains(key) }
+                .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
+                .map { event in
+                    ScheduleItem(
+                        id: event.id,
+                        time: event.isAllDay ? "종일" : (event.startTime ?? "-"),
+                        title: event.title,
+                        owner: owner(for: event)
+                    )
+                }
+            guard !items.isEmpty else { return nil }
+            let label = calendar.isDateInTomorrow(date) ? "내일" : labelFormatter.string(from: date)
+            return UpcomingDay(id: key, label: label, items: items)
+        }
+    }
+
+    /// 7일 창이 다음 달로 넘어가는 날에만 다음 달 일정을 추가로 받아옵니다.
+    private func loadNextMonthEventsIfNeeded(groupId: String) async -> [MoilRemoteEvent] {
+        guard let lastDate = upcomingDates.last,
+              !calendar.isDate(lastDate, equalTo: Date(), toGranularity: .month) else { return [] }
+        let components = calendar.dateComponents([.year, .month], from: lastDate)
+        let monthValue = String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+        return (try? await sessionStore.service().events(groupId: groupId, month: monthValue)) ?? []
+    }
+
     // MARK: - Availability
 
     /// 가족이 아이폰 앱에서 등록한 가능 시간대를 읽기 전용으로 불러옵니다.
     private func loadAvailability(eventId: String, date: String) async -> MoilAvailabilitySummary? {
         try? await sessionStore.service().availabilitySummary(eventId: eventId, date: date)
-    }
-
-    /// 가능 시간 API가 일정 단위라, 가족일정 탭에서는 오늘 가장 가까운 일정을 기준으로
-    /// "오늘 가능한 시간"을 보여줍니다. 오늘 일정이 없으면 표시하지 않습니다.
-    private var nextTodayEvent: MoilRemoteEvent? {
-        remoteEvents
-            .filter { $0.dateStrings().contains(todayDateString) }
-            .sorted { ($0.startTime ?? "") < ($1.startTime ?? "") }
-            .first
-    }
-
-    private func loadFamilyAvailability() async {
-        guard let event = nextTodayEvent else {
-            familyAvailability = nil
-            return
-        }
-        familyAvailability = await loadAvailability(eventId: event.id, date: todayDateString)
     }
 }
 
