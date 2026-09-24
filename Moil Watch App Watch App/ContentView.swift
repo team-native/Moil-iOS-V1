@@ -13,6 +13,9 @@ struct ContentView: View {
     @State private var errorMessage: String?
     /// 다가오는 일정(내일부터 7일)이 다음 달로 넘어가는 주에만 채워지는 다음 달 일정입니다.
     @State private var nextMonthEvents: [MoilRemoteEvent] = []
+    /// 방금 워치에서 바꾼 참석 상태입니다. 상세 화면을 나갔다 다시 들어와도 서버에서
+    /// 다시 받아오기 전까지는 방금 바꾼 값이 보이게 하고, 새로 불러오면 서버 값으로 대체합니다.
+    @State private var attendanceOverrides: [String: AttendanceState] = [:]
     /// 캘린더를 가운데 두고, 다가오는 일정/오늘을 양옆으로 스와이프해서 볼 수 있게 합니다.
     /// 앱을 열 때마다 항상 캘린더가 먼저 보이도록 기본값을 가운데(1)로 둡니다.
     @State private var selectedTab = 1
@@ -98,7 +101,8 @@ struct ContentView: View {
                     if let detail = eventDetail(for: item) {
                         ScheduleDetailView(
                             event: detail,
-                            loadAvailability: { await loadAvailability(eventId: detail.id, date: detail.date) }
+                            loadAvailability: { await loadAvailability(eventId: detail.id, date: detail.date) },
+                            setAttending: { await setAttendance(eventId: detail.id, attending: $0) }
                         )
                     }
                 }
@@ -137,6 +141,7 @@ struct ContentView: View {
             let (remoteMembers, events) = try await (membersTask, eventsTask)
             members = remoteMembers.map(FamilyMember.init(remote:))
             remoteEvents = events
+            attendanceOverrides = [:]
             nextMonthEvents = await loadNextMonthEventsIfNeeded(groupId: group.id)
             errorMessage = nil
         } catch {
@@ -211,8 +216,33 @@ struct ContentView: View {
             timeLocationLabel: timeLocationParts.joined(separator: " · "),
             attendeeCountLabel: "가족 \(event.members.count)명",
             attendees: attendees,
-            attendingSummary: "\(attendees.count)명 참석"
+            isAttending: attendance(for: event).isAttending,
+            attendingCount: attendance(for: event).count
         )
+    }
+
+    // MARK: - Attendance
+
+    private func attendance(for event: MoilRemoteEvent) -> AttendanceState {
+        attendanceOverrides[event.id]
+            ?? AttendanceState(isAttending: event.myAttendanceStatus == "ATTENDING", count: event.attendingCount ?? 0)
+    }
+
+    /// 서버에 참석/취소를 저장하고 성공하면 화면에 보이는 값도 함께 갱신합니다.
+    private func setAttendance(eventId: String, attending: Bool) async -> Bool {
+        do {
+            try await sessionStore.service().setAttendance(eventId: eventId, attending: attending)
+        } catch {
+            return false
+        }
+        guard let event = remoteEvents.first(where: { $0.id == eventId }) else { return true }
+        let current = attendance(for: event)
+        guard current.isAttending != attending else { return true }
+        attendanceOverrides[eventId] = AttendanceState(
+            isAttending: attending,
+            count: max(0, current.count + (attending ? 1 : -1))
+        )
+        return true
     }
 
     // MARK: - Monthly
@@ -312,4 +342,9 @@ private struct MoilMascotView: View {
 
 #Preview {
     ContentView()
+}
+
+struct AttendanceState {
+    var isAttending: Bool
+    var count: Int
 }
