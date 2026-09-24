@@ -995,11 +995,23 @@ private struct ScheduleComposerView: View {
                         .onTapGesture {
                             composerMode = .date
                         }
-                    ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            composerMode = .time
-                        }
+                    HStack {
+                        Text("하루 종일").font(MoilTypography.regular(15))
+                        Spacer()
+                        Toggle("하루 종일", isOn: $isAllDay)
+                            .labelsHidden()
+                            .tint(MoilColor.primary)
+                    }
+                    .padding(.horizontal, 18).frame(height: 46)
+                    .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+
+                    if !isAllDay {
+                        ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                composerMode = .time
+                            }
+                    }
 
                     ScheduleRow(title: "위치", value: location.nilIfBlank ?? "추가", secondary: location.nilIfBlank == nil)
                         .contentShape(Rectangle())
