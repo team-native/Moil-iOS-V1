@@ -10,9 +10,13 @@ struct TodayView: View {
 
     private var nextItem: ScheduleItem? { items.first }
 
+    /// 마지막 일정 카드가 화면에 보이는지입니다. LazyVStack은 화면에 들어올 때만 onAppear가
+    /// 불려서, 마지막 카드가 아직 안 보이면 "아래에 일정이 더 있음"으로 판단합니다.
+    @State private var isLastItemVisible = false
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+            LazyVStack(alignment: .leading, spacing: 10) {
                 header
                 if let nextItem {
                     summaryCard(nextItem)
@@ -24,6 +28,8 @@ struct TodayView: View {
                         scheduleRow(item)
                     }
                     .buttonStyle(.plain)
+                    .onAppear { if item.id == items.last?.id { isLastItemVisible = true } }
+                    .onDisappear { if item.id == items.last?.id { isLastItemVisible = false } }
                 }
                 if items.isEmpty {
                     Text("오늘은 일정이 없어요")
@@ -35,6 +41,19 @@ struct TodayView: View {
             .padding(.horizontal, 4)
         }
         .background(WatchColor.background)
+        .overlay(alignment: .bottom) {
+            if items.count > 1 && !isLastItemVisible {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(WatchColor.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 3)
+                    .background(WatchColor.surface)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 2)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 
     private var header: some View {
