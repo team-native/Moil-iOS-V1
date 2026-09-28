@@ -29,16 +29,18 @@ enum MoilFieldState: Equatable {
 
 /// 라벨과 입력 칸, 검증 문구를 한 덩어리로 묶습니다.
 struct MoilValidatedField<Field: View>: View {
-    let label: String
+    var label: String? = nil
     var state: MoilFieldState = .neutral
     @ViewBuilder let field: Field
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(label)
-                .font(MoilTypography.semibold(12))
-                .foregroundStyle(MoilColor.textTertiary)
-                .padding(.bottom, 10)
+            if let label {
+                Text(label)
+                    .font(MoilTypography.semibold(12))
+                    .foregroundStyle(MoilColor.textTertiary)
+                    .padding(.bottom, 10)
+            }
 
             field
                 .overlay {
