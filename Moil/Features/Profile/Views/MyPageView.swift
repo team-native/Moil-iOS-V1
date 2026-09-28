@@ -1,0 +1,343 @@
+import SwiftUI
+
+struct MyPageView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var groupStore: MoilGroupStore
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    @AppStorage("moilDarkMode") private var isDarkMode = false
+    @State private var isGroupDetailPresented = false
+    @State private var isLogoutConfirmationPresented = false
+    @State private var isMemberPresented = false
+    @State private var isJoinGroupPresented = false
+    @State private var isJoinProfilePresented = false
+    @State private var accountRoute: AccountRoute?
+    @State private var isEditingMyProfile = false
+    let onCreateGroup: () -> Void
+    let onLeaveGroup: () -> Void
+    let onLogout: () -> Void
+    let onTabSelect: ((MoilTab) -> Void)?
+    let showsTabBar: Bool
+    /// 탭 안에서 열릴 때는 상위 네비게이션이 탭바를 그리므로 진입 여부를 알려 줍니다.
+    @Binding var isAccountPagePresented: Bool
+
+    init(
+        onCreateGroup: @escaping () -> Void = {},
+        onLeaveGroup: @escaping () -> Void = {},
+        onLogout: @escaping () -> Void = {},
+        onTabSelect: ((MoilTab) -> Void)? = nil,
+        showsTabBar: Bool = true,
+        isAccountPagePresented: Binding<Bool> = .constant(false)
+    ) {
+        self.onCreateGroup = onCreateGroup
+        self.onLeaveGroup = onLeaveGroup
+        self.onLogout = onLogout
+        self.onTabSelect = onTabSelect
+        self.showsTabBar = showsTabBar
+        self._isAccountPagePresented = isAccountPagePresented
+    }
+    private var myMemberInSelectedGroup: MoilRemoteMember? {
+        groupStore.members(for: groupStore.selectedGroupId).first { $0.isMe }
+    }
+
+    var body: some View {
+        NavigationStack {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 14) {
+                    MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
+                    Text(myMemberInSelectedGroup?.nickname ?? "나").font(MoilTypography.bold(21))
+                    Spacer()
+                    if groupStore.selectedGroupId != nil {
+                        Button { isEditingMyProfile = true } label: {
+                            Text("프로필 수정")
+                                .font(MoilTypography.semibold(13))
+                                .foregroundStyle(MoilColor.primary)
+                                .padding(.horizontal, 12)
+                                .frame(height: 30)
+                                .background(MoilColor.primary.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .padding(.bottom, 20)
+
+                GroupSection(title: "내 그룹") {
+                    ForEach(groupStore.groups) { group in
+                        Button {
+                            groupStore.selectGroup(group.id)
+                            isGroupDetailPresented = true
+                        } label: {
+                            GroupRow(group.name, group.color)
+                        }
+                        if group.id != groupStore.groups.last?.id { Divider() }
+                    }
+                    Divider()
+                    Button(action: onCreateGroup) {
+                        Label("새 그룹 만들기", systemImage: "plus")
+                            .font(MoilTypography.semibold(15))
+                            .foregroundStyle(MoilColor.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                    }
+                }
+                .padding(.bottom, 28)
+                GroupSection(title: "환경설정") {
+                    Toggle("다크 모드", isOn: $isDarkMode).padding(14).tint(MoilColor.primary)
+                }
+                .padding(.bottom, 16)
+                GroupSection(title: "계정 보안") {
+                    AccountMenuRow(title: "비밀번호 변경") { accountRoute = .passwordChange }
+                    Divider()
+                    AccountMenuRow(title: "로그아웃") { isLogoutConfirmationPresented = true }
+                    Divider()
+                    AccountMenuRow(title: "회원 탈퇴", isDestructive: true) { accountRoute = .accountDeletion }
+                }
+            }
+            .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+            .safeAreaPadding(.top, MoilTabScreenMetrics.titleTopPadding)
+            .padding(.bottom, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background)
+        .moilTabScreenLayout(selected: .profile, isTabBarVisible: showsTabBar && accountRoute == nil) { tab in
+            if let onTabSelect {
+                onTabSelect(tab)
+            } else {
+                switch tab {
+                case .calendar: dismiss()
+                case .members: isMemberPresented = true
+                case .create: isJoinGroupPresented = true
+                case .profile: break
+                }
+            }
+        }
+        .sheet(isPresented: $isEditingMyProfile) {
+            if let groupId = groupStore.selectedGroupId {
+                EditMemberProfileView(
+                    groupId: groupId,
+                    currentNickname: myMemberInSelectedGroup?.nickname ?? "",
+                    currentColorId: myMemberInSelectedGroup?.colorId
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $isGroupDetailPresented) {
+            GroupDetailView {
+                isGroupDetailPresented = false
+                onLeaveGroup()
+            }
+        }
+        .fullScreenCover(isPresented: $isMemberPresented) {
+            MemberView(showsTabBar: false)
+        }
+        .fullScreenCover(isPresented: $isJoinGroupPresented) {
+            GroupJoinCodeView(onNext: {
+                isJoinGroupPresented = false
+                isJoinProfilePresented = true
+            }, showsTabBar: false)
+        }
+        .fullScreenCover(isPresented: $isJoinProfilePresented) {
+            GroupJoinProfileView { isJoinProfilePresented = false }
+        }
+        .navigationDestination(item: $accountRoute) { route in
+            switch route {
+            case .passwordChange:
+                PasswordChangeView()
+            case .accountDeletion:
+                AccountDeletionView { email, password, leftData in
+                    await deleteAccount(email: email, password: password, leftData: leftData)
+                }
+            }
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .alert("로그아웃할까요?", isPresented: $isLogoutConfirmationPresented) {
+            Button("취소", role: .cancel) { }
+            Button("로그아웃", role: .destructive, action: onLogout)
+        } message: {
+            Text("로그아웃하면 로그인 화면으로 돌아갑니다.")
+        }
+        .onChange(of: accountRoute) { _, route in
+            isAccountPagePresented = route != nil
+        }
+        // 단독 Preview와 전체 앱 모두에서 토글을 누르는 즉시 색상 스킴을 갱신합니다.
+        .preferredColorScheme(isDarkMode ? .dark : .light)
+        // 루트(MoilApp)의 @AppStorage onChange에만 맡기면 워치 동기화가 갱신되지 않는
+        // 경우가 있어(모달로 뜬 화면이 루트 Scene과 별개로 갱신되는 문제로 추정), 토글을
+        // 실제로 조작하는 이 화면에서도 직접 한 번 더 동기화를 트리거합니다.
+        .onChange(of: isDarkMode) { _, newValue in
+            MoilWatchConnectivityManager.shared.sync(
+                accessToken: sessionStore.accessToken,
+                refreshToken: sessionStore.refreshToken,
+                groupId: groupStore.selectedGroupId,
+                isDarkMode: newValue
+            )
+        }
+        }
+    }
+
+    private func deleteAccount(email: String, password: String, leftData: Bool) async -> String? {
+        do {
+            try await sessionStore.service().deleteAccount(email: email, password: password, leftData: leftData)
+            sessionStore.clear()
+            groupStore.reset()
+            onLogout()
+            return nil
+        } catch { return error.localizedDescription }
+    }
+}
+
+#Preview("마이페이지") {
+    MyPageView()
+        .environmentObject(MoilGroupStore())
+        .environmentObject(MoilSessionStore())
+}
+
+private enum AccountRoute: Hashable {
+    case passwordChange
+    case accountDeletion
+}
+
+private struct AccountMenuRow: View {
+    let title: String
+    var isDestructive = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(MoilTypography.semibold(15))
+                    .foregroundStyle(isDestructive ? MoilColor.error : MoilColor.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(MoilColor.textTertiary)
+            }
+            .padding(16)
+        }
+    }
+}
+
+private struct PasswordChangeView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionStore: MoilSessionStore
+    @State private var origin = ""
+    @State private var newPassword = ""
+    @State private var confirmation = ""
+    @State private var message: String?
+
+    private var canSubmit: Bool {
+        !origin.isEmpty && newPassword.count >= 8 && newPassword == confirmation
+    }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
+                    SecureField("현재 비밀번호", text: $origin).accountField()
+                    SecureField("새 비밀번호", text: $newPassword).accountField()
+                    SecureField("새 비밀번호 확인", text: $confirmation).accountField()
+                    if let message {
+                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
+                    }
+                }
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, 12)
+                .padding(.bottom, 32)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button("비밀번호 변경") { Task { await changePassword() } }
+                .accountButton(enabled: canSubmit)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background.ignoresSafeArea())
+        .navigationTitle("비밀번호 변경")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func changePassword() async {
+        do {
+            try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
+            origin = ""; newPassword = ""; confirmation = ""
+            dismiss()
+        } catch { message = "비밀번호를 변경하지 못했어요." }
+    }
+}
+
+private struct AccountDeletionView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var email = ""
+    @State private var password = ""
+    @State private var leftData = false
+    @State private var message: String?
+    @State private var isDeleting = false
+    let onDelete: (String, String, Bool) async -> String?
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("탈퇴하면 계정에 접근할 수 없어요.")
+                        .font(MoilTypography.regular(13))
+                        .foregroundStyle(MoilColor.textSecondary)
+                    TextField("이메일", text: $email).accountField()
+                    SecureField("비밀번호", text: $password).accountField()
+                    Toggle("그룹 데이터 유지", isOn: $leftData)
+                        .font(MoilTypography.regular(15))
+                        .tint(MoilColor.primary)
+                        .padding(.vertical, 2)
+                    if let message {
+                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
+                    }
+                }
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .safeAreaPadding(.top, 12)
+                .padding(.bottom, 32)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button("회원 탈퇴") {
+                Task {
+                    isDeleting = true
+                    message = await onDelete(email, password, leftData)
+                    isDeleting = false
+                    if message == nil { dismiss() }
+                }
+            }
+                .accountButton(enabled: !isDeleting)
+                .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
+                .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MoilColor.background.ignoresSafeArea())
+        .navigationTitle("회원 탈퇴")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private extension View {
+    func accountField() -> some View {
+        moilField()
+            // 배경과 구분이 잘 안 돼 입력칸이 흐릿하게 보였어서 옅은 외곽선을 더해줍니다.
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
+            }
+    }
+
+    func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {
+        font(MoilTypography.bold(15)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50)
+            .background(enabled ? color : color.opacity(0.7)).clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!enabled)
+    }
+}
+
+private struct GroupSection<Content: View>: View {
+    let title: String; @ViewBuilder let content: Content
+    var body: some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary); VStack(spacing: 0) { content }.background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 18)) } }
+}
+private struct GroupRow: View {
+    let title: String; let color: Color
+    init(_ title: String, _ color: Color) { self.title = title; self.color = color }
+    var body: some View { HStack { Circle().fill(color).frame(width: 8, height: 8); Text(title).font(MoilTypography.semibold(15)); Spacer(); Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(MoilColor.textTertiary) }.padding(14) }
+}

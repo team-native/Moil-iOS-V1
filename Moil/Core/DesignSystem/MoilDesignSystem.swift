@@ -1,0 +1,67 @@
+import SwiftUI
+
+enum MoilColor {
+    // Brand
+    static let primary = Color("BrandPrimary")
+    static let primaryPressed = Color("BrandPrimaryPressed")
+    static let error = Color("Error")
+    static let success = Color("Success")
+
+    // Neutral
+    static let background = Color("Background")
+    static let systemBackground = Color("MoilSystemBackground")
+    static let surface = Color("Surface")
+    static let textPrimary = Color("TextPrimary")
+    static let textSecondary = Color("TextSecondary")
+    static let textTertiary = Color("TextTertiary")
+    static let label = Color("MoilLabel")
+    static let launchBackground = Color("LaunchBackground")
+    static let groupDetailBackground = Color("GroupDetailBackground")
+    static let groupDetailSurface = Color("GroupDetailSurface")
+    static let groupDetailTextPrimary = Color("GroupDetailTextPrimary")
+    static let groupDetailTextSecondary = Color("GroupDetailTextSecondary")
+    static let groupDetailSeparator = Color("GroupDetailSeparator")
+    static let black = Color.black
+    static let black25 = Color.black.opacity(0.25)
+    static let black35 = Color.black.opacity(0.35)
+    static let black40 = Color.black.opacity(0.40)
+}
+
+enum MoilTypography {
+    static func regular(_ size: CGFloat) -> Font {
+        .custom("Pretendard-Regular", size: size)
+    }
+
+    static func semibold(_ size: CGFloat) -> Font {
+        .custom("Pretendard-SemiBold", size: size)
+    }
+
+    static func bold(_ size: CGFloat) -> Font {
+        .custom("Pretendard-Bold", size: size)
+    }
+
+    /// 번들에는 Bold가 가장 굵어, 그보다 굵게 보여야 하는 큰 제목에만 굵기를 더 올려 씁니다.
+    static func heavy(_ size: CGFloat) -> Font {
+        .custom("Pretendard-Bold", size: size).weight(.black)
+    }
+}
+
+/// 앱의 모든 입력 칸이 같은 여백과 모서리를 쓰도록 맞춰 주는 스타일입니다.
+struct MoilFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(MoilTypography.regular(15))
+            .padding(.horizontal, 16)
+            // 높이를 고정하지 않으면 커서가 생길 때 내용 높이가 달라져 칸이 미세하게 흔들립니다.
+            .frame(minHeight: 53)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(MoilColor.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+extension View {
+    func moilField() -> some View {
+        modifier(MoilFieldStyle())
+    }
+}
