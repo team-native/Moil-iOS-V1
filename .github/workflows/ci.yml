@@ -25,6 +25,6 @@ jobs:
           xcodebuild
           -project Moil.xcodeproj
           -scheme Moil
-          -sdk iphonesimulator
+          -destination "generic/platform=iOS Simulator"
           CODE_SIGNING_ALLOWED=NO
           build
