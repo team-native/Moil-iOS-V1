@@ -235,7 +235,11 @@ private struct LoginView: View {
 
                     VStack(spacing: 12) {
                         AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                        AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                            .onChange(of: email) { _, _ in errorMessage = nil }
+                        MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                            AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                                .onChange(of: password) { _, _ in errorMessage = nil }
+                        }
                         HStack {
                             Spacer()
                             Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
@@ -270,12 +274,6 @@ private struct LoginView: View {
                             .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                             .disabled(!canSubmit)
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(MoilTypography.regular(12))
-                                .foregroundStyle(MoilColor.error)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
 
                         Button {
                             showingSignUp = true
