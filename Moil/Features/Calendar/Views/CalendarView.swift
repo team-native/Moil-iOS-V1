@@ -305,7 +305,8 @@ struct CalendarView: View {
             EventEditorView(
                 event: event,
                 avatarColors: avatarColors(for: event),
-                onSetAttendance: { await setAttendance(for: event, attending: $0) }
+                onSetAttendance: { await setAttendance(for: event, attending: $0) },
+                onLoadAttendees: { await attendeeColors(for: event) }
             ) { title in
                 updateEvent(event, title: title)
             } onDelete: {
@@ -516,6 +517,16 @@ struct CalendarView: View {
         } catch {
             serverError = error.localizedDescription
             return false
+        }
+    }
+
+    /// 참석을 누른 멤버의 프로필 색을 가져옵니다. 참여자 동그라미와 같은 색이 되도록 그룹 멤버 색을
+    /// 먼저 쓰고, 그룹에서 못 찾으면 응답의 색을 씁니다. 불러오지 못하면 nil을 돌려줍니다.
+    private func attendeeColors(for event: CalendarEvent) async -> [Color]? {
+        guard let attendance = try? await sessionStore.service().attendance(eventId: event.id) else { return nil }
+        let members = groupStore.members(for: groupStore.selectedGroupId)
+        return attendance.members.filter(\.isAttending).map { attendee in
+            MoilAvatarColor.color(for: members.first { $0.id == attendee.id }?.colorId ?? attendee.colorId)
         }
     }
 
@@ -884,14 +895,13 @@ private struct DayScheduleSheet: View {
     }
 }
 
+/// 일정 참여자를 색 동그라미 대신 프로필 얼굴(MoilAvatar)로 겹쳐 보여줍니다.
 private struct AvatarDots: View {
     let colors: [Color]
     var body: some View {
         HStack(spacing: -6) {
             ForEach(Array(colors.prefix(3).enumerated()), id: \.offset) { _, color in
-                Circle()
-                    .fill(color)
-                    .frame(width: 26, height: 26)
+                MoilAvatar(color: color, size: 26)
                     .overlay { Circle().stroke(MoilColor.surface, lineWidth: 2) }
             }
         }
@@ -1453,6 +1463,8 @@ private struct EventEditorView: View {
     let avatarColors: [Color]
     /// 참석(true)/취소(false)를 서버에 저장하고 성공 여부를 돌려줍니다.
     let onSetAttendance: (Bool) async -> Bool
+    /// 참석을 누른 멤버들의 프로필 색을 불러옵니다. 실패하면 nil입니다.
+    let onLoadAttendees: () async -> [Color]?
     let onSave: (String) -> Void
     let onDelete: () -> Void
     @State private var title: String
@@ -1461,17 +1473,20 @@ private struct EventEditorView: View {
     @State private var isAttending: Bool
     @State private var attendingCount: Int
     @State private var isSubmittingAttendance = false
+    @State private var attendeeColors: [Color] = []
 
     init(
         event: CalendarEvent,
         avatarColors: [Color],
         onSetAttendance: @escaping (Bool) async -> Bool,
+        onLoadAttendees: @escaping () async -> [Color]?,
         onSave: @escaping (String) -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.event = event
         self.avatarColors = avatarColors
         self.onSetAttendance = onSetAttendance
+        self.onLoadAttendees = onLoadAttendees
         self.onSave = onSave
         self.onDelete = onDelete
         _title = State(initialValue: event.title)
@@ -1489,12 +1504,22 @@ private struct EventEditorView: View {
         attendingCount = max(0, attendingCount + (target ? 1 : -1))
         Task {
             let succeeded = await onSetAttendance(target)
-            if !succeeded {
+            if succeeded {
+                await reloadAttendees()
+            } else {
                 isAttending = !target
                 attendingCount = max(0, attendingCount + (target ? -1 : 1))
             }
             isSubmittingAttendance = false
         }
+    }
+
+    /// 서버에서 참석자를 다시 받아 얼굴과 "참석 N명"을 같은 기준으로 맞춥니다.
+    /// 불러오지 못하면 지금 보이는 얼굴과 숫자를 그대로 둡니다.
+    private func reloadAttendees() async {
+        guard let colors = await onLoadAttendees() else { return }
+        attendeeColors = colors
+        attendingCount = colors.count
     }
 
     private var trimmedTitle: String {
@@ -1544,6 +1569,9 @@ private struct EventEditorView: View {
                 Text("참석 \(attendingCount)명")
                     .font(MoilTypography.regular(15))
                 Spacer()
+                if !attendeeColors.isEmpty {
+                    AvatarDots(colors: attendeeColors)
+                }
                 Button(action: toggleAttendance) {
                     Text(isAttending ? "취소하기" : "참석하기")
                         .font(MoilTypography.semibold(13))
@@ -1598,6 +1626,7 @@ private struct EventEditorView: View {
         .sheet(isPresented: $isAvailabilityPresented) {
             EventAvailabilityView(eventId: event.id, eventTitle: event.title, date: event.date)
         }
+        .task { await reloadAttendees() }
     }
 
     private var formattedDate: String { event.date.replacingOccurrences(of: "-", with: ".") }
