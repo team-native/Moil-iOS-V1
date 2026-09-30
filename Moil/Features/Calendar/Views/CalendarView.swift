@@ -994,8 +994,9 @@ private struct ScheduleComposerView: View {
                     .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
                     .disabled(!canSave)
             }
+            // 상단 끌기 표시줄과 버튼 사이가 너무 떠 보여, 모든 입력 팝업의 취소/완료 줄을 같은 높이로 올립니다.
             .padding(.horizontal, 18)
-            .padding(.top, 34)
+            .padding(.top, 18)
             .padding(.bottom, 18)
 
             ScrollView {
@@ -1138,7 +1139,7 @@ private struct ScheduleTextInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 18)
-            .padding(.top, 28)
+            .padding(.top, 18)
             .padding(.bottom, 18)
 
             TextField(placeholder, text: $text, axis: allowsMultipleLines ? .vertical : .horizontal)
@@ -1190,7 +1191,7 @@ private struct MonthYearPickerSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 0) {
@@ -1276,7 +1277,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 24)
 
             HStack {
@@ -1381,7 +1382,7 @@ private struct ScheduleTimeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 10) {
