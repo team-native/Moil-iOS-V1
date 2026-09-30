@@ -1022,8 +1022,8 @@ private struct ScheduleComposerView: View {
                             .labelsHidden()
                             .tint(MoilColor.primary)
                     }
-                    .padding(.horizontal, 18).frame(height: 46)
-                    .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+                    .frame(height: 46)
+                    .overlay(alignment: .bottom) { Divider() }
 
                     if !isAllDay {
                         ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
@@ -1631,8 +1631,10 @@ private struct ScheduleRow: View {
             Spacer()
             Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
         }
-        .padding(.horizontal, 18).frame(height: 46)
-        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+        // 목록이 이미 좌우 18 여백 안에 있어, 여기서 여백을 또 주면 제목 입력칸·공유 문구보다
+        // 글자가 안쪽으로 밀려 보였습니다. 바깥 여백 하나로 왼쪽 시작선을 맞춥니다.
+        .frame(height: 46)
+        .overlay(alignment: .bottom) { Divider() }
     }
 }
 
