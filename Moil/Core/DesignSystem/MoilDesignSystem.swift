@@ -21,6 +21,8 @@ enum MoilColor {
     static let groupDetailTextPrimary = Color("GroupDetailTextPrimary")
     static let groupDetailTextSecondary = Color("GroupDetailTextSecondary")
     static let groupDetailSeparator = Color("GroupDetailSeparator")
+    /// 캘린더의 일요일·공휴일 날짜 숫자 색입니다. 따로 에셋을 두지 않고 에러 빨강을 같이 씁니다.
+    static let holiday = Color("Error")
     static let black = Color.black
     static let black25 = Color.black.opacity(0.25)
     static let black35 = Color.black.opacity(0.35)
