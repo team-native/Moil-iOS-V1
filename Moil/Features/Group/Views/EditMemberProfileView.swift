@@ -16,19 +16,11 @@ struct EditMemberProfileView: View {
     @State private var profileImagePreview: Image?
     @State private var uploadedImagePath: String?
     @State private var isUploadingImage = false
-    /// (id, 표시색) 쌍으로 들고 있어야, 27종 팔레트 중 스와치에 없는 색이 미리 채워져도
-    /// 저장할 때 Color→id 역변환 없이 원래 id를 그대로 다시 보낼 수 있습니다.
-    private let baseColors: [(id: String, color: Color)] = [
-        ("GREEN", MoilAvatarColor.green),
-        ("VIOLET", MoilAvatarColor.purple),
-        ("MAGENTA", MoilAvatarColor.pink),
-    ]
-
-    /// 현재 프로필 색이 기본 3색 스와치에 없으면(사진에서 자동 추출된 27종 팔레트 중 하나라면)
+    /// 현재 프로필 색이 선택 스와치에 없으면(사진에서 자동 추출된 27종 팔레트 중 하나라면)
     /// 맨 앞에 그 색을 추가해, 재진입했을 때 항상 현재 색이 선택 표시된 채로 보이게 합니다.
-    private var colors: [(id: String, color: Color)] {
-        guard !baseColors.contains(where: { $0.id == selectedColorId }) else { return baseColors }
-        return [(selectedColorId, MoilAvatarColor.color(for: selectedColorId))] + baseColors
+    private var colorIds: [String] {
+        guard !MoilAvatarColor.selectableIds.contains(selectedColorId) else { return MoilAvatarColor.selectableIds }
+        return [selectedColorId] + MoilAvatarColor.selectableIds
     }
 
     init(groupId: String, currentNickname: String, currentColorId: String?) {
@@ -60,40 +52,13 @@ struct EditMemberProfileView: View {
                         .padding(.top, 6)
                 }
                 Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 18)
-                HStack(spacing: 16) {
-                    if uploadedImagePath == nil {
-                        ForEach(colors, id: \.id) { entry in
-                            Button { selectColor(entry.id) } label: {
-                                MoilAvatar(color: entry.color, size: 46)
-                                    .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColorId == entry.id ? 2 : 0).padding(-5) }
-                            }
-                        }
+                if uploadedImagePath == nil {
+                    ProfileColorSwatchGrid(colorIds: colorIds, selectedId: selectedColorId, onSelect: selectColor) {
+                        profileImagePicker
                     }
-                    PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
-                        ZStack {
-                            if let profileImagePreview {
-                                profileImagePreview
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(Circle())
-                            } else {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(MoilColor.textSecondary)
-                                    .frame(width: 40, height: 40)
-                                    .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                            }
-                            if isUploadingImage {
-                                Circle().fill(.black.opacity(0.35)).frame(width: 40, height: 40)
-                                ProgressView().tint(.white)
-                            }
-                        }
-                        .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath != nil ? 2 : 0).padding(-5) }
-                    }
-                    .disabled(isUploadingImage)
-                    .accessibilityLabel("프로필 사진 추가")
-                    if uploadedImagePath != nil {
+                } else {
+                    HStack(spacing: 16) {
+                        profileImagePicker
                         Button("색상으로 변경") { selectColor(selectedColorId) }
                             .font(MoilTypography.regular(13))
                             .foregroundStyle(MoilColor.textSecondary)
@@ -153,6 +118,33 @@ struct EditMemberProfileView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+    }
+
+    private var profileImagePicker: some View {
+        PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
+            ZStack {
+                if let profileImagePreview {
+                    profileImagePreview
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(width: 40, height: 40)
+                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
+                }
+                if isUploadingImage {
+                    Circle().fill(.black.opacity(0.35)).frame(width: 40, height: 40)
+                    ProgressView().tint(.white)
+                }
+            }
+            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath != nil ? 2 : 0).padding(-5) }
+        }
+        .disabled(isUploadingImage)
+        .accessibilityLabel("프로필 사진 추가")
     }
 
     private func selectColor(_ id: String) {

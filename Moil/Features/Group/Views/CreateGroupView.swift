@@ -6,14 +6,13 @@ struct CreateGroupView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @State private var name = ""
-    @State private var selectedColor = MoilAvatarColor.green
+    @State private var selectedColorId = "GREEN"
     @State private var didCreateGroup = false
     @State private var errorMessage: String?
     @State private var profileImagePickerItem: PhotosPickerItem?
     @State private var profileImagePreview: Image?
     @State private var uploadedImagePath: String?
     @State private var isUploadingImage = false
-    private let colors = [MoilAvatarColor.green, MoilAvatarColor.purple, MoilAvatarColor.pink]
     var onClose: (() -> Void)? = nil
     /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
     /// 여기서도 같은 설정값을 직접 적용합니다.
@@ -25,41 +24,14 @@ struct CreateGroupView: View {
             TextField("예: 우리 가족", text: $name)
                 .moilField()
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            HStack(spacing: 16) {
-                if uploadedImagePath == nil {
-                    ForEach(colors, id: \.self) { color in
-                        Button { selectColor(color) } label: {
-                            MoilAvatar(color: color, size: 46)
-                                .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: selectedColor == color ? 2 : 0).padding(-5) }
-                        }
-                    }
+            if uploadedImagePath == nil {
+                ProfileColorSwatchGrid(colorIds: MoilAvatarColor.selectableIds, selectedId: selectedColorId, onSelect: selectColor) {
+                    profileImagePicker
                 }
-                PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
-                    ZStack {
-                        if let profileImagePreview {
-                            profileImagePreview
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 40, height: 40)
-                                .clipShape(Circle())
-                        } else {
-                            Image(systemName: "plus")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(MoilColor.textSecondary)
-                                .frame(width: 40, height: 40)
-                                .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                        }
-                        if isUploadingImage {
-                            Circle().fill(.black.opacity(0.35)).frame(width: 40, height: 40)
-                            ProgressView().tint(.white)
-                        }
-                    }
-                    .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath != nil ? 2 : 0).padding(-5) }
-                }
-                .disabled(isUploadingImage)
-                .accessibilityLabel("프로필 사진 추가")
-                if uploadedImagePath != nil {
-                    Button("색상으로 변경") { selectColor(selectedColor) }
+            } else {
+                HStack(spacing: 16) {
+                    profileImagePicker
+                    Button("색상으로 변경") { selectColor(selectedColorId) }
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
                 }
@@ -81,7 +53,7 @@ struct CreateGroupView: View {
                         try await groupStore.create(
                             name: name,
                             nickname: "나",
-                            colorId: uploadedImagePath == nil ? MoilAvatarColor.id(for: selectedColor) : nil,
+                            colorId: uploadedImagePath == nil ? selectedColorId : nil,
                             imagePath: uploadedImagePath,
                             using: sessionStore.service()
                         )
@@ -128,8 +100,35 @@ struct CreateGroupView: View {
         }
     }
 
-    private func selectColor(_ color: Color) {
-        selectedColor = color
+    private var profileImagePicker: some View {
+        PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
+            ZStack {
+                if let profileImagePreview {
+                    profileImagePreview
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(MoilColor.textSecondary)
+                        .frame(width: 40, height: 40)
+                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
+                }
+                if isUploadingImage {
+                    Circle().fill(.black.opacity(0.35)).frame(width: 40, height: 40)
+                    ProgressView().tint(.white)
+                }
+            }
+            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath != nil ? 2 : 0).padding(-5) }
+        }
+        .disabled(isUploadingImage)
+        .accessibilityLabel("프로필 사진 추가")
+    }
+
+    private func selectColor(_ id: String) {
+        selectedColorId = id
         uploadedImagePath = nil
         profileImagePreview = nil
         profileImagePickerItem = nil

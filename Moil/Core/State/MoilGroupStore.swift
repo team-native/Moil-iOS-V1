@@ -186,13 +186,25 @@ extension MoilAvatarColor {
         return color
     }
 
-    static func id(for color: Color) -> String {
-        if color == blue { return "SKY" }
-        if color == red { return "RED" }
-        if color == yellow { return "YELLOW" }
-        if color == purple { return "VIOLET" }
-        if color == pink { return "MAGENTA" }
-        if color == orange { return "ORANGE" }
-        return "GREEN"
+    /// 프로필 색 선택 화면에 보여줄 스와치입니다. 서버 팔레트 중 아바타의 흰 눈·입이 보이고
+    /// 라이트(Surface)·다크(검정) 배경 모두에서 대비가 2.5:1 이상인 색만 골라 색상환 순서로 둡니다.
+    /// 너무 밝은 색(CREAM, YELLOW 등)과 다크 모드에서 묻히는 NAVY는 사진 자동 추출로만 쓰입니다.
+    static let selectableIds = [
+        "RED", "VIVID_ORANGE", "TAN", "GREEN", "TEAL", "BLUE",
+        "INDIGO", "VIOLET", "PURPLE", "MAGENTA", "ROSE",
+    ]
+
+    /// VoiceOver에서 스와치를 구분할 수 있도록 서버(`MoilColor.kt`)의 displayName을 그대로 씁니다.
+    private static let nameById: [String: String] = [
+        "RED": "빨간색", "ORANGE": "주황색", "YELLOW": "노란색", "GREEN": "초록색", "BLUE": "파란색",
+        "NAVY": "남색", "INDIGO": "남색", "PURPLE": "보라색", "PINK": "핑크색", "CREAM": "크림색",
+        "PEACH": "피치색", "APRICOT": "살구색", "TAN": "탄색", "GOLD": "금색", "CORAL": "코랄색",
+        "ROSE": "장미색", "SKY": "하늘색", "LIGHT_BLUE": "연파랑색", "MINT": "민트색", "TEAL": "청록색",
+        "LIGHT_GREEN": "연초록색", "VIVID_GREEN": "선명한 초록색", "VIOLET": "보라색", "MAGENTA": "자주색",
+        "VIVID_ORANGE": "선명한 주황색", "VIVID_RED": "선명한 빨간색", "WARM_PINK": "웜 핑크색",
+    ]
+
+    static func name(for id: String) -> String {
+        nameById[id.uppercased()] ?? "프로필 색"
     }
 }
