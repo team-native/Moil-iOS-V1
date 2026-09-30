@@ -13,8 +13,8 @@ enum MoilAPIError: LocalizedError {
         switch self {
         case .invalidResponse:
             "서버 응답을 처리할 수 없어요."
-        case let .server(message, _):
-            message
+        case let .server(message, statusCode):
+            MoilErrorMessage.server(message, statusCode: statusCode)
         case .decoding:
             "서버 응답 형식이 올바르지 않아요."
         }
