@@ -4,24 +4,18 @@ import WatchKit
 /// 피그마 "Apple Watch · 일정 상세" 화면입니다.
 struct ScheduleDetailView: View {
     let event: EventDetail
-    /// 가족이 아이폰 앱에서 등록한 가능 시간대를 읽기 전용으로 불러옵니다. 워치에서는
-    /// 등록하지 않고 결과만 보여줍니다.
-    let loadAvailability: () async -> MoilAvailabilitySummary?
     /// 참석(true)/취소(false)를 서버에 저장하고 성공 여부를 돌려줍니다.
     let setAttending: (Bool) async -> Bool
 
     @State private var isAttending: Bool
     @State private var attendingCount: Int
     @State private var isSubmitting = false
-    @State private var availability: MoilAvailabilitySummary?
 
     init(
         event: EventDetail,
-        loadAvailability: @escaping () async -> MoilAvailabilitySummary?,
         setAttending: @escaping (Bool) async -> Bool
     ) {
         self.event = event
-        self.loadAvailability = loadAvailability
         self.setAttending = setAttending
         _isAttending = State(initialValue: event.isAttending)
         _attendingCount = State(initialValue: event.attendingCount)
@@ -47,14 +41,9 @@ struct ScheduleDetailView: View {
                 rsvpRow
 
                 attendButton
-
-                availabilitySection
             }
         }
         .background(WatchColor.background)
-        .task {
-            availability = await loadAvailability()
-        }
     }
 
     private var infoCard: some View {
@@ -133,35 +122,6 @@ struct ScheduleDetailView: View {
             isSubmitting = false
         }
     }
-
-    @ViewBuilder
-    private var availabilitySection: some View {
-        if let availability, !availability.timeSlots.isEmpty {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("가족 가능 시간 · \(availability.respondedCount)/\(availability.participantCount)명")
-                    .font(.system(size: 9))
-                    .foregroundStyle(WatchColor.textSecondary)
-                    .padding(.top, 4)
-
-                ForEach(availability.timeSlots) { slot in
-                    HStack(spacing: 6) {
-                        Text("\(slot.startTime)–\(slot.endTime)")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(WatchColor.textPrimary)
-                        Spacer(minLength: 0)
-                        Text(slot.isAvailableForEveryone ? "모두 가능" : "\(slot.availableCount)명")
-                            .font(.system(size: 9))
-                            .foregroundStyle(WatchColor.textSecondary)
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(WatchColor.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-        }
-    }
 }
 
 #Preview {
@@ -171,7 +131,6 @@ struct ScheduleDetailView: View {
                 id: "1",
                 owner: MoilWatchSampleData.members[0],
                 title: "엄마 생일",
-                date: "2026-07-05",
                 dateLabel: "7월 5일 · 일요일",
                 timeLocationLabel: "오후 6:30 · 우리집",
                 attendeeCountLabel: "가족 4명",
@@ -179,7 +138,6 @@ struct ScheduleDetailView: View {
                 isAttending: false,
                 attendingCount: 3
             ),
-            loadAvailability: { nil },
             setAttending: { _ in true }
         )
     }
