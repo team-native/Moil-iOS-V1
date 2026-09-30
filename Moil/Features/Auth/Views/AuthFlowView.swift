@@ -266,6 +266,8 @@ private struct LoginView: View {
                     }
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicators(.hidden)
+                    // 스크롤 영역이 화면 대부분을 덮으므로, 스크롤로도 키보드를 내릴 수 있게 합니다.
+                    .scrollDismissesKeyboard(.immediately)
                 }
 
                 VStack(spacing: 14) {
