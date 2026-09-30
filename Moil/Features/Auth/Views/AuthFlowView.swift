@@ -216,6 +216,7 @@ private struct LoginView: View {
         ZStack {
             MoilColor.background
                 .ignoresSafeArea()
+                .moilDismissKeyboardOnTap()
 
             VStack(spacing: 0) {
                 VStack(spacing: 0) {
@@ -318,7 +319,7 @@ private struct SignUpInfoView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
 
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -377,7 +378,7 @@ private struct PasswordResetEmailView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) { Image(systemName: "chevron.left").foregroundStyle(MoilColor.textPrimary) }
@@ -431,7 +432,7 @@ private struct EmailVerificationView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) {
@@ -484,6 +485,10 @@ private struct EmailVerificationView: View {
                 .onChange(of: code) { _, value in
                     code = String(value.filter(\.isNumber).prefix(6))
                     isEditingCode = code.count < 6
+                }
+                .onChange(of: isCodeFieldFocused) { _, isFocused in
+                    // 빈 곳을 눌러 키보드를 내리면 깜빡이는 커서도 함께 숨깁니다.
+                    if !isFocused { isEditingCode = false }
                 }
                 .onAppear {
                     isEditingCode = true
@@ -569,7 +574,7 @@ private struct PasswordSetupView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) {
