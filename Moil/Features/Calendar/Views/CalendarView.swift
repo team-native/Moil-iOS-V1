@@ -852,33 +852,38 @@ private struct DayScheduleSheet: View {
             .padding(.top, 20)
             .padding(.bottom, 12)
 
-            ForEach(events) { event in
-                Button { onSelect(event) } label: {
-                    HStack(spacing: 14) {
-                        Circle().fill(event.color).frame(width: 10, height: 10)
-                        Text(event.isAllDay ? "하루 종일" : "\(event.startTime ?? "09:00")\n\(event.endTime ?? "")")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                            .multilineTextAlignment(.leading)
-                            .frame(width: 46, alignment: .leading)
-                        Text(event.title)
-                            .font(MoilTypography.bold(16))
-                            .foregroundStyle(MoilColor.textPrimary)
-                            .lineLimit(2)
-                        Spacer(minLength: 8)
-                        AvatarDots(colors: avatarColors(event))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(MoilColor.textPrimary)
+            // 한 줄 높이가 커서 일정이 몇 개만 넘어도 고정 높이 시트 밖으로 잘렸습니다.
+            // 목록만 스크롤되게 해 날짜 제목과 추가 버튼은 위에 고정합니다.
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(events) { event in
+                        Button { onSelect(event) } label: {
+                            HStack(spacing: 14) {
+                                Circle().fill(event.color).frame(width: 10, height: 10)
+                                Text(event.isAllDay ? "하루 종일" : "\(event.startTime ?? "09:00")\n\(event.endTime ?? "")")
+                                    .font(MoilTypography.regular(13))
+                                    .foregroundStyle(MoilColor.textSecondary)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(width: 46, alignment: .leading)
+                                Text(event.title)
+                                    .font(MoilTypography.bold(16))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                                    .lineLimit(2)
+                                Spacer(minLength: 8)
+                                AvatarDots(colors: avatarColors(event))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                            }
+                            .padding(.horizontal, 28)
+                            .frame(minHeight: 110)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        Divider().padding(.horizontal, 28)
                     }
-                    .padding(.horizontal, 28)
-                    .frame(minHeight: 110)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                Divider().padding(.horizontal, 28)
             }
-            Spacer()
         }
         .background(MoilColor.surface)
     }
