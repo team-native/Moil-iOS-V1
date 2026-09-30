@@ -6,10 +6,14 @@ import Foundation
 /// 로그에는 원래 문구를 그대로 남깁니다.
 enum MoilErrorMessage {
     static let fallback = "문제가 발생했어요. 잠시 후 다시 시도해주세요."
+    /// 서버 응답 본문에 `message`가 없을 때 `MoilAPIClient`가 채우는 문구입니다.
+    static let unreadableServerMessage = "요청에 실패했어요."
     private static let socialLoginFailed = "소셜 로그인에 실패했어요. 잠시 후 다시 시도해주세요."
 
     /// 서버 `message`를 화면용 문구로 바꿉니다. 이미 한국어면 그대로 씁니다.
     static func server(_ message: String, statusCode: Int) -> String {
+        // 응답 본문을 해석하지 못했을 때 쓰는 기본 문구는 한국어지만 정보가 없으므로 상태 코드로 안내합니다.
+        if message.isEmpty || message == unreadableServerMessage { return statusMessage(statusCode) }
         if message.containsHangul { return message }
         return knownServerMessage(message) ?? statusMessage(statusCode)
     }
@@ -61,16 +65,35 @@ enum MoilErrorMessage {
             || message.contains("profile response is empty") || message.contains("public keys response is empty") {
             return socialLoginFailed
         }
+        if let mapped = domainMessages.first(where: { message.contains($0.key) })?.message { return mapped }
         if message.contains("Invalid request") { return "입력한 내용을 다시 확인해주세요." }
         if message.contains("Resource not found") { return "요청한 정보를 찾을 수 없어요." }
         if message.contains("Unexpected server error") { return "서버에 문제가 생겼어요. 잠시 후 다시 시도해주세요." }
         return nil
     }
 
+    /// 그룹·일정 API가 영어로 내려주는 문구입니다. 비슷한 문구가 있어 더 구체적인 것을 앞에 둡니다.
+    private static let domainMessages: [(key: String, message: String)] = [
+        ("OWNER cannot leave a group", "방장은 그룹을 나갈 수 없어요. 방장을 넘긴 뒤 다시 시도해주세요."),
+        ("OWNER role must be changed through transfer-admin", "방장은 방장 넘기기로만 바꿀 수 있어요."),
+        ("OWNER role cannot be changed", "방장의 역할은 바꿀 수 없어요."),
+        ("Current owner cannot be the transfer target", "이미 방장인 멤버에게는 넘길 수 없어요."),
+        ("Invalid role", "멤버 역할이 올바르지 않아요."),
+        ("Shared members must belong to the group", "그룹 멤버만 공유 대상으로 지정할 수 있어요."),
+        ("Invalid event time range", "종료 시간은 시작 시간보다 뒤여야 해요."),
+        ("Invalid event time format", "일정 시간 형식이 올바르지 않아요."),
+        ("Invalid attendance status", "참석 상태가 올바르지 않아요."),
+        ("Invalid image path", "이미지 정보가 올바르지 않아요. 다시 선택해주세요."),
+        ("Image not found", "이미지를 찾을 수 없어요."),
+        ("Event not found", "일정을 찾을 수 없어요."),
+        ("Group member not found", "그룹 멤버를 찾을 수 없어요."),
+    ]
+
     /// 알 수 없는 영어 문구(예: `Bad Request` 같은 HTTP 기본 문구)는 상태 코드로 안내합니다.
     private static func statusMessage(_ statusCode: Int) -> String {
         switch statusCode {
-        case 400: "입력한 내용을 다시 확인해주세요."
+        // 400은 입력이 없는 화면(그룹 나가기 등)에서도 오므로 입력을 탓하지 않는 문구를 씁니다.
+        case 400: "요청을 처리할 수 없어요."
         case 401: "로그인 정보가 올바르지 않아요. 다시 로그인해주세요."
         case 403: "접근 권한이 없어요."
         case 404: "요청한 정보를 찾을 수 없어요."
