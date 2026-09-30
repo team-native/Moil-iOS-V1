@@ -463,7 +463,7 @@ private struct EmailVerificationView: View {
                             }
                         }
                             .frame(width: 52, height: 52)
-                            .background(MoilColor.surface)
+                            .background(MoilColor.fieldBackground)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }

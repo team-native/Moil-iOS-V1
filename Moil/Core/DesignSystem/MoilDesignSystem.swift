@@ -11,6 +11,7 @@ enum MoilColor {
     static let background = Color("Background")
     static let systemBackground = Color("MoilSystemBackground")
     static let surface = Color("Surface")
+    static let fieldBackground = Color("FieldBackground")
     static let textPrimary = Color("TextPrimary")
     static let textSecondary = Color("TextSecondary")
     static let textTertiary = Color("TextTertiary")
@@ -55,7 +56,7 @@ struct MoilFieldStyle: ViewModifier {
             // 높이를 고정하지 않으면 커서가 생길 때 내용 높이가 달라져 칸이 미세하게 흔들립니다.
             .frame(minHeight: 53)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(MoilColor.surface)
+            .background(MoilColor.fieldBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
