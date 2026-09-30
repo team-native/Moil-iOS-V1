@@ -82,6 +82,8 @@ struct CalendarView: View {
     }
 
     private let dayCellHeight: CGFloat = 108
+    /// 날짜 칸 하나에 칩으로 그릴 최대 일정 수입니다. 넘치는 일정은 "+N"으로 줄여 보여줍니다.
+    private let maxVisibleEventsPerDay = 6
     @State private var selectedDay = Calendar.current.component(.day, from: Date())
     @State private var selectedDayMonth = Date()
 
@@ -579,8 +581,16 @@ struct CalendarView: View {
         calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
+    /// 일요일과 공휴일은 날짜 숫자를 공휴일 색으로 칠합니다.
+    private func dayNumberColor(day: Int, month: Date) -> Color {
+        let date = calendar.date(bySetting: .day, value: day, of: firstDay(of: month)) ?? firstDay(of: month)
+        let isSunday = calendar.component(.weekday, from: date) == 1
+        return isSunday || KoreanHoliday.isHoliday(date) ? MoilColor.holiday : MoilColor.textPrimary
+    }
+
     private func calendarDay(_ day: Int, month: Date, events: [CalendarEvent]) -> some View {
         let isSelected = selectedDay == day && calendar.isDate(selectedDayMonth, equalTo: month, toGranularity: .month)
+        let hiddenEventCount = max(events.count - maxVisibleEventsPerDay, 0)
         return Button {
             scheduleDraftDay = day
             scheduleDraftMonth = month
@@ -595,14 +605,22 @@ struct CalendarView: View {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
-                    .foregroundStyle(isSelected ? Color.white : MoilColor.textPrimary)
+                    .foregroundStyle(isSelected ? Color.white : dayNumberColor(day: day, month: month))
                     .frame(width: 32, height: 32, alignment: .center)
                     .background(isSelected ? MoilColor.primary : .clear)
                     .clipShape(Circle())
                 // 일정이 여러 개 쌓일 때는 서로 더 붙어 보이도록 간격을 좁게 둡니다.
                 VStack(spacing: 2) {
-                    ForEach(events) { event in
+                    ForEach(events.prefix(maxVisibleEventsPerDay)) { event in
                         eventChip(event, day: day, month: month)
+                    }
+                    if hiddenEventCount > 0 {
+                        Text("+\(hiddenEventCount)")
+                            .font(MoilTypography.semibold(10))
+                            .foregroundStyle(MoilColor.textSecondary)
+                            .padding(.horizontal, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityLabel("일정 \(hiddenEventCount)개 더 있음")
                     }
                 }
                 Spacer(minLength: 0)
@@ -809,6 +827,149 @@ private enum MoilCalendarDate {
         }
 
         return nil
+    }
+}
+
+/// 한국 관공서 공휴일(대체공휴일 포함)을 계산합니다. 서버에 공휴일 API가 없어 앱에서 직접 구합니다.
+/// 음력 공휴일(설날·부처님오신날·추석)은 기기 달력의 음력 변환을 쓰고, 선거일 같은
+/// 임시공휴일은 미리 알 수 없어 포함하지 않습니다.
+private enum KoreanHoliday {
+    /// 대체공휴일 규칙이 공휴일 종류마다 달라 종류를 함께 들고 다닙니다.
+    private enum Kind {
+        /// 1월 1일, 현충일: 대체공휴일이 없습니다.
+        case plain
+        /// 국경일·부처님오신날·성탄절: 토·일요일과 겹치면 대체공휴일이 생깁니다.
+        case weekendSubstitute
+        /// 어린이날: 토·일요일이나 다른 공휴일과 겹치면 대체공휴일이 생깁니다.
+        case childrensDay
+        /// 설날·추석 연휴: 일요일이나 다른 공휴일과 겹치면 연휴 다음 날에 대체공휴일이 생깁니다.
+        case lunarBreak(id: Int)
+    }
+
+    /// 한 해치 계산에 음력 변환이 365번 들어가므로 연도별로 한 번만 계산해 둡니다.
+    private static var cache: [Int: Set<DateComponents>] = [:]
+
+    private static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    /// 한국 음력(단기) 달력을 씁니다. 중국 음력은 기준 시간대가 한 시간 달라 가끔 하루씩
+    /// 어긋나므로(예: 2027년 설날), `Calendar.Identifier.dangi`가 없는 iOS 26 미만에서도
+    /// 식별자로 단기 달력을 찾고, 그래도 없을 때만 중국 음력으로 대신합니다.
+    private static var lunarCalendar: Calendar {
+        var lunar = NSCalendar(identifier: NSCalendar.Identifier("dangi")).map { $0 as Calendar }
+            ?? Calendar(identifier: .chinese)
+        lunar.timeZone = .autoupdatingCurrent
+        return lunar
+    }
+
+    static func isHoliday(_ date: Date) -> Bool {
+        let key = dayKey(date)
+        guard let year = key.year else { return false }
+        return holidays(in: year).contains(key)
+    }
+
+    static func holidays(in year: Int) -> Set<DateComponents> {
+        if let cached = cache[year] { return cached }
+        let calendar = calendar
+        func date(_ month: Int, _ day: Int) -> Date? {
+            calendar.date(from: DateComponents(year: year, month: month, day: day))
+        }
+        func adding(_ days: Int, to date: Date) -> Date? {
+            calendar.date(byAdding: .day, value: days, to: date)
+        }
+
+        var entries: [(date: Date, kind: Kind)] = []
+        for (month, day) in [(1, 1), (6, 6)] {
+            if let value = date(month, day) { entries.append((value, .plain)) }
+        }
+        for (month, day) in [(3, 1), (8, 15), (10, 3), (10, 9), (12, 25)] {
+            if let value = date(month, day) { entries.append((value, .weekendSubstitute)) }
+        }
+        if let value = date(5, 5) { entries.append((value, .childrensDay)) }
+
+        let lunar = lunarDates(in: year)
+        if let buddha = lunar.buddha { entries.append((buddha, .weekendSubstitute)) }
+        for (id, center) in [lunar.seollal, lunar.chuseok].enumerated() {
+            guard let center else { continue }
+            for offset in -1...1 {
+                if let value = adding(offset, to: center) { entries.append((value, .lunarBreak(id: id))) }
+            }
+        }
+
+        var result = Set(entries.map { dayKey($0.date) })
+        func isWeekend(_ date: Date) -> Bool { [1, 7].contains(calendar.component(.weekday, from: date)) }
+        func isSunday(_ date: Date) -> Bool { calendar.component(.weekday, from: date) == 1 }
+        /// 같은 날짜에 다른 종류의 공휴일이 또 있는지 봅니다. 설날 연휴처럼 같은 묶음끼리는 겹침으로 치지 않습니다.
+        func overlapsOtherHoliday(_ index: Int) -> Bool {
+            let entry = entries[index]
+            return entries.indices.contains { other in
+                guard other != index, calendar.isDate(entries[other].date, inSameDayAs: entry.date) else { return false }
+                if case .lunarBreak(let a) = entry.kind, case .lunarBreak(let b) = entries[other].kind { return a != b }
+                return true
+            }
+        }
+
+        // 대체공휴일은 "다음 첫 번째 비공휴일"이라 앞에서 정한 대체공휴일도 피해야 하므로 날짜순으로 정합니다.
+        var substituteBases: [Date] = []
+        for index in entries.indices.sorted(by: { entries[$0].date < entries[$1].date }) {
+            let entry = entries[index]
+            switch entry.kind {
+            case .plain:
+                break
+            case .weekendSubstitute:
+                if isWeekend(entry.date) { substituteBases.append(entry.date) }
+            case .childrensDay:
+                if isWeekend(entry.date) || overlapsOtherHoliday(index) { substituteBases.append(entry.date) }
+            case .lunarBreak(let id):
+                // 연휴 중 여러 날이 겹쳐도 겹친 날 수만큼 연휴 끝 다음에 이어 붙입니다.
+                if isSunday(entry.date) || overlapsOtherHoliday(index) {
+                    let lastDay = entries.filter {
+                        if case .lunarBreak(let other) = $0.kind { return other == id }
+                        return false
+                    }.map(\.date).max() ?? entry.date
+                    substituteBases.append(lastDay)
+                }
+            }
+        }
+        for base in substituteBases.sorted() {
+            var candidate = adding(1, to: base)
+            while let value = candidate, isWeekend(value) || result.contains(dayKey(value)) {
+                candidate = adding(1, to: value)
+            }
+            if let candidate { result.insert(dayKey(candidate)) }
+        }
+
+        cache[year] = result
+        return result
+    }
+
+    /// 양력 한 해를 하루씩 음력으로 바꿔 설날(1/1)·부처님오신날(4/8)·추석(8/15)을 찾습니다.
+    private static func lunarDates(in year: Int) -> (seollal: Date?, buddha: Date?, chuseok: Date?) {
+        let calendar = calendar
+        let lunar = lunarCalendar
+        guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+              let dayCount = calendar.range(of: .day, in: .year, for: start)?.count else { return (nil, nil, nil) }
+        var seollal: Date?, buddha: Date?, chuseok: Date?
+        for offset in 0..<dayCount {
+            guard let value = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
+            let parts = lunar.dateComponents([.month, .day, .isLeapMonth], from: value)
+            guard parts.isLeapMonth != true else { continue }
+            switch (parts.month, parts.day) {
+            case (1, 1): seollal = value
+            case (4, 8): buddha = value
+            case (8, 15): chuseok = value
+            default: break
+            }
+        }
+        return (seollal, buddha, chuseok)
+    }
+
+    private static func dayKey(_ date: Date) -> DateComponents {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return DateComponents(year: parts.year, month: parts.month, day: parts.day)
     }
 }
 
