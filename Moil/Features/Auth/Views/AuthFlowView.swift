@@ -659,7 +659,7 @@ private struct SocialLoginRow: View {
         VStack(spacing: 22) {
             HStack(spacing: 12) {
                 dividerLine
-                Text("간편 로그인")
+                Text("간편로그인/회원가입")
                     .font(MoilTypography.regular(13))
                     .foregroundStyle(MoilColor.textSecondary)
                     .fixedSize()
