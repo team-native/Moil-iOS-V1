@@ -1553,6 +1553,9 @@ private struct EventEditorView: View {
                         .background(isAttending ? MoilColor.textPrimary.opacity(0.1) : MoilColor.primary)
                         .clipShape(Capsule())
                 }
+                // 기본 버튼 스타일은 손을 뗄 때 눌림 표시를 애니메이션으로 되돌리는데, 같은 순간
+                // 바뀌는 글자·배경색까지 그 애니메이션에 섞여 서서히 바뀝니다. 즉시 바뀌도록 뺍니다.
+                .buttonStyle(NoPressHighlightButtonStyle())
             }
             .padding(.bottom, 16)
             Button {
