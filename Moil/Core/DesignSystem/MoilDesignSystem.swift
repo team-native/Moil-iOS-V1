@@ -11,6 +11,9 @@ enum MoilColor {
     static let background = Color("Background")
     static let systemBackground = Color("MoilSystemBackground")
     static let surface = Color("Surface")
+    /// 팝업(시트) 안 입력칸 배경입니다. 다크모드에서는 팝업 배경(surface)이 검정이라
+    /// 입력칸이 묻히지 않도록 한 단계 밝은 회색을 씁니다. 라이트모드는 surface와 같습니다.
+    static let popupField = Color("PopupField")
     static let textPrimary = Color("TextPrimary")
     static let textSecondary = Color("TextSecondary")
     static let textTertiary = Color("TextTertiary")
@@ -48,6 +51,8 @@ enum MoilTypography {
 
 /// 앱의 모든 입력 칸이 같은 여백과 모서리를 쓰도록 맞춰 주는 스타일입니다.
 struct MoilFieldStyle: ViewModifier {
+    var background: Color = MoilColor.surface
+
     func body(content: Content) -> some View {
         content
             .font(MoilTypography.regular(15))
@@ -55,13 +60,13 @@ struct MoilFieldStyle: ViewModifier {
             // 높이를 고정하지 않으면 커서가 생길 때 내용 높이가 달라져 칸이 미세하게 흔들립니다.
             .frame(minHeight: 53)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(MoilColor.surface)
+            .background(background)
             .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
 extension View {
-    func moilField() -> some View {
-        modifier(MoilFieldStyle())
+    func moilField(background: Color = MoilColor.surface) -> some View {
+        modifier(MoilFieldStyle(background: background))
     }
 }
