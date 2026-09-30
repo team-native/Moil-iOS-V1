@@ -218,46 +218,55 @@ private struct LoginView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    VStack(spacing: 6) {
-                        Image("MoilMascot")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 75, height: 74)
-                        Text("모일")
-                            .font(MoilTypography.bold(22))
-                            .foregroundStyle(MoilColor.textPrimary)
-                        Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                    }
-                    .padding(.bottom, 36)
+                // 키보드가 올라오면 남는 높이보다 위쪽 내용이 길어져, 넘친 만큼 로그인 버튼이
+                // 키보드에 붙고 회원가입 문구가 키보드에 가려졌습니다. 위쪽 내용만 스크롤되게 해
+                // 아래 버튼 영역이 다른 인증 화면처럼 키보드 위 12pt 여백을 유지하도록 합니다.
+                GeometryReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            VStack(spacing: 6) {
+                                Image("MoilMascot")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 75, height: 74)
+                                Text("모일")
+                                    .font(MoilTypography.bold(22))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                                Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
+                                    .font(MoilTypography.regular(13))
+                                    .foregroundStyle(MoilColor.textSecondary)
+                            }
+                            .padding(.bottom, 36)
 
-                    VStack(spacing: 12) {
-                        AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                            .onChange(of: email) { _, _ in errorMessage = nil }
-                        MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
-                            AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                                .onChange(of: password) { _, _ in errorMessage = nil }
-                        }
-                        HStack {
-                            Spacer()
-                            Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
-                                .font(MoilTypography.regular(13))
-                                .foregroundStyle(MoilColor.textSecondary)
-                        }
-                    }
+                            VStack(spacing: 12) {
+                                AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                                    .onChange(of: email) { _, _ in errorMessage = nil }
+                                MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                                    AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                                        .onChange(of: password) { _, _ in errorMessage = nil }
+                                }
+                                HStack {
+                                    Spacer()
+                                    Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
+                                        .font(MoilTypography.regular(13))
+                                        .foregroundStyle(MoilColor.textSecondary)
+                                }
+                            }
 
-                    SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
-                        Task {
-                            isSocialLoginSubmitting = true
-                            errorMessage = await onSocialLogin(provider)
-                            isSocialLoginSubmitting = false
+                            SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
+                                Task {
+                                    isSocialLoginSubmitting = true
+                                    errorMessage = await onSocialLogin(provider)
+                                    isSocialLoginSubmitting = false
+                                }
+                            }
+                            .padding(.top, 44)
                         }
+                        .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .center)
                     }
-                    .padding(.top, 44)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.hidden)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
 
                 VStack(spacing: 14) {
                         Button("로그인") {
