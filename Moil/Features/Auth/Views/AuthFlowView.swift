@@ -62,7 +62,7 @@ struct AuthFlowView: View {
             route = .main
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -81,9 +81,9 @@ struct AuthFlowView: View {
             // cancellation(코드 1)로 전달하는 경우가 있습니다. 이를 숨기면 사용자는
             // 로그인 화면으로 되돌아오는 현상만 보게 되므로 오류를 표시합니다.
 #if DEBUG
-            print("[MoilAuth] \(provider.rawValue) login failed: \(error.localizedDescription)")
+            print("[MoilAuth] \(provider.rawValue) login failed: \(error)")
 #endif
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -120,7 +120,7 @@ struct AuthFlowView: View {
             route = .emailVerification
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -131,7 +131,7 @@ struct AuthFlowView: View {
             route = .passwordSetup
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -143,7 +143,7 @@ struct AuthFlowView: View {
             route = .main
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -154,7 +154,7 @@ struct AuthFlowView: View {
             verifyId = response.verifyId
             route = .passwordResetVerification
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func verifyResetCode(_ code: String) async -> String? {
@@ -163,7 +163,7 @@ struct AuthFlowView: View {
             resetSessionId = response.sessionId
             route = .passwordResetSetup
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func resetPassword(password: String, confirmation: String) async -> String? {
@@ -171,7 +171,7 @@ struct AuthFlowView: View {
             _ = try await sessionStore.service().resetPassword(sessionId: resetSessionId, password: password, confirmation: confirmation)
             route = .login
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func logout() {
