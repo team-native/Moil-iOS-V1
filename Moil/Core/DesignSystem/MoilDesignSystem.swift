@@ -70,4 +70,12 @@ extension View {
     func moilField(background: Color = MoilColor.fieldBackground) -> some View {
         modifier(MoilFieldStyle(background: background))
     }
+
+    /// 입력 중 빈 곳을 누르면 키보드를 내립니다. 버튼·입력 칸의 탭은 가로채지 않도록 화면 배경 뷰에 붙여 씁니다.
+    func moilDismissKeyboardOnTap() -> some View {
+        contentShape(Rectangle())
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+    }
 }
