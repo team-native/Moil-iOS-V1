@@ -1001,9 +1001,9 @@ private struct ScheduleComposerView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
-                        .moilField()
+                        .moilField(background: MoilColor.popupField)
                         .overlay {
-                            // 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
+                            // 라이트모드에서는 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
                             // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
                             RoundedRectangle(cornerRadius: 14)
                                 .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
@@ -1142,7 +1142,7 @@ private struct ScheduleTextInputSheet: View {
             .padding(.bottom, 18)
 
             TextField(placeholder, text: $text, axis: allowsMultipleLines ? .vertical : .horizontal)
-                .moilField()
+                .moilField(background: MoilColor.popupField)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
                 .padding(.horizontal, 18)
             Spacer()
@@ -1518,7 +1518,7 @@ private struct EventEditorView: View {
 
             if isEditing {
                 TextField("일정 제목", text: $title)
-                    .moilField()
+                    .moilField(background: MoilColor.popupField)
                     .padding(.bottom, 12)
             } else {
                 Text(event.title)
