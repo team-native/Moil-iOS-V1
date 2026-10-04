@@ -1003,16 +1003,17 @@ private struct ScheduleComposerView: View {
                     .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
                     .disabled(!canSave)
             }
+            // 상단 끌기 표시줄과 버튼 사이가 너무 떠 보여, 모든 입력 팝업의 취소/완료 줄을 같은 높이로 올립니다.
             .padding(.horizontal, 18)
-            .padding(.top, 34)
+            .padding(.top, 18)
             .padding(.bottom, 18)
 
             ScrollView {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
-                        .moilField()
+                        .moilField(background: MoilColor.popupField)
                         .overlay {
-                            // 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
+                            // 라이트모드에서는 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
                             // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
                             RoundedRectangle(cornerRadius: 14)
                                 .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
@@ -1031,8 +1032,8 @@ private struct ScheduleComposerView: View {
                             .labelsHidden()
                             .tint(MoilColor.primary)
                     }
-                    .padding(.horizontal, 18).frame(height: 46)
-                    .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+                    .frame(height: 46)
+                    .overlay(alignment: .bottom) { Divider() }
 
                     if !isAllDay {
                         ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
@@ -1155,11 +1156,11 @@ private struct ScheduleTextInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
-                .moilField()
+                .moilField(background: MoilColor.popupField)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
                 .overlay {
                     // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
@@ -1213,7 +1214,7 @@ private struct MonthYearPickerSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 0) {
@@ -1299,7 +1300,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 24)
 
             HStack {
@@ -1404,7 +1405,7 @@ private struct ScheduleTimeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 10) {
@@ -1541,7 +1542,7 @@ private struct EventEditorView: View {
 
             if isEditing {
                 TextField("일정 제목", text: $title)
-                    .moilField()
+                    .moilField(background: MoilColor.popupField)
                     .padding(.bottom, 12)
             } else {
                 Text(event.title)
@@ -1654,8 +1655,10 @@ private struct ScheduleRow: View {
             Spacer()
             Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
         }
-        .padding(.horizontal, 18).frame(height: 46)
-        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+        // 목록이 이미 좌우 18 여백 안에 있어, 여기서 여백을 또 주면 제목 입력칸·공유 문구보다
+        // 글자가 안쪽으로 밀려 보였습니다. 바깥 여백 하나로 왼쪽 시작선을 맞춥니다.
+        .frame(height: 46)
+        .overlay(alignment: .bottom) { Divider() }
     }
 }
 
