@@ -120,7 +120,6 @@ struct MemberView: View {
                 PermissionEditorView(members: currentMembers) { updatedRoles in
                     Task { await updateRoles(updatedRoles) }
                 }
-                    .presentationDetents([.height(327)])
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $isSharingInvite) {
@@ -500,6 +499,11 @@ private struct PermissionEditorView: View {
     let members: [MoilRemoteMember]
     let onSave: ([MemberRoleRequest]) -> Void
     @State private var administrators: Set<String>
+    /// 처음 그려지기 전까지 쓰는 높이로, 측정이 끝나면 실제 내용 높이로 바뀝니다.
+    @State private var contentHeight: CGFloat = 327
+    private static let rowHeight: CGFloat = 56
+    /// 이보다 멤버가 많으면 시트를 더 키우지 않고 목록만 스크롤합니다.
+    private static let maxVisibleRows = 5
 
     init(members: [MoilRemoteMember], onSave: @escaping ([MemberRoleRequest]) -> Void) {
         self.members = members
@@ -512,33 +516,42 @@ private struct PermissionEditorView: View {
             Text("멤버 권한 설정")
                 .font(MoilTypography.bold(17))
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 14)
-            ForEach(members) { member in
-                HStack(spacing: 12) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 34)
-                    Text(member.nickname)
-                        .font(MoilTypography.semibold(15))
-                        .lineLimit(1)
-                    Spacer(minLength: 12)
-                    Picker("권한", selection: Binding(get: { administrators.contains(member.id) }, set: { enabled in
-                        if enabled {
-                            administrators.insert(member.id)
-                        } else {
-                            administrators.remove(member.id)
+                // 드래그 인디케이터와 제목이 붙어 보이지 않도록 위쪽 여백을 넉넉히 둡니다.
+                .padding(.top, 28)
+                .padding(.bottom, 8)
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(members) { member in
+                        HStack(spacing: 12) {
+                            MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 34)
+                            Text(member.nickname)
+                                .font(MoilTypography.semibold(15))
+                                .lineLimit(1)
+                            Spacer(minLength: 12)
+                            Picker("권한", selection: Binding(get: { administrators.contains(member.id) }, set: { enabled in
+                                if enabled {
+                                    administrators.insert(member.id)
+                                } else {
+                                    administrators.remove(member.id)
+                                }
+                            })) {
+                                Text("멤버").tag(false)
+                                Text("관리자").tag(true)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 132)
                         }
-                    })) {
-                        Text("멤버").tag(false)
-                        Text("관리자").tag(true)
+                        .padding(.horizontal, 20)
+                        .frame(height: Self.rowHeight)
+                        // 구분선이 높이를 차지하지 않아야 목록 높이가 행 개수만으로 정확히 계산됩니다.
+                        .overlay(alignment: .bottom) {
+                            if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 132)
                 }
-                .padding(.horizontal, 20)
-                .frame(height: 56)
-                if member.id != members.last?.id { Divider().padding(.leading, 66).padding(.trailing, 20) }
             }
-            Spacer(minLength: 0)
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(height: Self.rowHeight * CGFloat(min(members.count, Self.maxVisibleRows)))
             Button("완료") {
                 onSave(members.compactMap { member in
                     guard let userId = Int(member.id) else { return nil }
@@ -548,8 +561,15 @@ private struct PermissionEditorView: View {
                 .font(MoilTypography.bold(14)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
                 .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
         }
+        .fixedSize(horizontal: false, vertical: true)
+        // 멤버 수에 맞춰 시트 높이를 정해, 인원이 적을 때 목록과 버튼 사이가 벌어지지 않게 합니다.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .presentationDetents([.height(contentHeight)])
     }
 }
 
