@@ -62,7 +62,7 @@ struct AuthFlowView: View {
             route = .main
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -81,9 +81,9 @@ struct AuthFlowView: View {
             // cancellation(코드 1)로 전달하는 경우가 있습니다. 이를 숨기면 사용자는
             // 로그인 화면으로 되돌아오는 현상만 보게 되므로 오류를 표시합니다.
 #if DEBUG
-            print("[MoilAuth] \(provider.rawValue) login failed: \(error.localizedDescription)")
+            print("[MoilAuth] \(provider.rawValue) login failed: \(error)")
 #endif
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -120,7 +120,7 @@ struct AuthFlowView: View {
             route = .emailVerification
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -131,7 +131,7 @@ struct AuthFlowView: View {
             route = .passwordSetup
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -143,7 +143,7 @@ struct AuthFlowView: View {
             route = .main
             return nil
         } catch {
-            return error.localizedDescription
+            return error.userFacingMessage
         }
     }
 
@@ -154,7 +154,7 @@ struct AuthFlowView: View {
             verifyId = response.verifyId
             route = .passwordResetVerification
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func verifyResetCode(_ code: String) async -> String? {
@@ -163,7 +163,7 @@ struct AuthFlowView: View {
             resetSessionId = response.sessionId
             route = .passwordResetSetup
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func resetPassword(password: String, confirmation: String) async -> String? {
@@ -171,7 +171,7 @@ struct AuthFlowView: View {
             _ = try await sessionStore.service().resetPassword(sessionId: resetSessionId, password: password, confirmation: confirmation)
             route = .login
             return nil
-        } catch { return error.localizedDescription }
+        } catch { return error.userFacingMessage }
     }
 
     private func logout() {
@@ -216,48 +216,60 @@ private struct LoginView: View {
         ZStack {
             MoilColor.background
                 .ignoresSafeArea()
+                .moilDismissKeyboardOnTap()
 
             VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    VStack(spacing: 6) {
-                        Image("MoilMascot")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 75, height: 74)
-                        Text("모일")
-                            .font(MoilTypography.bold(22))
-                            .foregroundStyle(MoilColor.textPrimary)
-                        Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                    }
-                    .padding(.bottom, 36)
+                // 키보드가 올라오면 남는 높이보다 위쪽 내용이 길어져, 넘친 만큼 로그인 버튼이
+                // 키보드에 붙고 회원가입 문구가 키보드에 가려졌습니다. 위쪽 내용만 스크롤되게 해
+                // 아래 버튼 영역이 다른 인증 화면처럼 키보드 위 12pt 여백을 유지하도록 합니다.
+                GeometryReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            VStack(spacing: 6) {
+                                Image("MoilMascot")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 75, height: 74)
+                                Text("모일")
+                                    .font(MoilTypography.bold(22))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                                Text("각자의 시간이 모여, 우리의 약속이 되는 곳")
+                                    .font(MoilTypography.regular(13))
+                                    .foregroundStyle(MoilColor.textSecondary)
+                            }
+                            .padding(.bottom, 36)
 
-                    VStack(spacing: 12) {
-                        AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                            .onChange(of: email) { _, _ in errorMessage = nil }
-                        MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
-                            AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                                .onChange(of: password) { _, _ in errorMessage = nil }
-                        }
-                        HStack {
-                            Spacer()
-                            Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
-                                .font(MoilTypography.regular(13))
-                                .foregroundStyle(MoilColor.textSecondary)
-                        }
-                    }
+                            VStack(spacing: 12) {
+                                AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                                    .onChange(of: email) { _, _ in errorMessage = nil }
+                                MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                                    AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                                        .onChange(of: password) { _, _ in errorMessage = nil }
+                                }
+                                HStack {
+                                    Spacer()
+                                    Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
+                                        .font(MoilTypography.regular(13))
+                                        .foregroundStyle(MoilColor.textSecondary)
+                                }
+                            }
 
-                    SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
-                        Task {
-                            isSocialLoginSubmitting = true
-                            errorMessage = await onSocialLogin(provider)
-                            isSocialLoginSubmitting = false
+                            SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
+                                Task {
+                                    isSocialLoginSubmitting = true
+                                    errorMessage = await onSocialLogin(provider)
+                                    isSocialLoginSubmitting = false
+                                }
+                            }
+                            .padding(.top, 44)
                         }
+                        .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .center)
                     }
-                    .padding(.top, 44)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .scrollIndicators(.hidden)
+                    // 스크롤 영역이 화면 대부분을 덮으므로, 스크롤로도 키보드를 내릴 수 있게 합니다.
+                    .scrollDismissesKeyboard(.immediately)
                 }
-                .frame(maxHeight: .infinity, alignment: .center)
 
                 VStack(spacing: 14) {
                         Button("로그인") {
@@ -318,7 +330,7 @@ private struct SignUpInfoView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
 
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -377,7 +389,7 @@ private struct PasswordResetEmailView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) { Image(systemName: "chevron.left").foregroundStyle(MoilColor.textPrimary) }
@@ -431,7 +443,7 @@ private struct EmailVerificationView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) {
@@ -463,7 +475,7 @@ private struct EmailVerificationView: View {
                             }
                         }
                             .frame(width: 52, height: 52)
-                            .background(MoilColor.surface)
+                            .background(MoilColor.fieldBackground)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -484,6 +496,10 @@ private struct EmailVerificationView: View {
                 .onChange(of: code) { _, value in
                     code = String(value.filter(\.isNumber).prefix(6))
                     isEditingCode = code.count < 6
+                }
+                .onChange(of: isCodeFieldFocused) { _, isFocused in
+                    // 빈 곳을 눌러 키보드를 내리면 깜빡이는 커서도 함께 숨깁니다.
+                    if !isFocused { isEditingCode = false }
                 }
                 .onAppear {
                     isEditingCode = true
@@ -569,7 +585,7 @@ private struct PasswordSetupView: View {
 
     var body: some View {
         ZStack {
-            MoilColor.background.ignoresSafeArea()
+            MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onBack) {
