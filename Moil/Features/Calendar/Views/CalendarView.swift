@@ -4,6 +4,7 @@ struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var eventStore: MoilEventStore
+    @Environment(\.scenePhase) private var scenePhase
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
@@ -35,6 +36,9 @@ struct CalendarView: View {
     /// 고를 수 있게 하므로 그 범위를 그대로 맞춥니다. LazyVStack이라 화면 근처 달만
     /// 실제로 그려지므로 범위를 넓게 잡아도 성능에는 영향이 없습니다.
     @State private var monthsWindow: [Date] = CalendarView.makeMonthsWindow()
+    /// 앱이 실제로 백그라운드에 다녀왔는지 기억합니다. 제어 센터를 내리는 정도의 잠깐 비활성화에는
+    /// 보던 달을 그대로 두고, 앱을 나갔다 다시 들어왔을 때만 오늘로 돌아가게 하기 위함입니다.
+    @State private var didEnterBackground = false
 
     private static func makeMonthsWindow() -> [Date] {
         let calendar = Calendar.current
@@ -386,6 +390,19 @@ struct CalendarView: View {
         .task(id: groupStore.selectedGroupId ?? "") {
             await loadMemberProfiles()
         }
+        // 다른 탭에 다녀오면 이 화면이 새로 만들어져 오늘로 시작하지만, 앱을 나갔다 오면 화면이
+        // 그대로 남아 있어 전에 보던 날짜에 머물렀습니다. 다시 활성화될 때 오늘로 돌려놓습니다.
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                didEnterBackground = true
+            case .active where didEnterBackground:
+                didEnterBackground = false
+                returnToToday()
+            default:
+                break
+            }
+        }
     }
 
     private func loadMemberProfiles() async {
@@ -409,6 +426,14 @@ struct CalendarView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             scrollPositionMonth = target
         }
+    }
+
+    /// 선택 날짜와 스크롤 위치를 모두 오늘로 되돌립니다.
+    private func returnToToday() {
+        let today = Date()
+        selectedDay = calendar.component(.day, from: today)
+        selectedDayMonth = today
+        scrollToMonth(today)
     }
 
     private func monthRequestValue(for month: Date) -> String {
