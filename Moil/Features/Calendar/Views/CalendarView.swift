@@ -1062,10 +1062,18 @@ private struct DayScheduleSheet: View {
                                     .foregroundStyle(MoilColor.textSecondary)
                                     .multilineTextAlignment(.leading)
                                     .frame(width: 46, alignment: .leading)
-                                Text(event.title)
-                                    .font(MoilTypography.bold(16))
-                                    .foregroundStyle(MoilColor.textPrimary)
-                                    .lineLimit(2)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(event.title)
+                                        .font(MoilTypography.bold(16))
+                                        .foregroundStyle(MoilColor.textPrimary)
+                                        .lineLimit(2)
+                                    if let summary = summary(for: event) {
+                                        Text(summary)
+                                            .font(MoilTypography.regular(13))
+                                            .foregroundStyle(MoilColor.textSecondary)
+                                            .lineLimit(1)
+                                    }
+                                }
                                 Spacer(minLength: 8)
                                 AvatarDots(colors: avatarColors(event))
                                 Image(systemName: "chevron.right")
@@ -1083,6 +1091,17 @@ private struct DayScheduleSheet: View {
             }
         }
         .background(MoilColor.surface)
+    }
+
+    /// 상세를 열지 않아도 알 수 있게 위치와 메모 첫 줄을 한 줄로 이어 보여줍니다. 둘 다 없으면 생략합니다.
+    private func summary(for event: CalendarEvent) -> String? {
+        let memoFirstLine = event.memo?
+            .split(whereSeparator: \.isNewline)
+            .first
+            .map(String.init)?
+            .nilIfBlank
+        let parts = [event.location?.nilIfBlank, memoFirstLine].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
