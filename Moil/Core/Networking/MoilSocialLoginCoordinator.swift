@@ -75,7 +75,7 @@ private extension MoilTokenResponse {
             item.value.map { (item.name, $0) }
         })
         if let error = values["error"], !error.isEmpty {
-            throw MoilOAuthCallbackError(message: values["error_description"] ?? error)
+            throw MoilOAuthCallbackError(error: error, description: values["error_description"])
         }
         guard let accessToken = values["accessToken"] ?? values["access_token"], !accessToken.isEmpty else {
             throw MoilAPIError.server(message: "소셜 로그인 토큰을 받지 못했어요.", statusCode: 0)
@@ -85,6 +85,7 @@ private extension MoilTokenResponse {
 }
 
 private struct MoilOAuthCallbackError: LocalizedError {
-    let message: String
-    var errorDescription: String? { message }
+    let error: String
+    let description: String?
+    var errorDescription: String? { MoilErrorMessage.socialLoginCallback(error: error, description: description) }
 }
