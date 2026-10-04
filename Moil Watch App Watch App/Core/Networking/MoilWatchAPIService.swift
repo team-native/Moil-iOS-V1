@@ -48,15 +48,6 @@ struct MoilWatchAPIService {
             let _: MoilEmptyResponse = try await client.request("events/\(eventId)/attendance", method: "DELETE")
         }
     }
-
-    /// 가족이 등록한 가능 시간대를 읽기 전용으로 보여줍니다. 등록은 아이폰 앱에서만 합니다.
-    func availabilitySummary(eventId: String, date: String) async throws -> MoilAvailabilitySummary {
-        try await client.request(
-            "events/\(eventId)/availability/summary",
-            method: "GET",
-            queryItems: [URLQueryItem(name: "date", value: date)]
-        )
-    }
 }
 
 private struct AttendanceRequest: Encodable {
@@ -282,39 +273,6 @@ private struct MoilEventList: Decodable {
         }
     }
     private enum CodingKeys: String, CodingKey { case events, items }
-}
-
-struct MoilAvailabilitySummarySlot: Decodable, Identifiable {
-    var id: String { "\(startTime)-\(endTime)" }
-    let startTime: String
-    let endTime: String
-    let availableCount: Int
-    let isAvailableForEveryone: Bool
-
-    private enum CodingKeys: String, CodingKey { case startTime, endTime, availableCount, isAvailableForEveryone }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        startTime = try container.decode(String.self, forKey: .startTime)
-        endTime = try container.decode(String.self, forKey: .endTime)
-        availableCount = (try? container.decode(Int.self, forKey: .availableCount)) ?? 0
-        isAvailableForEveryone = (try? container.decode(Bool.self, forKey: .isAvailableForEveryone)) ?? false
-    }
-}
-
-struct MoilAvailabilitySummary: Decodable {
-    let participantCount: Int
-    let respondedCount: Int
-    let timeSlots: [MoilAvailabilitySummarySlot]
-
-    private enum CodingKeys: String, CodingKey { case participantCount, respondedCount, timeSlots }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        participantCount = (try? container.decode(Int.self, forKey: .participantCount)) ?? 0
-        respondedCount = (try? container.decode(Int.self, forKey: .respondedCount)) ?? 0
-        timeSlots = (try? container.decode([MoilAvailabilitySummarySlot].self, forKey: .timeSlots)) ?? []
-    }
 }
 
 private extension KeyedDecodingContainer {
