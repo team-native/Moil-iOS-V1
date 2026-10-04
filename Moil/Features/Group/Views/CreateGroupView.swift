@@ -21,10 +21,10 @@ struct CreateGroupView: View {
     var body: some View {
         NavigationStack {
         VStack(alignment: .leading, spacing: 0) {
-            Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
+            Text("그룹 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 24).padding(.bottom, 10)
             TextField("예: 우리 가족", text: $name)
                 .moilField()
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
+            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 28).padding(.bottom, 12)
             HStack(spacing: 16) {
                 if uploadedImagePath == nil {
                     ForEach(colors, id: \.self) { color in
@@ -40,17 +40,17 @@ struct CreateGroupView: View {
                             profileImagePreview
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 40, height: 40)
+                                .frame(width: 46, height: 46)
                                 .clipShape(Circle())
                         } else {
                             Image(systemName: "plus")
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(MoilColor.textSecondary)
-                                .frame(width: 40, height: 40)
+                                .frame(width: 46, height: 46)
                                 .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
                         }
                         if isUploadingImage {
-                            Circle().fill(.black.opacity(0.35)).frame(width: 40, height: 40)
+                            Circle().fill(.black.opacity(0.35)).frame(width: 46, height: 46)
                             ProgressView().tint(.white)
                         }
                     }
@@ -68,12 +68,13 @@ struct CreateGroupView: View {
                 Text("사진을 선택하면 사진에서 뽑은 색이 내 프로필 색이 돼요.")
                     .font(MoilTypography.regular(13))
                     .foregroundStyle(MoilColor.textSecondary)
-                    .padding(.top, 10)
+                    .padding(.top, 12)
             }
+            // 프로필 색 안내와 한 덩어리로 읽히지 않도록 섹션 간격만큼 띄웁니다.
             Text("그룹을 만든 뒤 초대 코드로 구성원을 초대할 수 있어요.")
                 .font(MoilTypography.regular(13))
                 .foregroundStyle(MoilColor.textSecondary)
-                .padding(.top, 12)
+                .padding(.top, 28)
             Spacer()
             Button("그룹 만들기") {
                 Task {
@@ -97,7 +98,6 @@ struct CreateGroupView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
         }
         .padding(.horizontal, 24)
-        .safeAreaPadding(.top, 12)
         .background(MoilColor.background.ignoresSafeArea())
         .navigationTitle("새 그룹 만들기")
         .navigationBarTitleDisplayMode(.inline)
