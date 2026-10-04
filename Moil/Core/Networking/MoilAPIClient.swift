@@ -13,8 +13,8 @@ enum MoilAPIError: LocalizedError {
         switch self {
         case .invalidResponse:
             "서버 응답을 처리할 수 없어요."
-        case let .server(message, _):
-            message
+        case let .server(message, statusCode):
+            MoilErrorMessage.server(message, statusCode: statusCode)
         case .decoding:
             "서버 응답 형식이 올바르지 않아요."
         }
@@ -180,7 +180,7 @@ struct MoilAPIClient {
         print("[MoilAPI] \(method) /\(path) → \(httpResponse.statusCode)")
 #endif
         guard (200..<300).contains(httpResponse.statusCode) else {
-            let message = (try? JSONDecoder.moil.decode(MoilServerError.self, from: data).message) ?? "요청에 실패했어요."
+            let message = (try? JSONDecoder.moil.decode(MoilServerError.self, from: data).message) ?? MoilErrorMessage.unreadableServerMessage
 #if DEBUG
             let rawBody = String(data: data, encoding: .utf8) ?? "<empty>"
             print("[MoilAPI] \(method) /\(path) → \(httpResponse.statusCode) FAILED\n  message: \(message)\n  body: \(rawBody)")
@@ -194,7 +194,7 @@ struct MoilAPIClient {
             let envelope = try JSONDecoder.moil.decode(MoilAPIEnvelope<Response>.self, from: data)
             guard envelope.success else {
                 throw MoilAPIError.server(
-                    message: envelope.message ?? "요청에 실패했어요.",
+                    message: envelope.message ?? MoilErrorMessage.unreadableServerMessage,
                     statusCode: envelope.status ?? httpResponse.statusCode
                 )
             }
@@ -254,7 +254,7 @@ private struct MoilServerError: Decodable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        message = (try? container.decode(String.self, forKey: .message)) ?? "요청에 실패했어요."
+        message = (try? container.decode(String.self, forKey: .message)) ?? MoilErrorMessage.unreadableServerMessage
     }
 
     private enum CodingKeys: String, CodingKey { case message }

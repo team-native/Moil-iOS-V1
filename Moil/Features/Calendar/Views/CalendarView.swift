@@ -4,6 +4,7 @@ struct CalendarView: View {
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
     @EnvironmentObject private var eventStore: MoilEventStore
+    @Environment(\.scenePhase) private var scenePhase
     var onTabSelect: ((MoilTab) -> Void)? = nil
     var onCreateGroup: (() -> Void)? = nil
     var showsTabBar = true
@@ -35,6 +36,9 @@ struct CalendarView: View {
     /// 고를 수 있게 하므로 그 범위를 그대로 맞춥니다. LazyVStack이라 화면 근처 달만
     /// 실제로 그려지므로 범위를 넓게 잡아도 성능에는 영향이 없습니다.
     @State private var monthsWindow: [Date] = CalendarView.makeMonthsWindow()
+    /// 앱이 실제로 백그라운드에 다녀왔는지 기억합니다. 제어 센터를 내리는 정도의 잠깐 비활성화에는
+    /// 보던 달을 그대로 두고, 앱을 나갔다 다시 들어왔을 때만 오늘로 돌아가게 하기 위함입니다.
+    @State private var didEnterBackground = false
 
     private static func makeMonthsWindow() -> [Date] {
         let calendar = Calendar.current
@@ -82,6 +86,8 @@ struct CalendarView: View {
     }
 
     private let dayCellHeight: CGFloat = 108
+    /// 날짜 칸 하나에 칩으로 그릴 최대 일정 수입니다. 넘치는 일정은 "+N"으로 줄여 보여줍니다.
+    private let maxVisibleEventsPerDay = 6
     @State private var selectedDay = Calendar.current.component(.day, from: Date())
     @State private var selectedDayMonth = Date()
 
@@ -305,7 +311,8 @@ struct CalendarView: View {
             EventEditorView(
                 event: event,
                 avatarColors: avatarColors(for: event),
-                onSetAttendance: { await setAttendance(for: event, attending: $0) }
+                onSetAttendance: { await setAttendance(for: event, attending: $0) },
+                onLoadAttendees: { await attendeeColors(for: event) }
             ) { title in
                 updateEvent(event, title: title)
             } onDelete: {
@@ -384,6 +391,19 @@ struct CalendarView: View {
         .task(id: groupStore.selectedGroupId ?? "") {
             await loadMemberProfiles()
         }
+        // 다른 탭에 다녀오면 이 화면이 새로 만들어져 오늘로 시작하지만, 앱을 나갔다 오면 화면이
+        // 그대로 남아 있어 전에 보던 날짜에 머물렀습니다. 다시 활성화될 때 오늘로 돌려놓습니다.
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                didEnterBackground = true
+            case .active where didEnterBackground:
+                didEnterBackground = false
+                returnToToday()
+            default:
+                break
+            }
+        }
     }
 
     private func loadMemberProfiles() async {
@@ -407,6 +427,14 @@ struct CalendarView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             scrollPositionMonth = target
         }
+    }
+
+    /// 선택 날짜와 스크롤 위치를 모두 오늘로 되돌립니다.
+    private func returnToToday() {
+        let today = Date()
+        selectedDay = calendar.component(.day, from: today)
+        selectedDayMonth = today
+        scrollToMonth(today)
     }
 
     private func monthRequestValue(for month: Date) -> String {
@@ -519,6 +547,16 @@ struct CalendarView: View {
         }
     }
 
+    /// 참석을 누른 멤버의 프로필 색을 가져옵니다. 참여자 동그라미와 같은 색이 되도록 그룹 멤버 색을
+    /// 먼저 쓰고, 그룹에서 못 찾으면 응답의 색을 씁니다. 불러오지 못하면 nil을 돌려줍니다.
+    private func attendeeColors(for event: CalendarEvent) async -> [Color]? {
+        guard let attendance = try? await sessionStore.service().attendance(eventId: event.id) else { return nil }
+        let members = groupStore.members(for: groupStore.selectedGroupId)
+        return attendance.members.filter(\.isAttending).map { attendee in
+            MoilAvatarColor.color(for: members.first { $0.id == attendee.id }?.colorId ?? attendee.colorId)
+        }
+    }
+
     private func deleteEvent(_ event: CalendarEvent) {
         Task {
             do {
@@ -579,8 +617,16 @@ struct CalendarView: View {
         calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
+    /// 일요일과 공휴일은 날짜 숫자를 공휴일 색으로 칠합니다.
+    private func dayNumberColor(day: Int, month: Date) -> Color {
+        let date = calendar.date(bySetting: .day, value: day, of: firstDay(of: month)) ?? firstDay(of: month)
+        let isSunday = calendar.component(.weekday, from: date) == 1
+        return isSunday || KoreanHoliday.isHoliday(date) ? MoilColor.holiday : MoilColor.textPrimary
+    }
+
     private func calendarDay(_ day: Int, month: Date, events: [CalendarEvent]) -> some View {
         let isSelected = selectedDay == day && calendar.isDate(selectedDayMonth, equalTo: month, toGranularity: .month)
+        let hiddenEventCount = max(events.count - maxVisibleEventsPerDay, 0)
         return Button {
             scheduleDraftDay = day
             scheduleDraftMonth = month
@@ -595,14 +641,22 @@ struct CalendarView: View {
             VStack(alignment: .center, spacing: 8) {
                 Text("\(day)")
                     .font(MoilTypography.regular(15))
-                    .foregroundStyle(isSelected ? Color.white : MoilColor.textPrimary)
+                    .foregroundStyle(isSelected ? Color.white : dayNumberColor(day: day, month: month))
                     .frame(width: 32, height: 32, alignment: .center)
                     .background(isSelected ? MoilColor.primary : .clear)
                     .clipShape(Circle())
-                // 일정이 여러 개 쌓일 때는 서로 더 붙어 보이도록 간격을 좁게 둡니다.
-                VStack(spacing: 2) {
-                    ForEach(events) { event in
+                // 일정 칩끼리 너무 붙어 있으면 서로 구분이 어려워, 칩 사이를 조금 띄웁니다.
+                VStack(spacing: 4) {
+                    ForEach(events.prefix(maxVisibleEventsPerDay)) { event in
                         eventChip(event, day: day, month: month)
+                    }
+                    if hiddenEventCount > 0 {
+                        Text("+\(hiddenEventCount)")
+                            .font(MoilTypography.semibold(10))
+                            .foregroundStyle(MoilColor.textSecondary)
+                            .padding(.horizontal, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityLabel("일정 \(hiddenEventCount)개 더 있음")
                     }
                 }
                 Spacer(minLength: 0)
@@ -812,6 +866,149 @@ private enum MoilCalendarDate {
     }
 }
 
+/// 한국 관공서 공휴일(대체공휴일 포함)을 계산합니다. 서버에 공휴일 API가 없어 앱에서 직접 구합니다.
+/// 음력 공휴일(설날·부처님오신날·추석)은 기기 달력의 음력 변환을 쓰고, 선거일 같은
+/// 임시공휴일은 미리 알 수 없어 포함하지 않습니다.
+private enum KoreanHoliday {
+    /// 대체공휴일 규칙이 공휴일 종류마다 달라 종류를 함께 들고 다닙니다.
+    private enum Kind {
+        /// 1월 1일, 현충일: 대체공휴일이 없습니다.
+        case plain
+        /// 국경일·부처님오신날·성탄절: 토·일요일과 겹치면 대체공휴일이 생깁니다.
+        case weekendSubstitute
+        /// 어린이날: 토·일요일이나 다른 공휴일과 겹치면 대체공휴일이 생깁니다.
+        case childrensDay
+        /// 설날·추석 연휴: 일요일이나 다른 공휴일과 겹치면 연휴 다음 날에 대체공휴일이 생깁니다.
+        case lunarBreak(id: Int)
+    }
+
+    /// 한 해치 계산에 음력 변환이 365번 들어가므로 연도별로 한 번만 계산해 둡니다.
+    private static var cache: [Int: Set<DateComponents>] = [:]
+
+    private static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    /// 한국 음력(단기) 달력을 씁니다. 중국 음력은 기준 시간대가 한 시간 달라 가끔 하루씩
+    /// 어긋나므로(예: 2027년 설날), `Calendar.Identifier.dangi`가 없는 iOS 26 미만에서도
+    /// 식별자로 단기 달력을 찾고, 그래도 없을 때만 중국 음력으로 대신합니다.
+    private static var lunarCalendar: Calendar {
+        var lunar = NSCalendar(identifier: NSCalendar.Identifier("dangi")).map { $0 as Calendar }
+            ?? Calendar(identifier: .chinese)
+        lunar.timeZone = .autoupdatingCurrent
+        return lunar
+    }
+
+    static func isHoliday(_ date: Date) -> Bool {
+        let key = dayKey(date)
+        guard let year = key.year else { return false }
+        return holidays(in: year).contains(key)
+    }
+
+    static func holidays(in year: Int) -> Set<DateComponents> {
+        if let cached = cache[year] { return cached }
+        let calendar = calendar
+        func date(_ month: Int, _ day: Int) -> Date? {
+            calendar.date(from: DateComponents(year: year, month: month, day: day))
+        }
+        func adding(_ days: Int, to date: Date) -> Date? {
+            calendar.date(byAdding: .day, value: days, to: date)
+        }
+
+        var entries: [(date: Date, kind: Kind)] = []
+        for (month, day) in [(1, 1), (6, 6)] {
+            if let value = date(month, day) { entries.append((value, .plain)) }
+        }
+        for (month, day) in [(3, 1), (8, 15), (10, 3), (10, 9), (12, 25)] {
+            if let value = date(month, day) { entries.append((value, .weekendSubstitute)) }
+        }
+        if let value = date(5, 5) { entries.append((value, .childrensDay)) }
+
+        let lunar = lunarDates(in: year)
+        if let buddha = lunar.buddha { entries.append((buddha, .weekendSubstitute)) }
+        for (id, center) in [lunar.seollal, lunar.chuseok].enumerated() {
+            guard let center else { continue }
+            for offset in -1...1 {
+                if let value = adding(offset, to: center) { entries.append((value, .lunarBreak(id: id))) }
+            }
+        }
+
+        var result = Set(entries.map { dayKey($0.date) })
+        func isWeekend(_ date: Date) -> Bool { [1, 7].contains(calendar.component(.weekday, from: date)) }
+        func isSunday(_ date: Date) -> Bool { calendar.component(.weekday, from: date) == 1 }
+        /// 같은 날짜에 다른 종류의 공휴일이 또 있는지 봅니다. 설날 연휴처럼 같은 묶음끼리는 겹침으로 치지 않습니다.
+        func overlapsOtherHoliday(_ index: Int) -> Bool {
+            let entry = entries[index]
+            return entries.indices.contains { other in
+                guard other != index, calendar.isDate(entries[other].date, inSameDayAs: entry.date) else { return false }
+                if case .lunarBreak(let a) = entry.kind, case .lunarBreak(let b) = entries[other].kind { return a != b }
+                return true
+            }
+        }
+
+        // 대체공휴일은 "다음 첫 번째 비공휴일"이라 앞에서 정한 대체공휴일도 피해야 하므로 날짜순으로 정합니다.
+        var substituteBases: [Date] = []
+        for index in entries.indices.sorted(by: { entries[$0].date < entries[$1].date }) {
+            let entry = entries[index]
+            switch entry.kind {
+            case .plain:
+                break
+            case .weekendSubstitute:
+                if isWeekend(entry.date) { substituteBases.append(entry.date) }
+            case .childrensDay:
+                if isWeekend(entry.date) || overlapsOtherHoliday(index) { substituteBases.append(entry.date) }
+            case .lunarBreak(let id):
+                // 연휴 중 여러 날이 겹쳐도 겹친 날 수만큼 연휴 끝 다음에 이어 붙입니다.
+                if isSunday(entry.date) || overlapsOtherHoliday(index) {
+                    let lastDay = entries.filter {
+                        if case .lunarBreak(let other) = $0.kind { return other == id }
+                        return false
+                    }.map(\.date).max() ?? entry.date
+                    substituteBases.append(lastDay)
+                }
+            }
+        }
+        for base in substituteBases.sorted() {
+            var candidate = adding(1, to: base)
+            while let value = candidate, isWeekend(value) || result.contains(dayKey(value)) {
+                candidate = adding(1, to: value)
+            }
+            if let candidate { result.insert(dayKey(candidate)) }
+        }
+
+        cache[year] = result
+        return result
+    }
+
+    /// 양력 한 해를 하루씩 음력으로 바꿔 설날(1/1)·부처님오신날(4/8)·추석(8/15)을 찾습니다.
+    private static func lunarDates(in year: Int) -> (seollal: Date?, buddha: Date?, chuseok: Date?) {
+        let calendar = calendar
+        let lunar = lunarCalendar
+        guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+              let dayCount = calendar.range(of: .day, in: .year, for: start)?.count else { return (nil, nil, nil) }
+        var seollal: Date?, buddha: Date?, chuseok: Date?
+        for offset in 0..<dayCount {
+            guard let value = calendar.date(byAdding: .day, value: offset, to: start) else { continue }
+            let parts = lunar.dateComponents([.month, .day, .isLeapMonth], from: value)
+            guard parts.isLeapMonth != true else { continue }
+            switch (parts.month, parts.day) {
+            case (1, 1): seollal = value
+            case (4, 8): buddha = value
+            case (8, 15): chuseok = value
+            default: break
+            }
+        }
+        return (seollal, buddha, chuseok)
+    }
+
+    private static func dayKey(_ date: Date) -> DateComponents {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return DateComponents(year: parts.year, month: parts.month, day: parts.day)
+    }
+}
+
 #Preview("캘린더") {
     CalendarView()
         .environmentObject(MoilGroupStore())
@@ -852,41 +1049,46 @@ private struct DayScheduleSheet: View {
             .padding(.top, 20)
             .padding(.bottom, 12)
 
-            ForEach(events) { event in
-                Button { onSelect(event) } label: {
-                    HStack(spacing: 14) {
-                        Circle().fill(event.color).frame(width: 10, height: 10)
-                        Text(event.isAllDay ? "하루 종일" : "\(event.startTime ?? "09:00")\n\(event.endTime ?? "")")
-                            .font(MoilTypography.regular(13))
-                            .foregroundStyle(MoilColor.textSecondary)
-                            .multilineTextAlignment(.leading)
-                            .frame(width: 46, alignment: .leading)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(event.title)
-                                .font(MoilTypography.bold(16))
-                                .foregroundStyle(MoilColor.textPrimary)
-                                .lineLimit(2)
-                            if let summary = summary(for: event) {
-                                Text(summary)
+            // 한 줄 높이가 커서 일정이 몇 개만 넘어도 고정 높이 시트 밖으로 잘렸습니다.
+            // 목록만 스크롤되게 해 날짜 제목과 추가 버튼은 위에 고정합니다.
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(events) { event in
+                        Button { onSelect(event) } label: {
+                            HStack(spacing: 14) {
+                                Circle().fill(event.color).frame(width: 10, height: 10)
+                                Text(event.isAllDay ? "하루 종일" : "\(event.startTime ?? "09:00")\n\(event.endTime ?? "")")
                                     .font(MoilTypography.regular(13))
                                     .foregroundStyle(MoilColor.textSecondary)
-                                    .lineLimit(1)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(width: 46, alignment: .leading)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(event.title)
+                                        .font(MoilTypography.bold(16))
+                                        .foregroundStyle(MoilColor.textPrimary)
+                                        .lineLimit(2)
+                                    if let summary = summary(for: event) {
+                                        Text(summary)
+                                            .font(MoilTypography.regular(13))
+                                            .foregroundStyle(MoilColor.textSecondary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                Spacer(minLength: 8)
+                                AvatarDots(colors: avatarColors(event))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(MoilColor.textPrimary)
                             }
+                            .padding(.horizontal, 28)
+                            .frame(minHeight: 110)
+                            .contentShape(Rectangle())
                         }
-                        Spacer(minLength: 8)
-                        AvatarDots(colors: avatarColors(event))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(MoilColor.textPrimary)
+                        .buttonStyle(.plain)
+                        Divider().padding(.horizontal, 28)
                     }
-                    .padding(.horizontal, 28)
-                    .frame(minHeight: 110)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                Divider().padding(.horizontal, 28)
             }
-            Spacer()
         }
         .background(MoilColor.surface)
     }
@@ -903,14 +1105,13 @@ private struct DayScheduleSheet: View {
     }
 }
 
+/// 일정 참여자를 색 동그라미 대신 프로필 얼굴(MoilAvatar)로 겹쳐 보여줍니다.
 private struct AvatarDots: View {
     let colors: [Color]
     var body: some View {
         HStack(spacing: -6) {
             ForEach(Array(colors.prefix(3).enumerated()), id: \.offset) { _, color in
-                Circle()
-                    .fill(color)
-                    .frame(width: 26, height: 26)
+                MoilAvatar(color: color, size: 26)
                     .overlay { Circle().stroke(MoilColor.surface, lineWidth: 2) }
             }
         }
@@ -929,8 +1130,7 @@ private struct ScheduleComposerView: View {
     @State private var endTime: Date
     @State private var location = ""
     @State private var memo = ""
-    @State private var inputTarget: ScheduleInputTarget?
-    /// 날짜·시간 입력을 별도 시트로 새로 띄우면 그 시트 높이가 더 작아서 팝업이 순간
+    /// 날짜·시간·위치·메모 입력을 별도 시트로 새로 띄우면 그 시트 높이가 더 작아서 팝업이 순간
     /// 낮아지는 것처럼 보였습니다. 대신 같은 고정 높이 시트 안에서 내용만 바꿔 보여줍니다.
     @State private var composerMode: ComposerMode = .form
     @State private var selectedMemberIDs: Set<String>
@@ -975,18 +1175,28 @@ private struct ScheduleComposerView: View {
                     endTime: $endTime,
                     onClose: { composerMode = .form }
                 )
+            case .location:
+                ScheduleTextInputSheet(
+                    title: "위치",
+                    placeholder: "위치를 입력하세요",
+                    text: $location,
+                    allowsMultipleLines: false,
+                    onClose: { composerMode = .form }
+                )
+            case .memo:
+                ScheduleTextInputSheet(
+                    title: "메모",
+                    placeholder: "메모를 입력하세요",
+                    text: $memo,
+                    allowsMultipleLines: true,
+                    onClose: { composerMode = .form }
+                )
             }
         }
         .background(MoilColor.surface)
-        .sheet(item: $inputTarget) { target in
-            ScheduleTextInputSheet(
-                title: target.title,
-                placeholder: target.placeholder,
-                text: target == .location ? $location : $memo,
-                allowsMultipleLines: target == .memo
-            )
-            .presentationDetents([target == .memo ? .medium : .height(260)])
-        }
+        // 입력 화면도 같은 시트 안이라, 쓸어내리면 작성 중인 일정 전체가 닫혔습니다.
+        // 폼이 아닐 때는 취소/완료로만 돌아가게 막습니다.
+        .interactiveDismissDisabled(composerMode != .form)
     }
 
     private var formContent: some View {
@@ -1013,16 +1223,17 @@ private struct ScheduleComposerView: View {
                     .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
                     .disabled(!canSave)
             }
+            // 상단 끌기 표시줄과 버튼 사이가 너무 떠 보여, 모든 입력 팝업의 취소/완료 줄을 같은 높이로 올립니다.
             .padding(.horizontal, 18)
-            .padding(.top, 34)
+            .padding(.top, 18)
             .padding(.bottom, 18)
 
             ScrollView {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
-                        .moilField()
+                        .moilField(background: MoilColor.popupField)
                         .overlay {
-                            // 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
+                            // 라이트모드에서는 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
                             // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
                             RoundedRectangle(cornerRadius: 14)
                                 .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
@@ -1041,8 +1252,8 @@ private struct ScheduleComposerView: View {
                             .labelsHidden()
                             .tint(MoilColor.primary)
                     }
-                    .padding(.horizontal, 18).frame(height: 46)
-                    .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+                    .frame(height: 46)
+                    .overlay(alignment: .bottom) { Divider() }
 
                     if !isAllDay {
                         ScheduleRow(title: "시간", value: Self.displayTimeRange(start: startTime, end: endTime))
@@ -1055,13 +1266,13 @@ private struct ScheduleComposerView: View {
                     ScheduleRow(title: "위치", value: location.nilIfBlank ?? "추가", secondary: location.nilIfBlank == nil)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            inputTarget = .location
+                            composerMode = .location
                         }
 
                     ScheduleRow(title: "메모", value: memo.nilIfBlank ?? "추가", secondary: memo.nilIfBlank == nil)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            inputTarget = .memo
+                            composerMode = .memo
                         }
 
                     VStack(alignment: .leading, spacing: 18) {
@@ -1126,44 +1337,58 @@ private enum ComposerMode {
     case form
     case date
     case time
-}
-
-private enum ScheduleInputTarget: Identifiable, Equatable {
     case location
     case memo
-
-    var id: Self { self }
-    var title: String { self == .location ? "위치" : "메모" }
-    var placeholder: String { self == .location ? "위치를 입력하세요" : "메모를 입력하세요" }
 }
 
+/// 위치·메모 입력 화면입니다. 날짜·시간 입력과 같은 머리 영역과 여백을 쓰고,
+/// 완료를 눌렀을 때만 입력한 내용을 반영해 취소하면 이전 값이 그대로 남습니다.
 private struct ScheduleTextInputSheet: View {
-    @Environment(\.dismiss) private var dismiss
     let title: String
     let placeholder: String
     @Binding var text: String
     let allowsMultipleLines: Bool
+    let onClose: () -> Void
+    @State private var draft: String
+
+    init(title: String, placeholder: String, text: Binding<String>, allowsMultipleLines: Bool, onClose: @escaping () -> Void) {
+        self.title = title
+        self.placeholder = placeholder
+        _text = text
+        self.allowsMultipleLines = allowsMultipleLines
+        self.onClose = onClose
+        _draft = State(initialValue: text.wrappedValue)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button("취소", action: dismiss.callAsFunction)
+                Button("취소", action: onClose)
                     .foregroundStyle(MoilColor.textSecondary)
                 Spacer()
                 Text(title).font(MoilTypography.semibold(16))
                 Spacer()
-                Button("완료", action: dismiss.callAsFunction)
+                Button("완료") {
+                    text = draft
+                    onClose()
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(MoilColor.primary)
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 28)
-            .padding(.bottom, 18)
+            .padding(.horizontal, 28)
+            .padding(.top, 18)
+            .padding(.bottom, 8)
 
-            TextField(placeholder, text: $text, axis: allowsMultipleLines ? .vertical : .horizontal)
-                .moilField()
+            TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
+                .moilField(background: MoilColor.popupField)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
+                .overlay {
+                    // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
+                }
                 .padding(.horizontal, 18)
+                .padding(.top, 36)
             Spacer()
         }
         .background(MoilColor.surface)
@@ -1209,7 +1434,7 @@ private struct MonthYearPickerSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 0) {
@@ -1295,7 +1520,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 24)
 
             HStack {
@@ -1400,7 +1625,7 @@ private struct ScheduleTimeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 26)
+            .padding(.top, 18)
             .padding(.bottom, 8)
 
             HStack(spacing: 10) {
@@ -1472,6 +1697,8 @@ private struct EventEditorView: View {
     let avatarColors: [Color]
     /// 참석(true)/취소(false)를 서버에 저장하고 성공 여부를 돌려줍니다.
     let onSetAttendance: (Bool) async -> Bool
+    /// 참석을 누른 멤버들의 프로필 색을 불러옵니다. 실패하면 nil입니다.
+    let onLoadAttendees: () async -> [Color]?
     let onSave: (String) -> Void
     let onDelete: () -> Void
     @State private var title: String
@@ -1480,17 +1707,20 @@ private struct EventEditorView: View {
     @State private var isAttending: Bool
     @State private var attendingCount: Int
     @State private var isSubmittingAttendance = false
+    @State private var attendeeColors: [Color] = []
 
     init(
         event: CalendarEvent,
         avatarColors: [Color],
         onSetAttendance: @escaping (Bool) async -> Bool,
+        onLoadAttendees: @escaping () async -> [Color]?,
         onSave: @escaping (String) -> Void,
         onDelete: @escaping () -> Void
     ) {
         self.event = event
         self.avatarColors = avatarColors
         self.onSetAttendance = onSetAttendance
+        self.onLoadAttendees = onLoadAttendees
         self.onSave = onSave
         self.onDelete = onDelete
         _title = State(initialValue: event.title)
@@ -1508,12 +1738,22 @@ private struct EventEditorView: View {
         attendingCount = max(0, attendingCount + (target ? 1 : -1))
         Task {
             let succeeded = await onSetAttendance(target)
-            if !succeeded {
+            if succeeded {
+                await reloadAttendees()
+            } else {
                 isAttending = !target
                 attendingCount = max(0, attendingCount + (target ? -1 : 1))
             }
             isSubmittingAttendance = false
         }
+    }
+
+    /// 서버에서 참석자를 다시 받아 얼굴과 "참석 N명"을 같은 기준으로 맞춥니다.
+    /// 불러오지 못하면 지금 보이는 얼굴과 숫자를 그대로 둡니다.
+    private func reloadAttendees() async {
+        guard let colors = await onLoadAttendees() else { return }
+        attendeeColors = colors
+        attendingCount = colors.count
     }
 
     private var trimmedTitle: String {
@@ -1537,7 +1777,7 @@ private struct EventEditorView: View {
 
             if isEditing {
                 TextField("일정 제목", text: $title)
-                    .moilField()
+                    .moilField(background: MoilColor.popupField)
                     .padding(.bottom, 12)
             } else {
                 Text(event.title)
@@ -1563,6 +1803,9 @@ private struct EventEditorView: View {
                 Text("참석 \(attendingCount)명")
                     .font(MoilTypography.regular(15))
                 Spacer()
+                if !attendeeColors.isEmpty {
+                    AvatarDots(colors: attendeeColors)
+                }
                 Button(action: toggleAttendance) {
                     Text(isAttending ? "취소하기" : "참석하기")
                         .font(MoilTypography.semibold(13))
@@ -1617,6 +1860,7 @@ private struct EventEditorView: View {
         .sheet(isPresented: $isAvailabilityPresented) {
             EventAvailabilityView(eventId: event.id, eventTitle: event.title, date: event.date)
         }
+        .task { await reloadAttendees() }
     }
 
     private var formattedDate: String { event.date.replacingOccurrences(of: "-", with: ".") }
@@ -1650,8 +1894,10 @@ private struct ScheduleRow: View {
             Spacer()
             Text(value).font(MoilTypography.regular(15)).foregroundStyle(secondary ? MoilColor.textTertiary : MoilColor.textSecondary)
         }
-        .padding(.horizontal, 18).frame(height: 46)
-        .overlay(alignment: .bottom) { Divider().padding(.horizontal, 18) }
+        // 목록이 이미 좌우 18 여백 안에 있어, 여기서 여백을 또 주면 제목 입력칸·공유 문구보다
+        // 글자가 안쪽으로 밀려 보였습니다. 바깥 여백 하나로 왼쪽 시작선을 맞춥니다.
+        .frame(height: 46)
+        .overlay(alignment: .bottom) { Divider() }
     }
 }
 

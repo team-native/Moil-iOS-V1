@@ -167,6 +167,11 @@ struct MoilAPIService {
         }
     }
 
+    /// 일정 참여 멤버별 참석 여부를 가져옵니다. 참석자 얼굴을 보여줄 때 씁니다.
+    func attendance(eventId: String) async throws -> MoilEventAttendance {
+        try await client.request("events/\(eventId)/attendance", method: "GET")
+    }
+
     func deleteEvent(id: String) async throws {
         let _: MoilEmptyResponse = try await client.request("events/\(id)", method: "DELETE")
     }
@@ -581,6 +586,36 @@ struct MoilAvailabilitySummary: Decodable {
         participantCount = (try? container.decode(Int.self, forKey: .participantCount)) ?? 0
         respondedCount = (try? container.decode(Int.self, forKey: .respondedCount)) ?? 0
         timeSlots = (try? container.decode([MoilAvailabilitySummarySlot].self, forKey: .timeSlots)) ?? []
+    }
+}
+
+/// GET /events/{eventId}/attendance 응답입니다. 멤버마다 참석 여부(status)가 붙어 옵니다.
+struct MoilEventAttendance: Decodable {
+    let members: [MoilEventAttendanceMember]
+
+    private enum CodingKeys: String, CodingKey { case members }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        members = (try? container.decode([MoilEventAttendanceMember].self, forKey: .members)) ?? []
+    }
+}
+
+struct MoilEventAttendanceMember: Decodable {
+    let id: String
+    let colorId: String?
+    /// "ATTENDING" / "DECLINED" / nil(응답 안 함).
+    let status: String?
+
+    var isAttending: Bool { status == "ATTENDING" }
+
+    private enum CodingKeys: String, CodingKey { case memberId, userId, id, colorId, profileColor, status }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.string(for: [.memberId, .userId, .id])
+        colorId = try? container.string(for: [.colorId, .profileColor])
+        status = try? container.decode(String.self, forKey: .status)
     }
 }
 
