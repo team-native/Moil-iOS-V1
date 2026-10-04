@@ -910,8 +910,7 @@ private struct ScheduleComposerView: View {
     @State private var endTime: Date
     @State private var location = ""
     @State private var memo = ""
-    @State private var inputTarget: ScheduleInputTarget?
-    /// 날짜·시간 입력을 별도 시트로 새로 띄우면 그 시트 높이가 더 작아서 팝업이 순간
+    /// 날짜·시간·위치·메모 입력을 별도 시트로 새로 띄우면 그 시트 높이가 더 작아서 팝업이 순간
     /// 낮아지는 것처럼 보였습니다. 대신 같은 고정 높이 시트 안에서 내용만 바꿔 보여줍니다.
     @State private var composerMode: ComposerMode = .form
     @State private var selectedMemberIDs: Set<String>
@@ -956,18 +955,28 @@ private struct ScheduleComposerView: View {
                     endTime: $endTime,
                     onClose: { composerMode = .form }
                 )
+            case .location:
+                ScheduleTextInputSheet(
+                    title: "위치",
+                    placeholder: "위치를 입력하세요",
+                    text: $location,
+                    allowsMultipleLines: false,
+                    onClose: { composerMode = .form }
+                )
+            case .memo:
+                ScheduleTextInputSheet(
+                    title: "메모",
+                    placeholder: "메모를 입력하세요",
+                    text: $memo,
+                    allowsMultipleLines: true,
+                    onClose: { composerMode = .form }
+                )
             }
         }
         .background(MoilColor.surface)
-        .sheet(item: $inputTarget) { target in
-            ScheduleTextInputSheet(
-                title: target.title,
-                placeholder: target.placeholder,
-                text: target == .location ? $location : $memo,
-                allowsMultipleLines: target == .memo
-            )
-            .presentationDetents([target == .memo ? .medium : .height(260)])
-        }
+        // 입력 화면도 같은 시트 안이라, 쓸어내리면 작성 중인 일정 전체가 닫혔습니다.
+        // 폼이 아닐 때는 취소/완료로만 돌아가게 막습니다.
+        .interactiveDismissDisabled(composerMode != .form)
     }
 
     private var formContent: some View {
@@ -1037,13 +1046,13 @@ private struct ScheduleComposerView: View {
                     ScheduleRow(title: "위치", value: location.nilIfBlank ?? "추가", secondary: location.nilIfBlank == nil)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            inputTarget = .location
+                            composerMode = .location
                         }
 
                     ScheduleRow(title: "메모", value: memo.nilIfBlank ?? "추가", secondary: memo.nilIfBlank == nil)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            inputTarget = .memo
+                            composerMode = .memo
                         }
 
                     VStack(alignment: .leading, spacing: 18) {
@@ -1108,44 +1117,58 @@ private enum ComposerMode {
     case form
     case date
     case time
-}
-
-private enum ScheduleInputTarget: Identifiable, Equatable {
     case location
     case memo
-
-    var id: Self { self }
-    var title: String { self == .location ? "위치" : "메모" }
-    var placeholder: String { self == .location ? "위치를 입력하세요" : "메모를 입력하세요" }
 }
 
+/// 위치·메모 입력 화면입니다. 날짜·시간 입력과 같은 머리 영역과 여백을 쓰고,
+/// 완료를 눌렀을 때만 입력한 내용을 반영해 취소하면 이전 값이 그대로 남습니다.
 private struct ScheduleTextInputSheet: View {
-    @Environment(\.dismiss) private var dismiss
     let title: String
     let placeholder: String
     @Binding var text: String
     let allowsMultipleLines: Bool
+    let onClose: () -> Void
+    @State private var draft: String
+
+    init(title: String, placeholder: String, text: Binding<String>, allowsMultipleLines: Bool, onClose: @escaping () -> Void) {
+        self.title = title
+        self.placeholder = placeholder
+        _text = text
+        self.allowsMultipleLines = allowsMultipleLines
+        self.onClose = onClose
+        _draft = State(initialValue: text.wrappedValue)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button("취소", action: dismiss.callAsFunction)
+                Button("취소", action: onClose)
                     .foregroundStyle(MoilColor.textSecondary)
                 Spacer()
                 Text(title).font(MoilTypography.semibold(16))
                 Spacer()
-                Button("완료", action: dismiss.callAsFunction)
+                Button("완료") {
+                    text = draft
+                    onClose()
+                }
                     .font(MoilTypography.bold(16))
                     .foregroundStyle(MoilColor.primary)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, 28)
             .padding(.top, 18)
-            .padding(.bottom, 18)
+            .padding(.bottom, 8)
 
-            TextField(placeholder, text: $text, axis: allowsMultipleLines ? .vertical : .horizontal)
+            TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
                 .moilField(background: MoilColor.popupField)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
+                .overlay {
+                    // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
+                }
                 .padding(.horizontal, 18)
+                .padding(.top, 36)
             Spacer()
         }
         .background(MoilColor.surface)
