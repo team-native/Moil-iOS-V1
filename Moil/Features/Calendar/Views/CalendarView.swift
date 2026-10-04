@@ -609,8 +609,8 @@ struct CalendarView: View {
                     .frame(width: 32, height: 32, alignment: .center)
                     .background(isSelected ? MoilColor.primary : .clear)
                     .clipShape(Circle())
-                // 일정이 여러 개 쌓일 때는 서로 더 붙어 보이도록 간격을 좁게 둡니다.
-                VStack(spacing: 2) {
+                // 일정 칩끼리 너무 붙어 있으면 서로 구분이 어려워, 칩 사이를 조금 띄웁니다.
+                VStack(spacing: 4) {
                     ForEach(events.prefix(maxVisibleEventsPerDay)) { event in
                         eventChip(event, day: day, month: month)
                     }
