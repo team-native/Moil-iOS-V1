@@ -5,6 +5,8 @@ import Combine
 final class MoilSessionStore: ObservableObject {
     @Published private(set) var accessToken: String?
     @Published private(set) var refreshToken: String?
+    /// 계정 기본 프로필. 그룹별 참여 프로필과 별개이며, 새 그룹 생성·참여 시 초기값으로 씁니다.
+    @Published private(set) var accountProfile: MoilAccountProfile?
 
     private let accessTokenKey = "moilAccessToken"
     private let refreshTokenKey = "moilRefreshToken"
@@ -71,9 +73,19 @@ final class MoilSessionStore: ObservableObject {
         return didRefresh
     }
 
+    func loadAccountProfile() async {
+        guard isAuthenticated else { return }
+        if let profile = try? await service().myProfile() { accountProfile = profile }
+    }
+
+    func updateDefaultProfile(name: String, colorId: String?, imagePath: String?) async throws {
+        accountProfile = try await service().updateDefaultProfile(name: name, colorId: colorId, imagePath: imagePath)
+    }
+
     func clear() {
         accessToken = nil
         refreshToken = nil
+        accountProfile = nil
         UserDefaults.standard.removeObject(forKey: accessTokenKey)
         UserDefaults.standard.removeObject(forKey: refreshTokenKey)
     }

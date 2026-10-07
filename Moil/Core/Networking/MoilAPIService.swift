@@ -101,6 +101,16 @@ struct MoilAPIService {
         return response.imagePath
     }
 
+    /// 계정 기본 프로필(이름/색상/사진)을 조회합니다. 그룹 생성·참여 화면의 초기값으로 씁니다.
+    func myProfile() async throws -> MoilAccountProfile {
+        try await client.request("auth/profile", method: "GET")
+    }
+
+    /// 계정 기본 프로필을 수정합니다. 그룹별 참여 프로필(`updateMyProfile`)에는 영향을 주지 않습니다.
+    func updateDefaultProfile(name: String, colorId: String?, imagePath: String? = nil) async throws -> MoilAccountProfile {
+        try await client.request("auth/profile", method: "PATCH", body: UpdateDefaultProfileRequest(name: name, colorId: colorId, imagePath: imagePath))
+    }
+
     func groupDetail(groupId: String) async throws -> MoilRemoteGroup {
         try await client.request("groups/\(groupId)", method: "GET")
     }
@@ -197,6 +207,8 @@ private struct InviteCodeRequest: Encodable { let inviteCode: String }
 private struct JoinGroupRequest: Encodable { let inviteCode: String; let nickname: String; let colorId: String?; let imagePath: String? }
 private struct MoilImageUploadResponse: Decodable { let imagePath: String }
 private struct UpdateMemberProfileRequest: Encodable { let nickname: String; let colorId: String?; let imagePath: String? }
+private struct UpdateDefaultProfileRequest: Encodable { let name: String; let colorId: String?; let imagePath: String? }
+struct MoilAccountProfile: Decodable { let name: String; let email: String?; let defaultColorId: String?; let defaultImagePath: String? }
 struct MoilUpdatedMemberProfile: Decodable { let nickname: String; let colorId: String?; let imagePath: String? }
 private struct NotificationRequest: Encodable { let enabled: Bool }
 private struct RenameGroupRequest: Encodable { let name: String }

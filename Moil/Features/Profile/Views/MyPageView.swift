@@ -11,7 +11,7 @@ struct MyPageView: View {
     @State private var isJoinGroupPresented = false
     @State private var isJoinProfilePresented = false
     @State private var accountRoute: AccountRoute?
-    @State private var isEditingMyProfile = false
+    @State private var profileEditTarget: ProfileEditTarget?
     let onCreateGroup: () -> Void
     let onLeaveGroup: () -> Void
     let onLogout: () -> Void
@@ -43,23 +43,45 @@ struct MyPageView: View {
         NavigationStack {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
+                // 헤더는 계정 기본 프로필, 아래 섹션은 선택된 그룹에서 쓰는 참여 프로필입니다.
                 HStack(spacing: 14) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 56)
-                    Text(myMemberInSelectedGroup?.nickname ?? "나").font(MoilTypography.bold(21))
-                    Spacer()
-                    if groupStore.selectedGroupId != nil {
-                        Button { isEditingMyProfile = true } label: {
-                            Text("프로필 수정")
-                                .font(MoilTypography.semibold(13))
-                                .foregroundStyle(MoilColor.primary)
-                                .padding(.horizontal, 12)
-                                .frame(height: 30)
-                                .background(MoilColor.primary.opacity(0.1))
-                                .clipShape(Capsule())
-                        }
+                    MoilAvatar(color: MoilAvatarColor.color(for: sessionStore.accountProfile?.defaultColorId), size: 56)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(sessionStore.accountProfile?.name ?? "나").font(MoilTypography.bold(21))
+                        Text("기본 프로필").font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textTertiary)
                     }
+                    Spacer()
+                    Button { profileEditTarget = .account } label: {
+                        Text("프로필 수정")
+                            .font(MoilTypography.semibold(13))
+                            .foregroundStyle(MoilColor.primary)
+                            .padding(.horizontal, 12)
+                            .frame(height: 30)
+                            .background(MoilColor.primary.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    .disabled(sessionStore.accountProfile == nil)
                 }
                 .padding(.bottom, 20)
+
+                if let groupId = groupStore.selectedGroupId,
+                   let groupName = groupStore.groups.first(where: { $0.id == groupId })?.name {
+                    GroupSection(title: "\(groupName)에서 쓰는 프로필") {
+                        Button { profileEditTarget = .group(groupId) } label: {
+                            HStack(spacing: 10) {
+                                MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 28)
+                                Text(myMemberInSelectedGroup?.nickname ?? "나")
+                                    .font(MoilTypography.semibold(15))
+                                    .foregroundStyle(MoilColor.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(MoilColor.textTertiary)
+                            }
+                            .padding(14)
+                        }
+                        .accessibilityHint("이 그룹에서만 보이는 프로필을 수정합니다")
+                    }
+                    .padding(.bottom, 28)
+                }
 
                 GroupSection(title: "내 그룹") {
                     ForEach(groupStore.groups) { group in
@@ -111,15 +133,23 @@ struct MyPageView: View {
                 }
             }
         }
-        .sheet(isPresented: $isEditingMyProfile) {
-            if let groupId = groupStore.selectedGroupId {
+        .sheet(item: $profileEditTarget) { target in
+            switch target {
+            case .account:
                 EditMemberProfileView(
-                    groupId: groupId,
+                    target: .account,
+                    currentNickname: sessionStore.accountProfile?.name ?? "",
+                    currentColorId: sessionStore.accountProfile?.defaultColorId
+                )
+            case .group(let groupId):
+                EditMemberProfileView(
+                    target: .group(groupId),
                     currentNickname: myMemberInSelectedGroup?.nickname ?? "",
                     currentColorId: myMemberInSelectedGroup?.colorId
                 )
             }
         }
+        .task { await sessionStore.loadAccountProfile() }
         .fullScreenCover(isPresented: $isGroupDetailPresented) {
             GroupDetailView {
                 isGroupDetailPresented = false
@@ -189,6 +219,13 @@ struct MyPageView: View {
     MyPageView()
         .environmentObject(MoilGroupStore())
         .environmentObject(MoilSessionStore())
+}
+
+private enum ProfileEditTarget: Hashable, Identifiable {
+    case account
+    case group(String)
+
+    var id: Self { self }
 }
 
 private enum AccountRoute: Hashable {
