@@ -14,6 +14,12 @@ struct GroupJoinProfileView: View {
     @State private var profileImagePreview: Image?
     @State private var uploadedImagePath: String?
     @State private var isUploadingImage = false
+    @State private var didApplyDefaultProfile = false
+    /// 기본 프로필 색이 사진에서 뽑힌 색이라 선택 스와치에 없으면 맨 앞에 추가합니다.
+    private var colorIds: [String] {
+        guard !MoilAvatarColor.selectableIds.contains(selectedColorId) else { return MoilAvatarColor.selectableIds }
+        return [selectedColorId] + MoilAvatarColor.selectableIds
+    }
     /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
     /// 여기서도 같은 설정값을 직접 적용합니다.
     @AppStorage("moilDarkMode") private var isDarkMode = false
@@ -46,7 +52,7 @@ struct GroupJoinProfileView: View {
             HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
             Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
             if uploadedImagePath == nil {
-                ProfileColorSwatchGrid(colorIds: MoilAvatarColor.selectableIds, selectedId: selectedColorId, swatchSize: 40, onSelect: selectColor) {
+                ProfileColorSwatchGrid(colorIds: colorIds, selectedId: selectedColorId, swatchSize: 40, onSelect: selectColor) {
                     profileImagePicker
                 }
             } else {
@@ -91,6 +97,7 @@ struct GroupJoinProfileView: View {
         .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())
         .preferredColorScheme(isDarkMode ? .dark : .light)
+        .task { await applyDefaultProfile() }
         .onChange(of: profileImagePickerItem) { _, item in
             guard let item else { return }
             uploadProfileImage(item)
@@ -135,6 +142,20 @@ struct GroupJoinProfileView: View {
         }
         .disabled(isUploadingImage)
         .accessibilityLabel("프로필 사진 추가")
+    }
+
+    /// 계정 기본 프로필을 이 그룹 프로필의 초기값으로 채웁니다. 사용자가 이미 고른 값은 덮어쓰지 않습니다.
+    private func applyDefaultProfile() async {
+        await sessionStore.loadAccountProfile()
+        guard !didApplyDefaultProfile, let profile = sessionStore.accountProfile else { return }
+        didApplyDefaultProfile = true
+        if uploadedImagePath == nil, let colorId = profile.defaultColorId?.uppercased(), !colorId.isEmpty {
+            selectedColorId = colorId
+        }
+            let name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if nickname.isEmpty, !name.isEmpty {
+                nickname = String(name.prefix(10))
+            }
     }
 
     private func selectColor(_ id: String) {

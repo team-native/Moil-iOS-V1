@@ -1,13 +1,20 @@
 import PhotosUI
 import SwiftUI
 
-/// 그룹 안에서 내 닉네임/색상/프로필 사진을 수정하는 화면입니다.
+/// 그룹 안의 참여 프로필, 또는 계정 기본 프로필의 이름/색상/사진을 수정하는 화면입니다.
 /// 색상·사진 선택 UI는 CreateGroupView/GroupJoinProfileView와 동일한 패턴을 씁니다.
 struct EditMemberProfileView: View {
+    enum Target {
+        /// 특정 그룹에서만 쓰는 참여 프로필
+        case group(String)
+        /// 새 그룹에 들어갈 때 초기값이 되는 계정 기본 프로필
+        case account
+    }
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var groupStore: MoilGroupStore
     @EnvironmentObject private var sessionStore: MoilSessionStore
-    let groupId: String
+    let target: Target
     @State private var nickname: String
     @State private var selectedColorId: String
     @State private var errorMessage: String?
@@ -23,8 +30,8 @@ struct EditMemberProfileView: View {
         return [selectedColorId] + MoilAvatarColor.selectableIds
     }
 
-    init(groupId: String, currentNickname: String, currentColorId: String?) {
-        self.groupId = groupId
+    init(target: Target, currentNickname: String, currentColorId: String?) {
+        self.target = target
         _nickname = State(initialValue: currentNickname)
         _selectedColorId = State(initialValue: currentColorId?.uppercased() ?? "GREEN")
     }
@@ -33,20 +40,28 @@ struct EditMemberProfileView: View {
         nickname.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var isAccount: Bool {
+        if case .account = target { return true }
+        return false
+    }
+
+    /// 서버 제한: 그룹 닉네임 10자, 계정 이름 100자
+    private var maxLength: Int { isAccount ? 100 : 10 }
+
     private var isValidNickname: Bool {
-        (1...10).contains(trimmedNickname.count)
+        (1...maxLength).contains(trimmedNickname.count)
     }
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
-                Text("닉네임").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
-                TextField("닉네임 입력", text: $nickname).moilField()
+                Text(isAccount ? "이름" : "닉네임").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 26).padding(.bottom, 10)
+                TextField(isAccount ? "이름 입력" : "닉네임 입력", text: $nickname).moilField()
                     .onChange(of: nickname) { _, value in
-                        if value.count > 10 { nickname = String(value.prefix(10)) }
+                        if value.count > maxLength { nickname = String(value.prefix(maxLength)) }
                     }
                 if !nickname.isEmpty && !isValidNickname {
-                    Text("닉네임은 1자 이상 10자 이하로 입력해주세요.")
+                    Text(isAccount ? "이름을 입력해주세요." : "닉네임은 1자 이상 10자 이하로 입력해주세요.")
                         .font(MoilTypography.regular(12))
                         .foregroundStyle(MoilColor.error)
                         .padding(.top, 6)
@@ -70,19 +85,29 @@ struct EditMemberProfileView: View {
                         .foregroundStyle(MoilColor.textSecondary)
                         .padding(.top, 18)
                 }
+                Text(isAccount ? "기본 프로필은 새 그룹을 만들거나 참여할 때 처음 값으로 쓰여요. 이미 참여한 그룹의 프로필은 바뀌지 않아요." : "이 그룹에서만 보이는 프로필이에요. 기본 프로필은 바뀌지 않아요.")
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .padding(.top, 12)
                 Spacer()
                 Button("저장하기") {
                     Task {
                         isSaving = true
                         defer { isSaving = false }
                         do {
-                            try await groupStore.updateMyProfile(
-                                groupId: groupId,
-                                nickname: trimmedNickname,
-                                colorId: uploadedImagePath == nil ? selectedColorId : nil,
-                                imagePath: uploadedImagePath,
-                                using: sessionStore.service()
-                            )
+                            let colorId = uploadedImagePath == nil ? selectedColorId : nil
+                            switch target {
+                            case .group(let groupId):
+                                try await groupStore.updateMyProfile(
+                                    groupId: groupId,
+                                    nickname: trimmedNickname,
+                                    colorId: colorId,
+                                    imagePath: uploadedImagePath,
+                                    using: sessionStore.service()
+                                )
+                            case .account:
+                                try await sessionStore.updateDefaultProfile(name: trimmedNickname, colorId: colorId, imagePath: uploadedImagePath)
+                            }
                             dismiss()
                         } catch {
                             errorMessage = error.localizedDescription
@@ -97,7 +122,7 @@ struct EditMemberProfileView: View {
             .padding(.horizontal, 24)
             .safeAreaPadding(.top, 12)
             .background(MoilColor.background.ignoresSafeArea())
-            .navigationTitle("프로필 수정")
+            .navigationTitle(isAccount ? "기본 프로필 수정" : "그룹 프로필 수정")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -178,7 +203,7 @@ struct EditMemberProfileView: View {
 }
 
 #Preview("프로필 수정") {
-    EditMemberProfileView(groupId: "1", currentNickname: "나", currentColorId: "GREEN")
+    EditMemberProfileView(target: .group("1"), currentNickname: "나", currentColorId: "GREEN")
         .environmentObject(MoilGroupStore())
         .environmentObject(MoilSessionStore())
 }
