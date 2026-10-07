@@ -49,6 +49,7 @@ struct AuthFlowView: View {
             PasswordSetupView(onBack: { route = .passwordResetVerification }, actionTitle: "비밀번호 변경", onComplete: resetPassword)
         case .main:
             MoilTabNavigationView(onLogout: logout)
+                .modifier(MoilJoinLinkPresenter())
         }
         }
         .task { await restoreSession() }

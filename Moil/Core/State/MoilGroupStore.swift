@@ -36,6 +36,8 @@ final class MoilGroupStore: ObservableObject {
     @Published var pendingInviteCode: String?
     @Published var pendingInviteGroupName = ""
     @Published var pendingInviteMemberCount = 0
+    /// 초대 링크로 앱이 열렸을 때 메인 화면에서 처리할 링크. 로그인 전이면 로그인 후까지 유지됩니다.
+    @Published var pendingJoinLink: MoilJoinLink?
     @Published private(set) var isLoading = false
     @Published private var membersByGroupId: [String: [MoilRemoteMember]] = [:]
 

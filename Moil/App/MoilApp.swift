@@ -48,6 +48,9 @@ struct MoilApp: App {
                     guard isAuthenticated else { return }
                     MoilPushNotificationManager.shared.requestAuthorization()
                 }
+                .onOpenURL { url in
+                    if let link = MoilJoinLink(url: url) { groupStore.pendingJoinLink = link }
+                }
                 .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }
                 .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
                 .onChange(of: isDarkMode) { _, _ in syncWatch() }
