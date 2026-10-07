@@ -7,6 +7,8 @@ struct GroupJoinCodeView: View {
     let onNext: () -> Void
     let onTabSelect: ((MoilTab) -> Void)?
     let showsTabBar: Bool
+    /// 초대 링크에 실려 온 코드. 있으면 입력란을 채우고 바로 확인합니다.
+    let initialCode: String?
     @State private var code = ""
     @State private var error: String?
     @State private var isVerified = false
@@ -15,10 +17,11 @@ struct GroupJoinCodeView: View {
     /// 여기서도 같은 설정값을 직접 적용합니다.
     @AppStorage("moilDarkMode") private var isDarkMode = false
 
-    init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true) {
+    init(onNext: @escaping () -> Void = {}, onTabSelect: ((MoilTab) -> Void)? = nil, showsTabBar: Bool = true, initialCode: String? = nil) {
         self.onNext = onNext
         self.onTabSelect = onTabSelect
         self.showsTabBar = showsTabBar
+        self.initialCode = initialCode
     }
 
     /// 탭으로 들어온 경우에는 탭바로 이동하므로 뒤로 가기를 두지 않습니다.
@@ -52,22 +55,7 @@ struct GroupJoinCodeView: View {
             Spacer()
             Button(isVerified ? "다음" : "확인") {
                 if isVerified { onNext() }
-                else {
-                    Task {
-                        isVerifying = true
-                        do {
-                            let inviteCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let verification = try await sessionStore.service().verifyInviteCode(inviteCode)
-                            groupStore.pendingInviteCode = verification.inviteCode
-                            groupStore.pendingInviteGroupName = verification.groupName
-                            groupStore.pendingInviteMemberCount = verification.memberCount
-                            isVerified = true
-                        } catch let requestError {
-                            error = requestError.localizedDescription
-                        }
-                        isVerifying = false
-                    }
-                }
+                else { Task { await verify() } }
             }
             .font(MoilTypography.bold(16)).foregroundStyle(.white)
             .frame(maxWidth: .infinity).frame(height: 54)
@@ -78,6 +66,13 @@ struct GroupJoinCodeView: View {
             .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
         }
         .background(MoilColor.background.ignoresSafeArea())
+        .task {
+            guard let initialCode, code.isEmpty else { return }
+            code = initialCode
+            // 입력값 변경 시 검증 상태를 초기화하는 onChange가 먼저 끝나도록 한 번 양보합니다.
+            await Task.yield()
+            await verify()
+        }
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .moilTabScreenLayout(selected: .create, isTabBarVisible: showsTabBar) { tab in
             if let onTabSelect {
@@ -85,6 +80,23 @@ struct GroupJoinCodeView: View {
             } else if tab != .create {
                 dismiss()
             }
+        }
+    }
+}
+
+extension GroupJoinCodeView {
+    private func verify() async {
+        isVerifying = true
+        defer { isVerifying = false }
+        do {
+            let inviteCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+            let verification = try await sessionStore.service().verifyInviteCode(inviteCode)
+            groupStore.pendingInviteCode = verification.inviteCode
+            groupStore.pendingInviteGroupName = verification.groupName
+            groupStore.pendingInviteMemberCount = verification.memberCount
+            isVerified = true
+        } catch let requestError {
+            error = requestError.localizedDescription
         }
     }
 }
