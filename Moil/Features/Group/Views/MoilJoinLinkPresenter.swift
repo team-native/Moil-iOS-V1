@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 메인 화면 위에서 초대 링크(`moil://join/...`)를 처리합니다.
+/// 메인 화면 위에서 초대 링크(`moil://join/...`)와 푸시 알림 탭으로 들어온 그룹 전환을 처리합니다.
 /// 이미 속한 그룹이면 그 그룹으로 전환하고, 아니면 초대 코드 → 프로필 설정 순서로 참여 화면을 띄웁니다.
 struct MoilJoinLinkPresenter: ViewModifier {
     @EnvironmentObject private var groupStore: MoilGroupStore
@@ -22,6 +22,7 @@ struct MoilJoinLinkPresenter: ViewModifier {
     func body(content: Content) -> some View {
         content
             .task(id: groupStore.pendingJoinLink) { await handlePendingLink() }
+            .task(id: groupStore.pendingNotificationGroupId) { await handleNotificationGroup() }
             .fullScreenCover(item: $step) { step in
                 switch step {
                 case .code(let initialCode):
@@ -33,6 +34,13 @@ struct MoilJoinLinkPresenter: ViewModifier {
                     GroupJoinProfileView { self.step = nil }
                 }
             }
+    }
+
+    private func handleNotificationGroup() async {
+        guard let groupId = groupStore.pendingNotificationGroupId, sessionStore.isAuthenticated else { return }
+        groupStore.pendingNotificationGroupId = nil
+        if !groupStore.groups.contains(where: { $0.id == groupId }) { try? await groupStore.load(using: sessionStore.service()) }
+        groupStore.selectGroup(groupId)
     }
 
     private func handlePendingLink() async {
