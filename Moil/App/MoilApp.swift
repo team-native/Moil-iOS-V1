@@ -58,7 +58,9 @@ struct MoilApp: App {
                 }
                 .onChange(of: pushManager.tappedGroupId) { _, groupId in
                     guard let groupId else { return }
+                    groupStore.pendingNotificationEventId = pushManager.tappedEventId
                     groupStore.pendingNotificationGroupId = groupId
+                    pushManager.tappedEventId = nil
                     pushManager.tappedGroupId = nil
                 }
                 .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }

@@ -16,6 +16,8 @@ final class MoilPushNotificationManager: NSObject, ObservableObject {
     @Published private(set) var apnsToken: String?
     /// 알림을 탭했을 때 payload의 groupId. 메인 화면에서 그 그룹으로 전환한 뒤 비웁니다.
     @Published var tappedGroupId: String?
+    /// 일정 알림이면 함께 오는 eventId. 캘린더에서 일정 상세를 띄운 뒤 비웁니다.
+    @Published var tappedEventId: String?
 
     private override init() {
         super.init()
@@ -85,8 +87,16 @@ extension MoilPushNotificationManager: UNUserNotificationCenterDelegate {
     ) async {
         // 서버 payload: { aps, type, groupId, eventId? }. groupId는 숫자로 올 수 있습니다.
         let userInfo = response.notification.request.content.userInfo
-        let groupId = (userInfo["groupId"] as? String) ?? (userInfo["groupId"] as? NSNumber)?.stringValue
-        guard let groupId, !groupId.isEmpty else { return }
-        await MainActor.run { self.tappedGroupId = groupId }
+        func id(_ key: String) -> String? {
+            let value = (userInfo[key] as? String) ?? (userInfo[key] as? NSNumber)?.stringValue
+            return value?.isEmpty == false ? value : nil
+        }
+        guard let groupId = id("groupId") else { return }
+        let eventId = id("eventId")
+        await MainActor.run {
+            // groupId 변화를 받아 함께 넘기므로 eventId를 먼저 채웁니다.
+            self.tappedEventId = eventId
+            self.tappedGroupId = groupId
+        }
     }
 }

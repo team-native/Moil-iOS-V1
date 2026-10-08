@@ -40,6 +40,8 @@ final class MoilGroupStore: ObservableObject {
     @Published var pendingJoinLink: MoilJoinLink?
     /// 푸시 알림을 탭해 열렸을 때 메인 화면에서 전환할 그룹
     @Published var pendingNotificationGroupId: String?
+    /// 일정 알림을 탭해 열렸을 때 캘린더에서 상세를 띄울 일정
+    @Published var pendingNotificationEventId: String?
     @Published private(set) var isLoading = false
     @Published private var membersByGroupId: [String: [MoilRemoteMember]] = [:]
 
