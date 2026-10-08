@@ -38,6 +38,10 @@ final class MoilGroupStore: ObservableObject {
     @Published var pendingInviteMemberCount = 0
     /// 초대 링크로 앱이 열렸을 때 메인 화면에서 처리할 링크. 로그인 전이면 로그인 후까지 유지됩니다.
     @Published var pendingJoinLink: MoilJoinLink?
+    /// 푸시 알림을 탭해 열렸을 때 메인 화면에서 전환할 그룹
+    @Published var pendingNotificationGroupId: String?
+    /// 일정 알림을 탭해 열렸을 때 캘린더에서 상세를 띄울 일정
+    @Published var pendingNotificationEventId: String?
     @Published private(set) var isLoading = false
     @Published private var membersByGroupId: [String: [MoilRemoteMember]] = [:]
 

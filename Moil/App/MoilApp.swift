@@ -36,6 +36,7 @@ struct MoilApp: App {
     @StateObject private var groupStore = MoilGroupStore()
     @StateObject private var sessionStore = MoilSessionStore()
     @StateObject private var eventStore = MoilEventStore()
+    @ObservedObject private var pushManager = MoilPushNotificationManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -51,6 +52,17 @@ struct MoilApp: App {
                 .onOpenURL { url in
                     if let link = MoilJoinLink(url: url) { groupStore.pendingJoinLink = link }
                 }
+                .task(id: DeviceTokenKey(isAuthenticated: sessionStore.isAuthenticated, token: pushManager.apnsToken)) {
+                    guard sessionStore.isAuthenticated, let token = pushManager.apnsToken else { return }
+                    try? await sessionStore.service().saveDeviceToken(token)
+                }
+                .onChange(of: pushManager.tappedGroupId) { _, groupId in
+                    guard let groupId else { return }
+                    groupStore.pendingNotificationEventId = pushManager.tappedEventId
+                    groupStore.pendingNotificationGroupId = groupId
+                    pushManager.tappedEventId = nil
+                    pushManager.tappedGroupId = nil
+                }
                 .onChange(of: sessionStore.accessToken) { _, _ in syncWatch() }
                 .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
                 .onChange(of: isDarkMode) { _, _ in syncWatch() }
@@ -59,6 +71,11 @@ struct MoilApp: App {
                     MoilWatchConnectivityManager.shared.activate()
                 }
         }
+    }
+
+    private struct DeviceTokenKey: Equatable {
+        let isAuthenticated: Bool
+        let token: String?
     }
 
     /// 워치는 자체 로그인 화면이 없으므로, 아이폰의 로그인 세션과 선택된 그룹을

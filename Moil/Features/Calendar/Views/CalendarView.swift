@@ -307,6 +307,7 @@ struct CalendarView: View {
             .presentationDetents([.height(470)])
             .presentationDragIndicator(.visible)
         }
+        .task(id: groupStore.pendingNotificationEventId) { await openNotificationEvent() }
         .sheet(item: $selectedEvent) { event in
             EventEditorView(
                 event: event,
@@ -564,6 +565,15 @@ struct CalendarView: View {
                 await loadEvents(for: MoilCalendarDate.date(from: event.date) ?? displayedMonth)
             } catch { serverError = error.localizedDescription }
         }
+    }
+
+    /// 일정 알림을 탭해 들어온 경우 서버에서 일정을 받아 상세를 띄웁니다.
+    private func openNotificationEvent() async {
+        guard let eventId = groupStore.pendingNotificationEventId else { return }
+        groupStore.pendingNotificationEventId = nil
+        guard let remoteEvent = try? await sessionStore.service().event(id: eventId),
+              let event = CalendarEvent(remote: remoteEvent) else { return }
+        selectedEvent = event
     }
 
     private func selectEvent(_ event: CalendarEvent) async {

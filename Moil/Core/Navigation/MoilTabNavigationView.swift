@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MoilTabNavigationView: View {
+    @EnvironmentObject private var groupStore: MoilGroupStore
     let onLogout: () -> Void
     @AppStorage("moilDarkMode") private var isDarkMode = false
     @State private var selectedTab: MoilTab = .calendar
@@ -32,6 +33,13 @@ struct MoilTabNavigationView: View {
             onSelect: select
         )
         .preferredColorScheme(isDarkMode ? .dark : .light)
+        // 일정 알림을 탭하면 일정 상세를 띄우는 캘린더 탭으로 돌아옵니다.
+        .task(id: groupStore.pendingNotificationEventId) {
+            guard groupStore.pendingNotificationEventId != nil else { return }
+            isCreatingGroup = false
+            isJoiningProfile = false
+            selectedTab = .calendar
+        }
     }
 
     @ViewBuilder

@@ -12,6 +12,12 @@ final class MoilPushNotificationManager: NSObject, ObservableObject {
     static let shared = MoilPushNotificationManager()
 
     @Published private(set) var fcmToken: String?
+    /// 서버가 APNs로 직접 발송하므로 서버에는 이 hex 토큰을 등록합니다.
+    @Published private(set) var apnsToken: String?
+    /// 알림을 탭했을 때 payload의 groupId. 메인 화면에서 그 그룹으로 전환한 뒤 비웁니다.
+    @Published var tappedGroupId: String?
+    /// 일정 알림이면 함께 오는 eventId. 캘린더에서 일정 상세를 띄운 뒤 비웁니다.
+    @Published var tappedEventId: String?
 
     private override init() {
         super.init()
@@ -41,7 +47,11 @@ final class MoilPushNotificationManager: NSObject, ObservableObject {
     }
 
     func didRegisterForRemoteNotifications(deviceToken: Data) {
-        Messaging.messaging().apnsToken = deviceToken
+        apnsToken = deviceToken.map { String(format: "%02x", $0) }.joined()
+        // Firebase가 초기화되지 않은 상태에서 Messaging에 접근하면 크래시하므로 설정된 경우에만 넘깁니다.
+        if FirebaseApp.app() != nil {
+            Messaging.messaging().apnsToken = deviceToken
+        }
     }
 
     func didFailToRegisterForRemoteNotifications(error: Error) {
@@ -59,8 +69,6 @@ extension MoilPushNotificationManager: MessagingDelegate {
 #if DEBUG
             print("[Push] FCM 토큰 발급됨: \(fcmToken)")
 #endif
-            // TODO: 백엔드에 디바이스 토큰 저장 API가 확정되면 여기서 서버로 전송합니다.
-            // 예: try? await sessionStore.service().registerPushToken(fcmToken)
         }
     }
 }
@@ -77,6 +85,18 @@ extension MoilPushNotificationManager: UNUserNotificationCenterDelegate {
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        // TODO: 알림 탭 시 해당 그룹 화면으로 이동하는 딥링크 처리
+        // 서버 payload: { aps, type, groupId, eventId? }. groupId는 숫자로 올 수 있습니다.
+        let userInfo = response.notification.request.content.userInfo
+        func id(_ key: String) -> String? {
+            let value = (userInfo[key] as? String) ?? (userInfo[key] as? NSNumber)?.stringValue
+            return value?.isEmpty == false ? value : nil
+        }
+        guard let groupId = id("groupId") else { return }
+        let eventId = id("eventId")
+        await MainActor.run {
+            // groupId 변화를 받아 함께 넘기므로 eventId를 먼저 채웁니다.
+            self.tappedEventId = eventId
+            self.tappedGroupId = groupId
+        }
     }
 }

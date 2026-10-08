@@ -111,6 +111,15 @@ struct MoilAPIService {
         try await client.request("auth/profile", method: "PATCH", body: UpdateDefaultProfileRequest(name: name, colorId: colorId, imagePath: imagePath))
     }
 
+    /// 푸시 발송용 APNs 디바이스 토큰을 등록합니다. 같은 토큰이 다른 계정에 있으면 서버가 현재 계정으로 옮깁니다.
+    func saveDeviceToken(_ token: String) async throws {
+        let _: MoilEmptyResponse = try await client.request("users/me/device-token", method: "PUT", body: DeviceTokenRequest(token: token, platform: "IOS"))
+    }
+
+    func deleteDeviceToken(_ token: String) async throws {
+        let _: MoilEmptyResponse = try await client.request("users/me/device-token", method: "DELETE", body: DeleteDeviceTokenRequest(token: token))
+    }
+
     func groupDetail(groupId: String) async throws -> MoilRemoteGroup {
         try await client.request("groups/\(groupId)", method: "GET")
     }
@@ -209,6 +218,8 @@ private struct MoilImageUploadResponse: Decodable { let imagePath: String }
 private struct UpdateMemberProfileRequest: Encodable { let nickname: String; let colorId: String?; let imagePath: String? }
 private struct UpdateDefaultProfileRequest: Encodable { let name: String; let colorId: String?; let imagePath: String? }
 struct MoilAccountProfile: Decodable { let name: String; let email: String?; let defaultColorId: String?; let defaultImagePath: String? }
+private struct DeviceTokenRequest: Encodable { let token: String; let platform: String }
+private struct DeleteDeviceTokenRequest: Encodable { let token: String }
 struct MoilUpdatedMemberProfile: Decodable { let nickname: String; let colorId: String?; let imagePath: String? }
 private struct NotificationRequest: Encodable { let enabled: Bool }
 private struct RenameGroupRequest: Encodable { let name: String }

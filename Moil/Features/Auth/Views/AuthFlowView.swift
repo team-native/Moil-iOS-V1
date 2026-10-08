@@ -177,6 +177,10 @@ struct AuthFlowView: View {
 
     private func logout() {
         Task {
+            // 로그아웃한 기기로 다른 계정 알림이 가지 않도록 토큰을 먼저 지웁니다(인증이 필요해 logout 전에 호출).
+            if let token = MoilPushNotificationManager.shared.apnsToken {
+                try? await sessionStore.service().deleteDeviceToken(token)
+            }
             try? await sessionStore.service().logout()
             sessionStore.clear()
             groupStore.reset()
