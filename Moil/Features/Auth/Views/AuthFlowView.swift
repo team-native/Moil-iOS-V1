@@ -211,10 +211,25 @@ private struct LoginView: View {
     @State private var password = ""
     @State private var isSubmitting = false
     @State private var isSocialLoginSubmitting = false
-    @State private var errorMessage: String?
+    /// 이메일·비밀번호 로그인 실패는 두 입력 칸에 각각 표시합니다.
+    @State private var credentialError: String?
+    @State private var socialLoginError: String?
 
     private var canSubmit: Bool {
         email.contains("@") && password.count >= 8
+    }
+
+    private var emailState: MoilFieldState {
+        credentialError == nil ? .neutral : .failure("이메일을 다시 확인해주세요")
+    }
+
+    private var passwordState: MoilFieldState {
+        (credentialError ?? socialLoginError).map(MoilFieldState.failure) ?? .neutral
+    }
+
+    private func clearErrors() {
+        credentialError = nil
+        socialLoginError = nil
     }
 
     var body: some View {
@@ -245,11 +260,13 @@ private struct LoginView: View {
                             .padding(.bottom, 36)
 
                             VStack(spacing: 12) {
-                                AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                                    .onChange(of: email) { _, _ in errorMessage = nil }
-                                MoilValidatedField(state: errorMessage.map(MoilFieldState.failure) ?? .neutral) {
+                                MoilValidatedField(state: emailState) {
+                                    AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                                        .onChange(of: email) { _, _ in clearErrors() }
+                                }
+                                MoilValidatedField(state: passwordState) {
                                     AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                                        .onChange(of: password) { _, _ in errorMessage = nil }
+                                        .onChange(of: password) { _, _ in clearErrors() }
                                 }
                                 HStack {
                                     Spacer()
@@ -262,7 +279,8 @@ private struct LoginView: View {
                             SocialLoginRow(isLoading: isSocialLoginSubmitting) { provider in
                                 Task {
                                     isSocialLoginSubmitting = true
-                                    errorMessage = await onSocialLogin(provider)
+                                    credentialError = nil
+                                    socialLoginError = await onSocialLogin(provider)
                                     isSocialLoginSubmitting = false
                                 }
                             }
@@ -280,7 +298,8 @@ private struct LoginView: View {
                         Button("로그인") {
                             Task {
                                 isSubmitting = true
-                                errorMessage = await onLogin(email, password)
+                                socialLoginError = nil
+                                credentialError = await onLogin(email, password)
                                 isSubmitting = false
                             }
                         }

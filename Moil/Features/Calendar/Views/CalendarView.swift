@@ -627,11 +627,11 @@ struct CalendarView: View {
         calendar.date(from: calendar.dateComponents([.year, .month], from: month)) ?? month
     }
 
-    /// 일요일과 공휴일은 날짜 숫자를 공휴일 색으로 칠합니다.
+    /// 토·일요일과 공휴일은 날짜 숫자를 공휴일 색으로 칠합니다.
     private func dayNumberColor(day: Int, month: Date) -> Color {
         let date = calendar.date(bySetting: .day, value: day, of: firstDay(of: month)) ?? firstDay(of: month)
-        let isSunday = calendar.component(.weekday, from: date) == 1
-        return isSunday || KoreanHoliday.isHoliday(date) ? MoilColor.holiday : MoilColor.textPrimary
+        let isWeekend = [1, 7].contains(calendar.component(.weekday, from: date))
+        return isWeekend || KoreanHoliday.isHoliday(date) ? MoilColor.holiday : MoilColor.textPrimary
     }
 
     private func calendarDay(_ day: Int, month: Date, events: [CalendarEvent]) -> some View {
@@ -1045,18 +1045,18 @@ private struct DayScheduleSheet: View {
                         .foregroundStyle(MoilColor.textSecondary)
                 }
                 Spacer()
+                // 원 배경이 있으면 버튼만 혼자 커 보여, 플러스 기호만 남기고 누르는 영역은 그대로 둡니다.
                 Button(action: onAdd) {
                     Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .regular))
-                        .frame(width: 48, height: 48)
-                        .background(MoilColor.textPrimary.opacity(0.12))
-                        .clipShape(Circle())
+                        .font(.system(size: 20, weight: .regular))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .foregroundStyle(MoilColor.textPrimary)
                 .accessibilityLabel("일정 추가")
             }
             .padding(.horizontal, 28)
-            .padding(.top, 20)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
             .padding(.bottom, 12)
 
             // 한 줄 높이가 커서 일정이 몇 개만 넘어도 고정 높이 시트 밖으로 잘렸습니다.
@@ -1233,10 +1233,10 @@ private struct ScheduleComposerView: View {
                     .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
                     .disabled(!canSave)
             }
-            // 상단 끌기 표시줄과 버튼 사이가 너무 떠 보여, 모든 입력 팝업의 취소/완료 줄을 같은 높이로 올립니다.
+            // 끌기 표시줄·입력칸과 붙어 보이지 않게 모든 입력 팝업의 취소/완료 줄을 같은 높이로 내립니다.
             .padding(.horizontal, 18)
-            .padding(.top, 18)
-            .padding(.bottom, 18)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
+            .padding(.bottom, MoilSheetMetrics.headerBottomPadding)
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -1343,6 +1343,12 @@ private struct ScheduleComposerView: View {
     }
 }
 
+/// 캘린더 팝업 머리 영역 여백입니다. 끌기 표시줄과 취소/완료 줄, 그리고 첫 입력칸 사이를 띄웁니다.
+private enum MoilSheetMetrics {
+    static let headerTopPadding: CGFloat = 28
+    static let headerBottomPadding: CGFloat = 28
+}
+
 private enum ComposerMode {
     case form
     case date
@@ -1386,7 +1392,7 @@ private struct ScheduleTextInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 18)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
             .padding(.bottom, 8)
 
             TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
@@ -1444,7 +1450,7 @@ private struct MonthYearPickerSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 18)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
             .padding(.bottom, 8)
 
             HStack(spacing: 0) {
@@ -1530,7 +1536,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 18)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
             .padding(.bottom, 24)
 
             HStack {
@@ -1635,7 +1641,7 @@ private struct ScheduleTimeInputSheet: View {
                     .foregroundStyle(MoilColor.primary)
             }
             .padding(.horizontal, 28)
-            .padding(.top, 18)
+            .padding(.top, MoilSheetMetrics.headerTopPadding)
             .padding(.bottom, 8)
 
             HStack(spacing: 10) {

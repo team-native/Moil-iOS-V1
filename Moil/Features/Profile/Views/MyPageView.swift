@@ -250,6 +250,8 @@ private struct AccountMenuRow: View {
                     .foregroundStyle(MoilColor.textTertiary)
             }
             .padding(16)
+            // 글자와 화살표 사이 빈 곳은 눌리지 않아 줄 전체가 아니라 일부만 눌렸습니다.
+            .contentShape(Rectangle())
         }
     }
 }
