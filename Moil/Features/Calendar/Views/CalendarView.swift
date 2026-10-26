@@ -1396,8 +1396,10 @@ private struct ScheduleTextInputSheet: View {
             .padding(.bottom, 8)
 
             TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
-                .moilField(background: MoilColor.popupField)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
+                // 여러 줄 입력칸은 글자가 칸 위쪽에 붙어 보여, 한 줄 입력칸과 같은 위아래 여백을 줍니다.
+                .padding(.vertical, allowsMultipleLines ? 16 : 0)
+                .moilField(background: MoilColor.popupField)
                 .overlay {
                     // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
                     RoundedRectangle(cornerRadius: 14)
