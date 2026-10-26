@@ -6,6 +6,7 @@ final class MoilAppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         MoilPushNotificationManager.shared.configureFirebase()
+        MoilKeyboardDismissal.shared.start()
         return true
     }
 
