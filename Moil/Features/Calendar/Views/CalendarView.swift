@@ -128,7 +128,7 @@ struct CalendarView: View {
                             HStack(spacing: 8) {
                                 HStack(spacing: -7) {
                                     ForEach(groupStore.members(for: groupStore.selectedGroupId).prefix(4)) { member in
-                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 24)
+                                        MoilAvatar(colorId: member.colorId, imagePath: member.imagePath, size: 24)
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
                                 }
@@ -284,7 +284,7 @@ struct CalendarView: View {
                     sharedMemberIDs: memberIDs
                 )
             }
-                .presentationDetents([.height(565)])
+                .presentationDetents([.height(600)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDaySchedulePresented) {
@@ -1211,11 +1211,10 @@ private struct ScheduleComposerView: View {
 
     private var formContent: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: dismiss.callAsFunction)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Button("저장") {
+            MoilSheetHeader(
+                title: "새 일정",
+                leading: .cancel(action: dismiss.callAsFunction),
+                trailing: .confirm("저장", isEnabled: canSave) {
                     onSave(
                         startDate,
                         endDate,
@@ -1229,14 +1228,7 @@ private struct ScheduleComposerView: View {
                     )
                     dismiss()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
-                    .disabled(!canSave)
-            }
-            // 끌기 표시줄·입력칸과 붙어 보이지 않게 모든 입력 팝업의 취소/완료 줄을 같은 높이로 내립니다.
-            .padding(.horizontal, 18)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, MoilSheetMetrics.headerBottomPadding)
+            )
 
             ScrollView {
                 VStack(spacing: 0) {
@@ -1293,7 +1285,7 @@ private struct ScheduleComposerView: View {
                             ForEach(members) { member in
                                 Button { toggle(member.id) } label: {
                                     VStack(spacing: 6) {
-                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
+                                        MoilAvatar(colorId: member.colorId, imagePath: member.imagePath, size: 44)
                                             .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
                                         Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
                                     }
@@ -1305,7 +1297,7 @@ private struct ScheduleComposerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 24)
                 }
-                .padding(.horizontal, 18)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
             }
         }
     }
@@ -1366,6 +1358,7 @@ private struct ScheduleTextInputSheet: View {
     let allowsMultipleLines: Bool
     let onClose: () -> Void
     @State private var draft: String
+    @FocusState private var isFocused: Bool
 
     init(title: String, placeholder: String, text: Binding<String>, allowsMultipleLines: Bool, onClose: @escaping () -> Void) {
         self.title = title
@@ -1378,22 +1371,14 @@ private struct ScheduleTextInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text(title).font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: title,
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     text = draft
                     onClose()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            )
 
             TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
@@ -1405,8 +1390,9 @@ private struct ScheduleTextInputSheet: View {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 36)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
+                .focused($isFocused)
+                .onAppear { isFocused = true }
             Spacer()
         }
         .background(MoilColor.surface)
@@ -1437,23 +1423,15 @@ private struct MonthYearPickerSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("연도 및 월").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: "연도 및 월",
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     if let date = calendar.date(from: DateComponents(year: selectedYear, month: selectedMonth, day: 1)) {
                         onSelect(date)
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            )
 
             HStack(spacing: 0) {
                 Picker("연도", selection: $selectedYear) {
@@ -1520,13 +1498,10 @@ private struct ScheduleDateRangeInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("날짜").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: "날짜",
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     let days = selectedDays
                     if let first = days.first {
                         startDate = first
@@ -1534,12 +1509,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     }
                     onClose()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 24)
+            )
 
             HStack {
                 Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
@@ -1632,19 +1602,7 @@ private struct ScheduleTimeInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("시간").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료", action: onClose)
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            MoilSheetHeader(title: "시간", leading: .cancel(action: onClose), trailing: .confirm(action: onClose))
 
             HStack(spacing: 10) {
                 timeOption(title: "시작 시간", value: displayTime(startTime), isSelected: !isEditingEndTime) {
@@ -1654,8 +1612,7 @@ private struct ScheduleTimeInputSheet: View {
                     isEditingEndTime = true
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 36)
+            .padding(.horizontal, MoilSheetHeader.horizontalPadding)
 
             Group {
                 if isEditingEndTime {
@@ -1932,14 +1889,14 @@ private struct ScheduleSearchView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                MoilSheetHeader(title: "일정 검색", leading: .back(action: dismiss.callAsFunction))
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(MoilColor.textTertiary)
-                    TextField("일정 검색", text: $query)
+                    TextField("제목·장소·이름으로 찾기", text: $query)
                 }
                 .moilField()
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
 
                 if filteredEvents.isEmpty {
                     Spacer()
@@ -1981,16 +1938,7 @@ private struct ScheduleSearchView: View {
                 }
             }
             .background(MoilColor.background.ignoresSafeArea())
-            .navigationTitle("일정 검색")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "chevron.left")
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .task(id: "\(groupId ?? "")-\(month)") {
