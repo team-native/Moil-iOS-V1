@@ -90,7 +90,7 @@ struct MonthlyView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(WatchColor.textPrimary)
                 Text(yearTitle(for: month))
-                    .font(.system(size: 9))
+                    .font(.system(size: 12))
                     .foregroundStyle(WatchColor.textSecondary)
             }
             .padding(.top, isFirst ? 0 : 10)
@@ -114,7 +114,7 @@ struct MonthlyView: View {
         HStack(spacing: 0) {
             ForEach(weekdaySymbols, id: \.self) { symbol in
                 Text(symbol)
-                    .font(.system(size: 8))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(WatchColor.textSecondary)
                     .frame(width: cellWidth, height: weekdayHeaderHeight)
             }
@@ -125,12 +125,12 @@ struct MonthlyView: View {
         VStack(spacing: 2) {
             if let value = day.day {
                 Text("\(value)")
-                    .font(.system(size: 10, weight: day.isToday ? .semibold : .regular))
+                    .font(.system(size: 13, weight: day.isToday ? .bold : .regular))
                     .foregroundStyle(day.isToday ? WatchColor.onAccent : WatchColor.textPrimary)
                 if let eventColor = day.eventColor {
                     Circle()
                         .fill(eventColor)
-                        .frame(width: 4, height: 4)
+                        .frame(width: 5, height: 5)
                 }
             }
         }

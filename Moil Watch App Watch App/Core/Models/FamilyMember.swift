@@ -6,13 +6,16 @@ struct FamilyMember: Identifiable, Hashable {
     let name: String
     let color: Color
     var isMe = false
+    /// 사진 프로필 주소입니다. 없으면 대표색 원 + 첫 글자로 보여줍니다.
+    var imageURL: URL?
 
-    init(id: String, initial: String, name: String, color: Color, isMe: Bool = false) {
+    init(id: String, initial: String, name: String, color: Color, isMe: Bool = false, imageURL: URL? = nil) {
         self.id = id
         self.initial = initial
         self.name = name
         self.color = color
         self.isMe = isMe
+        self.imageURL = imageURL
     }
 
     init(remote: MoilRemoteMember) {
@@ -21,6 +24,9 @@ struct FamilyMember: Identifiable, Hashable {
         initial = String(remote.nickname.prefix(1))
         color = MemberColorPalette.color(for: remote.colorId)
         isMe = remote.isMe
+        imageURL = remote.imagePath.map { path in
+            MoilAPIConfiguration.baseURL.appendingPathComponent(path.hasPrefix("/") ? String(path.dropFirst()) : path)
+        }
     }
 }
 
