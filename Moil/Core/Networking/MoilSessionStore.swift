@@ -54,11 +54,17 @@ final class MoilSessionStore: ObservableObject {
         let task = Task { [weak self] in
             guard let self, let refreshToken = self.refreshToken, !refreshToken.isEmpty else { return false }
             do {
-                let tokens = try await self.service().refreshToken(refreshToken)
+                let tokens = try await self.service().refreshToken(refreshToken, accessToken: self.accessToken)
                 self.save(tokens)
                 return true
             } catch {
                 if let apiError = error as? MoilAPIError, apiError.isAuthenticationFailure {
+                    // 워치가 같은 세션을 먼저 재발급했다면 아이폰 토큰은 이미 무효입니다.
+                    // 워치가 남겨 둔 새 토큰이 있으면 로그아웃하지 않고 그 토큰으로 이어갑니다.
+                    if let watchTokens = MoilWatchConnectivityManager.shared.latestTokensFromWatch(),
+                       self.adopt(watchTokens) {
+                        return true
+                    }
                     self.clear()
                     return false
                 }
@@ -71,6 +77,19 @@ final class MoilSessionStore: ObservableObject {
         let didRefresh = await task.value
         refreshTask = nil
         return didRefresh
+    }
+
+    /// 워치가 직접 재발급한 토큰을 받아들입니다. 같은 세션에서 나온 토큰일 때만 반영합니다.
+    @discardableResult
+    func adopt(_ tokens: MoilWatchTokens) -> Bool {
+        guard let current = refreshToken, !current.isEmpty,
+              tokens.refreshToken != current,
+              tokens.previousRefreshToken == current else { return false }
+        accessToken = tokens.accessToken
+        refreshToken = tokens.refreshToken
+        UserDefaults.standard.set(tokens.accessToken, forKey: accessTokenKey)
+        UserDefaults.standard.set(tokens.refreshToken, forKey: refreshTokenKey)
+        return true
     }
 
     func loadAccountProfile() async {
