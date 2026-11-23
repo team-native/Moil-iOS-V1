@@ -126,7 +126,7 @@ struct GroupDetailView: View {
         VStack(spacing: 0) {
             ForEach(members.indices, id: \.self) { index in
                 HStack(spacing: 12) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: members[index].colorId), size: 34)
+                    MoilAvatar(colorId: members[index].colorId, imagePath: members[index].imagePath, size: 34)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(members[index].nickname).font(MoilTypography.semibold(15))
                         Text(roleTitle(members[index].role))

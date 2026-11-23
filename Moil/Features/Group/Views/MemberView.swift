@@ -39,8 +39,8 @@ struct MemberView: View {
         return loaded.isEmpty ? groupStore.members(for: selectedGroup?.id) : loaded
     }
 
-    private var members: [(String, String, Color)] {
-        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId)) }
+    private var members: [(String, String, Color, String?)] {
+        currentMembers.map { ($0.nickname, isAdministrator($0) ? "관리자" : "멤버", MoilAvatarColor.color(for: $0.colorId), $0.imagePath) }
     }
 
     /// 그룹 응답의 역할을 먼저 쓰고, 멤버 응답이 도착하면 그쪽으로 확정합니다.
@@ -523,7 +523,7 @@ private struct PermissionEditorView: View {
                 VStack(spacing: 0) {
                     ForEach(members) { member in
                         HStack(spacing: 12) {
-                            MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 34)
+                            MoilAvatar(colorId: member.colorId, imagePath: member.imagePath, size: 34)
                             Text(member.nickname)
                                 .font(MoilTypography.semibold(15))
                                 .lineLimit(1)
@@ -595,10 +595,10 @@ private struct SectionTitle: View {
 }
 
 private struct MemberRow: View {
-    let member: (String, String, Color)
+    let member: (String, String, Color, String?)
     var body: some View {
         HStack(spacing: 12) {
-            MoilAvatar(color: member.2, size: 38)
+            MoilAvatar(color: member.2, size: 38, imagePath: member.3)
             VStack(alignment: .leading, spacing: 3) {
                 Text(member.0).font(MoilTypography.semibold(15))
                 Text(member.1).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textSecondary)

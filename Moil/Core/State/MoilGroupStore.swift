@@ -157,39 +157,51 @@ final class MoilGroupStore: ObservableObject {
 extension MoilAvatarColor {
     /// 서버(`MoilColor.kt`)가 정의한 전체 색상 팔레트입니다. RGB 값은 서버와 동일하게 맞춰,
     /// 사진에서 자동 추출된 색상(27종 전체)이 여기 8종짜리 스와치에 없어도 정확한 색으로 표시되도록 합니다.
-    private static let paletteById: [String: Color] = [
-        "RED": Color(red: 244 / 255, green: 67 / 255, blue: 54 / 255),
-        "ORANGE": Color(red: 255 / 255, green: 152 / 255, blue: 0 / 255),
-        "YELLOW": Color(red: 255 / 255, green: 235 / 255, blue: 59 / 255),
-        "GREEN": Color(red: 76 / 255, green: 175 / 255, blue: 80 / 255),
-        "BLUE": Color(red: 33 / 255, green: 150 / 255, blue: 243 / 255),
-        "NAVY": Color(red: 25 / 255, green: 55 / 255, blue: 109 / 255),
-        "INDIGO": Color(red: 63 / 255, green: 81 / 255, blue: 181 / 255),
-        "PURPLE": Color(red: 156 / 255, green: 39 / 255, blue: 176 / 255),
-        "PINK": Color(red: 233 / 255, green: 30 / 255, blue: 99 / 255),
-        "CREAM": Color(red: 255 / 255, green: 248 / 255, blue: 225 / 255),
-        "PEACH": Color(red: 255 / 255, green: 204 / 255, blue: 188 / 255),
-        "APRICOT": Color(red: 255 / 255, green: 183 / 255, blue: 77 / 255),
-        "TAN": Color(red: 188 / 255, green: 143 / 255, blue: 107 / 255),
-        "GOLD": Color(red: 255 / 255, green: 193 / 255, blue: 7 / 255),
-        "CORAL": Color(red: 255 / 255, green: 111 / 255, blue: 97 / 255),
-        "ROSE": Color(red: 233 / 255, green: 90 / 255, blue: 119 / 255),
-        "SKY": Color(red: 3 / 255, green: 169 / 255, blue: 244 / 255),
-        "LIGHT_BLUE": Color(red: 129 / 255, green: 212 / 255, blue: 250 / 255),
-        "MINT": Color(red: 128 / 255, green: 203 / 255, blue: 196 / 255),
-        "TEAL": Color(red: 0 / 255, green: 150 / 255, blue: 136 / 255),
-        "LIGHT_GREEN": Color(red: 139 / 255, green: 195 / 255, blue: 74 / 255),
-        "VIVID_GREEN": Color(red: 0 / 255, green: 200 / 255, blue: 83 / 255),
-        "VIOLET": Color(red: 103 / 255, green: 58 / 255, blue: 183 / 255),
-        "MAGENTA": Color(red: 216 / 255, green: 27 / 255, blue: 96 / 255),
-        "VIVID_ORANGE": Color(red: 255 / 255, green: 87 / 255, blue: 34 / 255),
-        "VIVID_RED": Color(red: 213 / 255, green: 0 / 255, blue: 0 / 255),
-        "WARM_PINK": Color(red: 255 / 255, green: 64 / 255, blue: 129 / 255),
+    static let rgbById: [String: (red: Int, green: Int, blue: Int)] = [
+        "RED": (244, 67, 54),
+        "ORANGE": (255, 152, 0),
+        "YELLOW": (255, 235, 59),
+        "GREEN": (76, 175, 80),
+        "BLUE": (33, 150, 243),
+        "NAVY": (25, 55, 109),
+        "INDIGO": (63, 81, 181),
+        "PURPLE": (156, 39, 176),
+        "PINK": (233, 30, 99),
+        "CREAM": (255, 248, 225),
+        "PEACH": (255, 204, 188),
+        "APRICOT": (255, 183, 77),
+        "TAN": (188, 143, 107),
+        "GOLD": (255, 193, 7),
+        "CORAL": (255, 111, 97),
+        "ROSE": (233, 90, 119),
+        "SKY": (3, 169, 244),
+        "LIGHT_BLUE": (129, 212, 250),
+        "MINT": (128, 203, 196),
+        "TEAL": (0, 150, 136),
+        "LIGHT_GREEN": (139, 195, 74),
+        "VIVID_GREEN": (0, 200, 83),
+        "VIOLET": (103, 58, 183),
+        "MAGENTA": (216, 27, 96),
+        "VIVID_ORANGE": (255, 87, 34),
+        "VIVID_RED": (213, 0, 0),
+        "WARM_PINK": (255, 64, 129),
     ]
 
     static func color(for id: String?) -> Color {
-        guard let id, let color = paletteById[id.uppercased()] else { return green }
-        return color
+        guard let id, let rgb = rgbById[id.uppercased()] else { return green }
+        return Color(red: Double(rgb.red) / 255, green: Double(rgb.green) / 255, blue: Double(rgb.blue) / 255)
+    }
+
+    /// 서버(`MoilColor.nearest`)와 같은 방식으로 가장 가까운 팔레트 색을 찾습니다.
+    static func nearestId(red: Int, green: Int, blue: Int) -> String {
+        rgbById.min { lhs, rhs in
+            distance(lhs.value, red, green, blue) < distance(rhs.value, red, green, blue)
+        }?.key ?? "RED"
+    }
+
+    private static func distance(_ rgb: (red: Int, green: Int, blue: Int), _ red: Int, _ green: Int, _ blue: Int) -> Int {
+        let r = red - rgb.red, g = green - rgb.green, b = blue - rgb.blue
+        return r * r + g * g + b * b
     }
 
     /// 프로필 색 선택 화면에 보여줄 스와치입니다. 서버 팔레트 중 아바타의 흰 눈·입이 보이고
