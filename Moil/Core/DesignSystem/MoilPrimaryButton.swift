@@ -22,11 +22,13 @@ struct MoilPrimaryButton: View {
             .frame(height: 54)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MoilPressableStyle(scale: 0.98))
         .frame(maxWidth: .infinity)
         .background(isEnabled ? MoilColor.primary : MoilColor.primary.opacity(0.78))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .contentShape(RoundedRectangle(cornerRadius: 14))
         .disabled(!isEnabled || isLoading)
+        .animation(MoilMotion.quick, value: isEnabled)
+        .animation(MoilMotion.quick, value: isLoading)
     }
 }

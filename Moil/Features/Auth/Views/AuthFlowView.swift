@@ -54,7 +54,7 @@ struct AuthFlowView: View {
         }
         // 화면이 툭 바뀌지 않도록 인증 단계 사이를 짧게 겹쳐 전환합니다.
         .transition(.opacity)
-        .animation(.easeInOut(duration: 0.25), value: route)
+        .animation(MoilMotion.page, value: route)
         .task { await restoreSession() }
     }
 
@@ -314,12 +314,14 @@ private struct LoginView: View {
 
                             MoilInlineError(message: socialLoginError)
                                 .padding(.top, socialLoginError == nil ? 0 : 16)
-                                .animation(.easeOut(duration: 0.22), value: socialLoginError)
+                                .animation(MoilMotion.standard, value: socialLoginError)
                         }
                         .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .center)
                     }
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicators(.hidden)
+                    // 스크롤 영역 폭이 입력칸 폭과 같아 그림자 좌우가 잘려 보였습니다.
+                    .scrollClipDisabled()
                     // 스크롤 영역이 화면 대부분을 덮으므로, 스크롤로도 키보드를 내릴 수 있게 합니다.
                     .scrollDismissesKeyboard(.immediately)
                 }
@@ -395,7 +397,7 @@ private struct SignUpInfoView: View {
 
                 MoilInlineError(message: serverError)
                     .padding(.bottom, serverError == nil ? 0 : 12)
-                    .animation(.easeOut(duration: 0.22), value: serverError)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
@@ -444,7 +446,7 @@ private struct PasswordResetEmailView: View {
                 Spacer()
                 MoilInlineError(message: serverError)
                     .padding(.bottom, serverError == nil ? 0 : 12)
-                    .animation(.easeOut(duration: 0.22), value: serverError)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: "인증번호 받기", isEnabled: email.contains("@"), isLoading: isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
@@ -499,16 +501,15 @@ private struct EmailVerificationView: View {
                                 .font(MoilTypography.bold(19))
                             if index == code.count && isEditingCode {
                                 RoundedRectangle(cornerRadius: 1)
-                                    .fill(Color.white)
+                                    .fill(MoilColor.textPrimary)
                                     .frame(width: 2, height: 24)
                                     .opacity(isCaretVisible ? 1 : 0.28)
                                     .accessibilityHidden(true)
                             }
                         }
                             .frame(width: 52, height: 52)
-                            .background(MoilColor.fieldBackground)
+                            .moilFieldSurface(cornerRadius: 12)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .contentShape(Rectangle())
@@ -556,7 +557,7 @@ private struct EmailVerificationView: View {
                 // 문구 자리를 미리 잡아 두어, 나타날 때 아래 버튼이 밀리지 않게 합니다.
                 .frame(height: 18, alignment: .leading)
                 .padding(.top, 10)
-                .animation(.easeOut(duration: 0.2), value: codeState)
+                .animation(MoilMotion.standard, value: codeState)
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
                     .font(MoilTypography.semibold(13))
@@ -574,7 +575,7 @@ private struct EmailVerificationView: View {
                 Spacer()
                 MoilInlineError(message: serverError)
                     .padding(.bottom, serverError == nil ? 0 : 12)
-                    .animation(.easeOut(duration: 0.22), value: serverError)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
@@ -635,7 +636,7 @@ private struct PasswordSetupView: View {
                 Spacer()
                 MoilInlineError(message: serverError)
                     .padding(.bottom, serverError == nil ? 0 : 12)
-                    .animation(.easeOut(duration: 0.22), value: serverError)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true

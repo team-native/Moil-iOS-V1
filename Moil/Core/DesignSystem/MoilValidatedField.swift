@@ -85,7 +85,7 @@ struct MoilValidatedField<Field: View>: View {
                 try? await Task.sleep(for: failureDelay)
                 guard !Task.isCancelled else { return }
             }
-            withAnimation(.easeOut(duration: 0.2)) { shownState = state }
+            withAnimation(MoilMotion.standard) { shownState = state }
         }
     }
 }
@@ -114,7 +114,7 @@ struct MoilInlineError: View {
                 .id(message)
             }
         }
-        .animation(.easeOut(duration: 0.22), value: message)
+        .animation(MoilMotion.standard, value: message)
     }
 }
 

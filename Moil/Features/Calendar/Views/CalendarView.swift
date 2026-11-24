@@ -121,7 +121,7 @@ struct CalendarView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
+                            withAnimation(MoilMotion.quick) {
                                 isGroupMenuPresented.toggle()
                             }
                         } label: {
@@ -425,7 +425,7 @@ struct CalendarView: View {
     /// 버튼/월 선택 시트에서 특정 달로 넘어갈 때, 이어붙인 스크롤 달력에서 그 달까지 스크롤합니다.
     private func scrollToMonth(_ month: Date) {
         let target = monthsWindow.first { calendar.isDate($0, equalTo: month, toGranularity: .month) } ?? month
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(MoilMotion.page) {
             scrollPositionMonth = target
         }
     }
@@ -1169,22 +1169,28 @@ private struct ScheduleComposerView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             switch composerMode {
             case .form:
                 formContent
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(x: -24)),
+                        removal: .opacity.combined(with: .offset(x: -24))
+                    ))
             case .date:
                 ScheduleDateRangeInputSheet(
                     startDate: $startDate,
                     endDate: $endDate,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .time:
                 ScheduleTimeInputSheet(
                     startTime: $startTime,
                     endTime: $endTime,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .location:
                 ScheduleTextInputSheet(
                     title: "위치",
@@ -1193,6 +1199,7 @@ private struct ScheduleComposerView: View {
                     allowsMultipleLines: false,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .memo:
                 ScheduleTextInputSheet(
                     title: "메모",
@@ -1201,8 +1208,13 @@ private struct ScheduleComposerView: View {
                     allowsMultipleLines: true,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             }
         }
+        // 폼과 날짜·시간·위치·메모 입력 화면이 툭 바뀌지 않도록, 옆으로 살짝 밀리며 겹쳐 전환합니다.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .transition(.identity)
+        .animation(MoilMotion.page, value: composerMode)
         .background(MoilColor.surface)
         // 입력 화면도 같은 시트 안이라, 쓸어내리면 작성 중인 일정 전체가 닫혔습니다.
         // 폼이 아닐 때는 취소/완료로만 돌아가게 막습니다.
@@ -1234,12 +1246,6 @@ private struct ScheduleComposerView: View {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
                         .moilField(background: MoilColor.popupField)
-                        .overlay {
-                            // 라이트모드에서는 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
-                            // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
-                        }
                         .padding(.bottom, 8)
 
                     ScheduleRow(title: "날짜", value: Self.displayDateRange(start: startDate, end: endDate))
@@ -1385,11 +1391,6 @@ private struct ScheduleTextInputSheet: View {
                 // 여러 줄 입력칸은 글자가 칸 위쪽에 붙어 보여, 한 줄 입력칸과 같은 위아래 여백을 줍니다.
                 .padding(.vertical, allowsMultipleLines ? 16 : 0)
                 .moilField(background: MoilColor.popupField)
-                .overlay {
-                    // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
-                }
                 .padding(.horizontal, MoilSheetHeader.horizontalPadding)
                 .focused($isFocused)
                 .onAppear { isFocused = true }

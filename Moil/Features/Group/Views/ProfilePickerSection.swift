@@ -156,11 +156,11 @@ final class MoilProfileDraft: ObservableObject {
             guard let data = try await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else {
                 throw MoilProfileDraftError.unreadableImage
             }
-            withAnimation(.easeOut(duration: 0.2)) { localImage = image }
+            withAnimation(MoilMotion.standard) { localImage = image }
             if let extracted = await Task.detached(priority: .userInitiated, operation: {
                 MoilProfileColorExtractor.dominantColorId(of: image)
             }).value {
-                withAnimation(.easeOut(duration: 0.2)) { colorId = extracted }
+                withAnimation(MoilMotion.standard) { colorId = extracted }
             }
             guard let jpeg = MoilProfileImageEncoder.jpegData(from: image) else {
                 throw MoilProfileDraftError.unprocessableImage
@@ -233,7 +233,7 @@ struct ProfilePickerSection: View {
                         }
                         .disabled(draft.isUploading)
                         if draft.hasPhoto {
-                            Button { withAnimation(.easeOut(duration: 0.2)) { draft.removePhoto() } } label: {
+                            Button { withAnimation(MoilMotion.standard) { draft.removePhoto() } } label: {
                                 chip("사진 삭제", systemImage: nil, isProminent: false)
                             }
                             .disabled(draft.isUploading)
@@ -254,7 +254,7 @@ struct ProfilePickerSection: View {
                 ForEach(defaultIds, id: \.self) { id in
                     let isSelected = selectedDefaultId == id
                     Button {
-                        withAnimation(.easeOut(duration: 0.2)) { draft.selectDefault(id) }
+                        withAnimation(MoilMotion.standard) { draft.selectDefault(id) }
                     } label: {
                         MoilDefaultAvatar(color: MoilAvatarColor.color(for: id), size: 40)
                             .padding(4)
@@ -280,7 +280,7 @@ struct ProfilePickerSection: View {
         // 사진일 때는 대표색 고리를 둘러, 고른 사진과 대표색이 어떻게 이어지는지 바로 보이게 합니다.
         .padding(4)
         .overlay { Circle().strokeBorder(draft.color, lineWidth: draft.hasPhoto ? 3 : 0) }
-        .animation(.easeOut(duration: 0.2), value: draft.colorId)
+        .animation(MoilMotion.standard, value: draft.colorId)
     }
 
     private func chip(_ title: String, systemImage: String?, isProminent: Bool) -> some View {

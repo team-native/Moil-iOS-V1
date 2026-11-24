@@ -136,7 +136,7 @@ private struct MoilRemoteProfileImage<Content: View>: View {
         content(image)
             .task(id: url) {
                 let loaded = await MoilProfileImageLoader.load(url)
-                withAnimation(.easeOut(duration: 0.2)) { image = loaded }
+                withAnimation(MoilMotion.standard) { image = loaded }
             }
     }
 }

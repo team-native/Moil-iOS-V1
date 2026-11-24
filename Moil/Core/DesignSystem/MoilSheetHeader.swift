@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// 팝업(시트)과 모달 화면의 공통 머리 영역입니다.
-/// 취소·완료 같은 버튼 줄과 제목 줄을 나눠, 가운데 제목이 버튼과 한 줄에 겹쳐 보이지 않게 합니다.
-/// 버튼 줄은 위에, 제목은 그 아래 왼쪽 정렬로 크게 둡니다.
+/// 제목과 취소·완료 버튼이 한 줄에 겹쳐 보이지 않도록 줄을 나눕니다.
+/// - 팝업(취소·완료): 제목을 맨 위 가운데에, 버튼은 그 아래 줄 양끝에 두는 피라미드 배치입니다.
+/// - 뒤로가기가 있는 화면: 뒤로 버튼 아래에 큰 제목을 왼쪽 정렬로 둡니다.
 struct MoilSheetHeader: View {
     let title: String
     var subtitle: String?
@@ -11,8 +12,33 @@ struct MoilSheetHeader: View {
     /// 바깥에서 이미 좌우 여백을 준 화면(인증 화면 등)에서는 false로 둡니다.
     var addsHorizontalPadding = true
 
+    private var isScreenStyle: Bool { leading?.isBack == true }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        Group {
+            if isScreenStyle { screenHeader } else { popupHeader }
+        }
+        .padding(.horizontal, addsHorizontalPadding ? MoilSheetHeader.horizontalPadding : 0)
+        .padding(.top, MoilSheetHeader.topPadding)
+    }
+
+    private var popupHeader: some View {
+        VStack(spacing: 0) {
+            Text(title)
+                .font(MoilTypography.bold(18))
+                .foregroundStyle(MoilColor.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityAddTraits(.isHeader)
+            if let subtitle {
+                Text(subtitle)
+                    .font(MoilTypography.regular(13))
+                    .foregroundStyle(MoilColor.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 12)
+            }
             if leading != nil || trailing != nil {
                 HStack(spacing: 0) {
                     if let leading { actionButton(leading) }
@@ -20,16 +46,30 @@ struct MoilSheetHeader: View {
                     if let trailing { actionButton(trailing) }
                 }
                 .frame(height: 44)
-                // 버튼 글자는 제목과 같은 왼쪽 선에 맞추고, 누르는 영역만 바깥으로 넓힙니다.
                 .padding(.horizontal, -8)
+                .padding(.top, 2)
             }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 14)
+    }
+
+    private var screenHeader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                if let leading { actionButton(leading) }
+                Spacer(minLength: 16)
+                if let trailing { actionButton(trailing) }
+            }
+            .frame(height: 44)
+            .padding(.horizontal, -8)
 
             Text(title)
                 .font(MoilTypography.bold(24))
                 .foregroundStyle(MoilColor.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .padding(.top, leading != nil || trailing != nil ? 10 : 0)
+                .padding(.top, 10)
                 .accessibilityAddTraits(.isHeader)
 
             if let subtitle {
@@ -41,8 +81,6 @@ struct MoilSheetHeader: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, addsHorizontalPadding ? MoilSheetHeader.horizontalPadding : 0)
-        .padding(.top, MoilSheetHeader.topPadding)
         .padding(.bottom, 20)
     }
 
@@ -75,8 +113,9 @@ struct MoilSheetHeader: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MoilPressableStyle())
         .disabled(!action.isEnabled)
+        .animation(MoilMotion.quick, value: action.isEnabled)
     }
 }
 
@@ -89,6 +128,11 @@ struct MoilSheetHeaderAction {
     let kind: Kind
     var isEnabled = true
     let handler: () -> Void
+
+    var isBack: Bool {
+        if case let .icon(name, _) = kind { return name == "chevron.left" }
+        return false
+    }
 
     static func cancel(_ title: String = "취소", action: @escaping () -> Void) -> Self {
         Self(kind: .text(title, isProminent: false), handler: action)
