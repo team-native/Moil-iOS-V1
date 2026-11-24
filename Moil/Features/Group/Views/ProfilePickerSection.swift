@@ -166,6 +166,8 @@ final class MoilProfileDraft: ObservableObject {
                 throw MoilProfileDraftError.unprocessableImage
             }
             imagePath = try await service.uploadProfileImage(data: jpeg, filename: "profile.jpg", mimeType: "image/jpeg")
+            // 같은 사진을 다시 골라도 선택이 다시 반영되도록 비워 둡니다.
+            pickerItem = nil
         } catch {
             (colorId, imagePath, localImage) = previous
             pickerItem = nil

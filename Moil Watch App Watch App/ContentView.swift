@@ -330,6 +330,8 @@ private struct MoilMascotView: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
+            // 라이트모드 흰 배경에서 흰 마스코트 윤곽이 보이도록 옅은 그림자를 줍니다.
+            .shadow(color: .black.opacity(WatchColor.isDarkMode ? 0 : 0.18), radius: 4, x: 0, y: 1)
             .opacity(pulsing && isPulsing ? 0.55 : 1)
             .onAppear {
                 guard pulsing else { return }

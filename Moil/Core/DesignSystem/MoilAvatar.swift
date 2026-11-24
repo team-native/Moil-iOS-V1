@@ -27,11 +27,12 @@ struct MoilAvatar: View {
             if let image {
                 photo(Image(uiImage: image))
             } else if let url = MoilProfileImageLoader.url(for: imagePath) {
-                MoilRemoteProfileImage(url: url) { loaded in
-                    if let loaded {
-                        photo(Image(uiImage: loaded))
-                    } else {
-                        Circle().fill(color.opacity(0.35))
+                MoilRemoteProfileImage(url: url) { phase in
+                    switch phase {
+                    case .loaded(let loaded): photo(Image(uiImage: loaded))
+                    case .loading: Circle().fill(color.opacity(0.35))
+                    // 사진이 지워졌거나 받지 못하면 빈 원 대신 기본 프로필을 보여줍니다.
+                    case .failed: MoilDefaultAvatar(color: color, size: size)
                     }
                 }
             } else {
@@ -121,22 +122,28 @@ enum MoilProfileImageLoader {
     }
 }
 
+private enum MoilRemoteImagePhase {
+    case loading
+    case loaded(UIImage)
+    case failed
+}
+
 private struct MoilRemoteProfileImage<Content: View>: View {
     let url: URL
-    @ViewBuilder let content: (UIImage?) -> Content
-    @State private var image: UIImage?
+    @ViewBuilder let content: (MoilRemoteImagePhase) -> Content
+    @State private var phase: MoilRemoteImagePhase
 
-    init(url: URL, @ViewBuilder content: @escaping (UIImage?) -> Content) {
+    init(url: URL, @ViewBuilder content: @escaping (MoilRemoteImagePhase) -> Content) {
         self.url = url
         self.content = content
-        _image = State(initialValue: MoilProfileImageLoader.cached(url))
+        _phase = State(initialValue: MoilProfileImageLoader.cached(url).map { .loaded($0) } ?? .loading)
     }
 
     var body: some View {
-        content(image)
+        content(phase)
             .task(id: url) {
                 let loaded = await MoilProfileImageLoader.load(url)
-                withAnimation(MoilMotion.standard) { image = loaded }
+                withAnimation(MoilMotion.standard) { phase = loaded.map { .loaded($0) } ?? .failed }
             }
     }
 }

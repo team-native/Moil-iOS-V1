@@ -268,10 +268,7 @@ private struct LoginView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             VStack(spacing: 6) {
-                                Image("MoilMascot")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 75, height: 74)
+                                MoilMascotImage(width: 75, height: 74)
                                 Text("모일")
                                     .font(MoilTypography.bold(22))
                                     .foregroundStyle(MoilColor.textPrimary)

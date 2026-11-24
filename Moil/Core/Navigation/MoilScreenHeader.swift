@@ -8,20 +8,23 @@ struct MoilScreenHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                if let onBack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                            .frame(width: 32, height: 32, alignment: .leading)
-                    }
+            // 뒤로 버튼과 제목이 한 줄에 붙어 보이지 않도록 뒤로 버튼은 제목 위 줄에 둡니다.
+            if let onBack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(MoilColor.textPrimary)
+                        .frame(width: 44, height: 44, alignment: .leading)
+                        .contentShape(Rectangle())
                 }
-                Text(title)
-                    .font(MoilTypography.heavy(30))
-                    .foregroundStyle(MoilColor.textPrimary)
-                Spacer(minLength: 0)
+                .buttonStyle(MoilPressableStyle())
+                .accessibilityLabel("뒤로")
+                .padding(.bottom, 6)
             }
+            Text(title)
+                .font(MoilTypography.heavy(30))
+                .foregroundStyle(MoilColor.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if let subtitle {
                 Text(subtitle)
                     .font(MoilTypography.regular(13))

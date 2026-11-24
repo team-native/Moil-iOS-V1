@@ -131,3 +131,19 @@ extension View {
             }
     }
 }
+
+/// 흰색 마스코트입니다. 라이트모드의 흰 배경에서는 윤곽이 사라져, 옅은 그림자로 형태가 보이게 합니다.
+struct MoilMascotImage: View {
+    var width: CGFloat
+    var height: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Image("MoilMascot")
+            .resizable()
+            .scaledToFit()
+            .frame(width: width, height: height)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0 : 0.14), radius: 6, x: 0, y: 2)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0 : 0.06), radius: 1, x: 0, y: 0)
+    }
+}

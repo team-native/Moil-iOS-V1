@@ -10,10 +10,7 @@ struct EmptyCalendarView: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 24)
-            Image("MoilMascot")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 84, height: 98)
+            MoilMascotImage(width: 84, height: 98)
             Text("아직 속한 그룹이 없어요")
                 .font(MoilTypography.bold(19))
                 .foregroundStyle(MoilColor.textPrimary)
