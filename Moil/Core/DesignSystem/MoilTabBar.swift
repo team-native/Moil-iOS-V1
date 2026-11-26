@@ -57,7 +57,11 @@ struct MoilTabBar: View {
                 .font(.system(size: 21, weight: .regular))
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(selected == tab ? MoilColor.primary : style.unselectedColor)
+                .symbolEffect(.bounce, value: selected == tab)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(MoilPressableStyle(scale: 0.9))
+        .animation(MoilMotion.quick, value: selected)
         .accessibilityLabel(accessibilityLabel(for: tab))
     }
 

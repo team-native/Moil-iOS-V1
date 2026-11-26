@@ -14,29 +14,19 @@ struct UpcomingView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("다가오는 일정")
-                        .font(.system(size: 11))
-                        .foregroundStyle(WatchColor.textSecondary)
-                    Text(groupName)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(WatchColor.textPrimary)
-                }
+            VStack(alignment: .leading, spacing: 12) {
+                WatchScreenTitle(caption: "다가오는 일정", title: groupName)
 
                 if days.isEmpty {
-                    Text("앞으로 7일간 일정이 없어요")
-                        .font(.system(size: 11))
-                        .foregroundStyle(WatchColor.textSecondary)
-                        .padding(.top, 8)
+                    WatchMessageView(systemImage: "calendar", message: "앞으로 7일간 일정이 없어요")
                 } else {
                     ForEach(days) { day in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(day.label)
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(WatchColor.textSecondary)
                             ForEach(day.items) { item in
-                                scheduleRow(item)
+                                WatchScheduleRow(item: item)
                             }
                         }
                     }
@@ -45,28 +35,6 @@ struct UpcomingView: View {
             .padding(.horizontal, 4)
         }
         .background(WatchColor.background)
-    }
-
-    private func scheduleRow(_ item: ScheduleItem) -> some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(item.owner.color)
-                .frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.time)
-                    .font(.system(size: 9))
-                    .foregroundStyle(WatchColor.textSecondary)
-                Text(item.title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(WatchColor.textPrimary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(WatchColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

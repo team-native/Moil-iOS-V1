@@ -31,15 +31,15 @@ struct MoilAPIService {
         try await client.request("auth/login", method: "POST", body: LoginRequest(email: email, password: password), requiresAuthentication: false)
     }
 
-    func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
-        let request = RefreshTokenRequest(refreshToken: refreshToken)
-        // 만료된 access token을 실어 보내면 재발급 자체가 실패할 수 있으므로,
-        // 명세의 refresh_token body만 사용합니다.
-        return try await client.request(
+    /// 서버는 만료된 access token(Authorization 헤더)과 refresh token을 짝으로 확인합니다.
+    /// 헤더가 없으면 401("로그인되어 있지 않습니다")로 거절해, 1시간 뒤 세션이 끊기던 원인이었습니다.
+    func refreshToken(_ refreshToken: String, accessToken: String?) async throws -> MoilTokenResponse {
+        try await client.request(
             "auth/refresh",
             method: "POST",
-            body: request,
-            requiresAuthentication: false
+            body: RefreshTokenRequest(refreshToken: refreshToken),
+            requiresAuthentication: false,
+            bearerToken: accessToken
         )
     }
 
@@ -327,10 +327,12 @@ struct MoilRemoteMember: Decodable, Identifiable {
     let nickname: String
     let role: String
     let colorId: String?
+    /// 사진 프로필이면 서버 사진 경로(`/images/...`), 기본 프로필이면 nil입니다.
+    let imagePath: String?
     let isMe: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case id, userId, memberId, nickname, name, userName, role, groupRole, colorId, profileColor, isMe
+        case id, userId, memberId, nickname, name, userName, role, groupRole, colorId, profileColor, color, imagePath, isMe
     }
 
     init(from decoder: Decoder) throws {
@@ -338,7 +340,8 @@ struct MoilRemoteMember: Decodable, Identifiable {
         id = try container.string(for: [.id, .userId, .memberId])
         nickname = (try? container.string(for: [.nickname, .name, .userName])) ?? "나"
         role = (try? container.string(for: [.role, .groupRole])) ?? "MEMBER"
-        colorId = try? container.string(for: [.colorId, .profileColor])
+        colorId = try? container.string(for: [.colorId, .profileColor, .color])
+        imagePath = (try? container.decode(String.self, forKey: .imagePath)).flatMap { $0.isEmpty ? nil : $0 }
         isMe = (try? container.decode(Bool.self, forKey: .isMe)) ?? false
     }
 }

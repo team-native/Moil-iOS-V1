@@ -16,8 +16,9 @@ struct TodayView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
+            LazyVStack(alignment: .leading, spacing: 8) {
                 header
+                    .padding(.bottom, 2)
                 if let nextItem {
                     summaryCard(nextItem)
                 }
@@ -25,26 +26,23 @@ struct TodayView: View {
                     Button {
                         onSelect(item)
                     } label: {
-                        scheduleRow(item)
+                        WatchScheduleRow(item: item)
                     }
                     .buttonStyle(.plain)
                     .onAppear { if item.id == items.last?.id { isLastItemVisible = true } }
                     .onDisappear { if item.id == items.last?.id { isLastItemVisible = false } }
                 }
                 if items.isEmpty {
-                    Text("오늘은 일정이 없어요")
-                        .font(.system(size: 11))
-                        .foregroundStyle(WatchColor.textSecondary)
-                        .padding(.top, 8)
+                    WatchMessageView(systemImage: "sun.max", message: "오늘은 일정이 없어요")
                 }
             }
             .padding(.horizontal, 4)
         }
         .background(WatchColor.background)
         .overlay(alignment: .bottom) {
-            if items.count > 1 && !isLastItemVisible {
+            if items.count > 2 && !isLastItemVisible {
                 Image(systemName: "chevron.compact.down")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(WatchColor.textPrimary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 3)
@@ -57,72 +55,34 @@ struct TodayView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("오늘 · \(dateTitle)")
-                    .font(.system(size: 11))
-                    .foregroundStyle(WatchColor.textSecondary)
-                Text(groupName)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(WatchColor.textPrimary)
-            }
+        HStack(alignment: .center, spacing: 8) {
+            WatchScreenTitle(caption: "오늘 · \(dateTitle)", title: groupName)
             Spacer(minLength: 0)
-            profileCircle
+            if let myProfile {
+                WatchAvatar(member: myProfile, size: 30)
+            }
         }
     }
 
-    @ViewBuilder
-    private var profileCircle: some View {
-        if let myProfile {
-            Text(myProfile.initial)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(WatchColor.onAccent)
-                .frame(width: 28, height: 28)
-                .background(myProfile.color)
-                .clipShape(Circle())
-        } else {
-            Circle()
-                .fill(WatchColor.surface)
-                .frame(width: 28, height: 28)
-        }
-    }
-
+    /// 다음 일정을 가장 먼저 보이게 합니다. 일정 주인의 대표색을 옅게 깔아 누구 일정인지 함께 보여줍니다.
     private func summaryCard(_ next: ScheduleItem) -> some View {
-        HStack(spacing: 6) {
-            Text("\(items.count)개 일정")
+        VStack(alignment: .leading, spacing: 3) {
+            Text("다음 일정 · \(next.time)")
                 .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(next.owner.color)
+            Text(next.title)
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(WatchColor.textPrimary)
-            Text("다음 약속 \(next.time)")
-                .font(.system(size: 9))
+                .lineLimit(2)
+            Text("오늘 일정 \(items.count)개")
+                .font(.system(size: 12))
                 .foregroundStyle(WatchColor.textSecondary)
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(WatchColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private func scheduleRow(_ item: ScheduleItem) -> some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(item.owner.color)
-                .frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.time)
-                    .font(.system(size: 9))
-                    .foregroundStyle(WatchColor.textSecondary)
-                Text(item.title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(WatchColor.textPrimary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(WatchColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(next.owner.color.opacity(0.18))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 

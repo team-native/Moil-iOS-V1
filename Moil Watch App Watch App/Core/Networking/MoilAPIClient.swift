@@ -58,7 +58,8 @@ struct MoilAPIClient {
         method: String,
         body: Body? = nil,
         queryItems: [URLQueryItem] = [],
-        requiresAuthentication: Bool = true
+        requiresAuthentication: Bool = true,
+        bearerToken: String? = nil
     ) async throws -> Response {
         do {
             return try await requestOnce(
@@ -66,7 +67,8 @@ struct MoilAPIClient {
                 method: method,
                 body: body,
                 queryItems: queryItems,
-                requiresAuthentication: requiresAuthentication
+                requiresAuthentication: requiresAuthentication,
+                bearerToken: bearerToken
             )
         } catch let error as MoilAPIError where requiresAuthentication && error.isAuthenticationFailure {
             guard let tokenRefresher, await tokenRefresher() else { throw error }
@@ -75,7 +77,8 @@ struct MoilAPIClient {
                 method: method,
                 body: body,
                 queryItems: queryItems,
-                requiresAuthentication: requiresAuthentication
+                requiresAuthentication: requiresAuthentication,
+                bearerToken: nil
             )
         }
     }
@@ -85,7 +88,8 @@ struct MoilAPIClient {
         method: String,
         body: Body?,
         queryItems: [URLQueryItem],
-        requiresAuthentication: Bool
+        requiresAuthentication: Bool,
+        bearerToken: String?
     ) async throws -> Response {
         var components = URLComponents(url: MoilAPIConfiguration.baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = queryItems.isEmpty ? nil : queryItems
@@ -98,7 +102,10 @@ struct MoilAPIClient {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder.moil.encode(body)
         }
-        if requiresAuthentication, let token = tokenProvider(), !token.isEmpty {
+        if let bearerToken, !bearerToken.isEmpty {
+            // 토큰 재발급처럼 자동 재시도 없이 특정 토큰을 실어 보내야 하는 요청입니다.
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        } else if requiresAuthentication, let token = tokenProvider(), !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 

@@ -39,14 +39,18 @@ struct GroupDetailView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
+                // 뒤로 버튼과 그룹 이름이 한 줄에 붙지 않도록 줄을 나눕니다(다른 화면 머리와 같은 배치).
+                VStack(alignment: .leading, spacing: 10) {
                     Button(action: dismiss.callAsFunction) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 9, height: 16)
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(width: 44, height: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(MoilPressableStyle())
+                    .accessibilityLabel("뒤로")
                     Text(groupName)
-                        .font(MoilTypography.bold(22))
+                        .font(MoilTypography.bold(24))
                 }
                 .foregroundStyle(MoilColor.groupDetailTextPrimary)
                 .safeAreaPadding(.top, 22)
@@ -126,7 +130,7 @@ struct GroupDetailView: View {
         VStack(spacing: 0) {
             ForEach(members.indices, id: \.self) { index in
                 HStack(spacing: 12) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: members[index].colorId), size: 34)
+                    MoilAvatar(colorId: members[index].colorId, imagePath: members[index].imagePath, size: 34)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(members[index].nickname).font(MoilTypography.semibold(15))
                         Text(roleTitle(members[index].role))

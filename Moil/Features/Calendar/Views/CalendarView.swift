@@ -121,14 +121,14 @@ struct CalendarView: View {
                 VStack(spacing: 0) {
                     HStack {
                         Button {
-                            withAnimation(.easeInOut(duration: 0.18)) {
+                            withAnimation(MoilMotion.quick) {
                                 isGroupMenuPresented.toggle()
                             }
                         } label: {
                             HStack(spacing: 8) {
                                 HStack(spacing: -7) {
                                     ForEach(groupStore.members(for: groupStore.selectedGroupId).prefix(4)) { member in
-                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 24)
+                                        MoilAvatar(colorId: member.colorId, imagePath: member.imagePath, size: 24)
                                             .overlay { Circle().stroke(MoilColor.background, lineWidth: 2) }
                                     }
                                 }
@@ -284,13 +284,14 @@ struct CalendarView: View {
                     sharedMemberIDs: memberIDs
                 )
             }
-                .presentationDetents([.height(565)])
+                .presentationDetents([.height(600)])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDaySchedulePresented) {
             DayScheduleSheet(
                 day: scheduleDraftDay,
                 dateTitle: scheduleDraftDateTitle,
+                isToday: calendar.isDateInToday(scheduleDraftDate),
                 events: eventsByDay(for: scheduleDraftMonth)[scheduleDraftDay] ?? [],
                 avatarColors: avatarColors(for:),
                 onAdd: {
@@ -425,7 +426,7 @@ struct CalendarView: View {
     /// 버튼/월 선택 시트에서 특정 달로 넘어갈 때, 이어붙인 스크롤 달력에서 그 달까지 스크롤합니다.
     private func scrollToMonth(_ month: Date) {
         let target = monthsWindow.first { calendar.isDate($0, equalTo: month, toGranularity: .month) } ?? month
-        withAnimation(.easeInOut(duration: 0.3)) {
+        withAnimation(MoilMotion.page) {
             scrollPositionMonth = target
         }
     }
@@ -1029,6 +1030,8 @@ private enum KoreanHoliday {
 private struct DayScheduleSheet: View {
     let day: Int
     let dateTitle: String
+    /// 고른 날짜가 오늘일 때만 '오늘' 표시를 붙입니다(전에는 어느 날짜든 항상 붙었습니다).
+    let isToday: Bool
     let events: [CalendarEvent]
     let avatarColors: (CalendarEvent) -> [Color]
     let onAdd: () -> Void
@@ -1036,28 +1039,25 @@ private struct DayScheduleSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(dateTitle)
-                        .font(MoilTypography.bold(18))
-                    Text("• 오늘")
+            // 다른 팝업과 같은 피라미드 배치: 날짜는 위 가운데, 추가 버튼은 아래 줄 오른쪽입니다.
+            MoilSheetHeader(
+                title: dateTitle,
+                subtitle: isToday ? "오늘" : nil,
+                trailing: .add(action: onAdd)
+            )
+
+            if events.isEmpty {
+                VStack(spacing: 8) {
+                    Text("등록된 일정이 없어요")
+                        .font(MoilTypography.semibold(16))
+                        .foregroundStyle(MoilColor.textPrimary)
+                    Text("오른쪽 위 + 버튼으로 일정을 추가해보세요")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
                 }
-                Spacer()
-                // 원 배경이 있으면 버튼만 혼자 커 보여, 플러스 기호만 남기고 누르는 영역은 그대로 둡니다.
-                Button(action: onAdd) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .regular))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .foregroundStyle(MoilColor.textPrimary)
-                .accessibilityLabel("일정 추가")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 12)
 
             // 한 줄 높이가 커서 일정이 몇 개만 넘어도 고정 높이 시트 밖으로 잘렸습니다.
             // 목록만 스크롤되게 해 날짜 제목과 추가 버튼은 위에 고정합니다.
@@ -1169,22 +1169,28 @@ private struct ScheduleComposerView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             switch composerMode {
             case .form:
                 formContent
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .offset(x: -24)),
+                        removal: .opacity.combined(with: .offset(x: -24))
+                    ))
             case .date:
                 ScheduleDateRangeInputSheet(
                     startDate: $startDate,
                     endDate: $endDate,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .time:
                 ScheduleTimeInputSheet(
                     startTime: $startTime,
                     endTime: $endTime,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .location:
                 ScheduleTextInputSheet(
                     title: "위치",
@@ -1193,6 +1199,7 @@ private struct ScheduleComposerView: View {
                     allowsMultipleLines: false,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             case .memo:
                 ScheduleTextInputSheet(
                     title: "메모",
@@ -1201,8 +1208,13 @@ private struct ScheduleComposerView: View {
                     allowsMultipleLines: true,
                     onClose: { composerMode = .form }
                 )
+                .transition(.opacity.combined(with: .offset(x: 24)))
             }
         }
+        // 폼과 날짜·시간·위치·메모 입력 화면이 툭 바뀌지 않도록, 옆으로 살짝 밀리며 겹쳐 전환합니다.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .transition(.identity)
+        .animation(MoilMotion.page, value: composerMode)
         .background(MoilColor.surface)
         // 입력 화면도 같은 시트 안이라, 쓸어내리면 작성 중인 일정 전체가 닫혔습니다.
         // 폼이 아닐 때는 취소/완료로만 돌아가게 막습니다.
@@ -1211,11 +1223,10 @@ private struct ScheduleComposerView: View {
 
     private var formContent: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: dismiss.callAsFunction)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Button("저장") {
+            MoilSheetHeader(
+                title: "새 일정",
+                leading: .cancel(action: dismiss.callAsFunction),
+                trailing: .confirm("저장", isEnabled: canSave) {
                     onSave(
                         startDate,
                         endDate,
@@ -1229,25 +1240,12 @@ private struct ScheduleComposerView: View {
                     )
                     dismiss()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(canSave ? MoilColor.primary : MoilColor.textTertiary)
-                    .disabled(!canSave)
-            }
-            // 끌기 표시줄·입력칸과 붙어 보이지 않게 모든 입력 팝업의 취소/완료 줄을 같은 높이로 내립니다.
-            .padding(.horizontal, 18)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, MoilSheetMetrics.headerBottomPadding)
+            )
 
             ScrollView {
                 VStack(spacing: 0) {
                     TextField("일정 제목", text: $title)
                         .moilField(background: MoilColor.popupField)
-                        .overlay {
-                            // 라이트모드에서는 팝업 배경과 필드 배경이 같은 색이라 입력칸이 안 보였습니다.
-                            // 자연스러운 긴 원형 외곽선을 더해 경계를 눈에 띄게 합니다.
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
-                        }
                         .padding(.bottom, 8)
 
                     ScheduleRow(title: "날짜", value: Self.displayDateRange(start: startDate, end: endDate))
@@ -1293,7 +1291,7 @@ private struct ScheduleComposerView: View {
                             ForEach(members) { member in
                                 Button { toggle(member.id) } label: {
                                     VStack(spacing: 6) {
-                                        MoilAvatar(color: MoilAvatarColor.color(for: member.colorId), size: 44)
+                                        MoilAvatar(colorId: member.colorId, imagePath: member.imagePath, size: 44)
                                             .overlay { Circle().stroke(selectedMemberIDs.contains(member.id) ? MoilColor.primary : .clear, lineWidth: 3).padding(-4) }
                                         Text(member.nickname).font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary)
                                     }
@@ -1305,7 +1303,7 @@ private struct ScheduleComposerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 24)
                 }
-                .padding(.horizontal, 18)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
             }
         }
     }
@@ -1344,11 +1342,6 @@ private struct ScheduleComposerView: View {
 }
 
 /// 캘린더 팝업 머리 영역 여백입니다. 끌기 표시줄과 취소/완료 줄, 그리고 첫 입력칸 사이를 띄웁니다.
-private enum MoilSheetMetrics {
-    static let headerTopPadding: CGFloat = 28
-    static let headerBottomPadding: CGFloat = 28
-}
-
 private enum ComposerMode {
     case form
     case date
@@ -1366,6 +1359,7 @@ private struct ScheduleTextInputSheet: View {
     let allowsMultipleLines: Bool
     let onClose: () -> Void
     @State private var draft: String
+    @FocusState private var isFocused: Bool
 
     init(title: String, placeholder: String, text: Binding<String>, allowsMultipleLines: Bool, onClose: @escaping () -> Void) {
         self.title = title
@@ -1378,35 +1372,23 @@ private struct ScheduleTextInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text(title).font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: title,
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     text = draft
                     onClose()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            )
 
             TextField(placeholder, text: $draft, axis: allowsMultipleLines ? .vertical : .horizontal)
                 .lineLimit(allowsMultipleLines ? 3...6 : 1...1)
                 // 여러 줄 입력칸은 글자가 칸 위쪽에 붙어 보여, 한 줄 입력칸과 같은 위아래 여백을 줍니다.
                 .padding(.vertical, allowsMultipleLines ? 16 : 0)
                 .moilField(background: MoilColor.popupField)
-                .overlay {
-                    // 일정 제목 입력칸과 같은 외곽선으로 팝업 배경과 입력칸을 구분합니다.
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
-                }
-                .padding(.horizontal, 18)
-                .padding(.top, 36)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
+                .focused($isFocused)
+                .onAppear { isFocused = true }
             Spacer()
         }
         .background(MoilColor.surface)
@@ -1437,23 +1419,15 @@ private struct MonthYearPickerSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("연도 및 월").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: "연도 및 월",
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     if let date = calendar.date(from: DateComponents(year: selectedYear, month: selectedMonth, day: 1)) {
                         onSelect(date)
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            )
 
             HStack(spacing: 0) {
                 Picker("연도", selection: $selectedYear) {
@@ -1520,13 +1494,10 @@ private struct ScheduleDateRangeInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("날짜").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료") {
+            MoilSheetHeader(
+                title: "날짜",
+                leading: .cancel(action: onClose),
+                trailing: .confirm {
                     let days = selectedDays
                     if let first = days.first {
                         startDate = first
@@ -1534,12 +1505,7 @@ private struct ScheduleDateRangeInputSheet: View {
                     }
                     onClose()
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 24)
+            )
 
             HStack {
                 Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
@@ -1632,19 +1598,7 @@ private struct ScheduleTimeInputSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button("취소", action: onClose)
-                    .foregroundStyle(MoilColor.textSecondary)
-                Spacer()
-                Text("시간").font(MoilTypography.semibold(16))
-                Spacer()
-                Button("완료", action: onClose)
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(MoilColor.primary)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 8)
+            MoilSheetHeader(title: "시간", leading: .cancel(action: onClose), trailing: .confirm(action: onClose))
 
             HStack(spacing: 10) {
                 timeOption(title: "시작 시간", value: displayTime(startTime), isSelected: !isEditingEndTime) {
@@ -1654,8 +1608,7 @@ private struct ScheduleTimeInputSheet: View {
                     isEditingEndTime = true
                 }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 36)
+            .padding(.horizontal, MoilSheetHeader.horizontalPadding)
 
             Group {
                 if isEditingEndTime {
@@ -1725,6 +1678,7 @@ private struct EventEditorView: View {
     @State private var attendingCount: Int
     @State private var isSubmittingAttendance = false
     @State private var attendeeColors: [Color] = []
+    @State private var isConfirmingDelete = false
 
     init(
         event: CalendarEvent,
@@ -1787,8 +1741,12 @@ private struct EventEditorView: View {
                 Button(action: dismiss.callAsFunction) {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(MoilPressableStyle())
                 .foregroundStyle(MoilColor.textSecondary)
+                .accessibilityLabel("닫기")
             }
             .padding(.bottom, 18)
 
@@ -1855,10 +1813,19 @@ private struct EventEditorView: View {
                 .disabled(isEditing && trimmedTitle.isEmpty)
                 .frame(maxWidth: .infinity).frame(height: 48)
                 .background(MoilColor.textPrimary.opacity(0.07)).clipShape(RoundedRectangle(cornerRadius: 12))
-                Button("삭제", role: .destructive) { onDelete(); dismiss() }
+                .buttonStyle(MoilPressableStyle(scale: 0.98))
+                // 한 번 잘못 눌러도 일정이 바로 지워지지 않도록 한 번 더 묻습니다.
+                Button("삭제", role: .destructive) { isConfirmingDelete = true }
                     .frame(maxWidth: .infinity).frame(height: 48)
                     .background(MoilColor.error.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .buttonStyle(MoilPressableStyle(scale: 0.98))
             }
+        }
+        .confirmationDialog("이 일정을 삭제할까요?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("삭제", role: .destructive) { onDelete(); dismiss() }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("삭제한 일정은 되돌릴 수 없어요.")
         }
         .foregroundStyle(MoilColor.textPrimary)
         .padding(24)
@@ -1932,14 +1899,14 @@ private struct ScheduleSearchView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                MoilSheetHeader(title: "일정 검색", leading: .back(action: dismiss.callAsFunction))
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(MoilColor.textTertiary)
-                    TextField("일정 검색", text: $query)
+                    TextField("제목·장소·이름으로 찾기", text: $query)
                 }
                 .moilField()
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
 
                 if filteredEvents.isEmpty {
                     Spacer()
@@ -1981,16 +1948,7 @@ private struct ScheduleSearchView: View {
                 }
             }
             .background(MoilColor.background.ignoresSafeArea())
-            .navigationTitle("일정 검색")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: dismiss.callAsFunction) {
-                        Image(systemName: "chevron.left")
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .task(id: "\(groupId ?? "")-\(month)") {

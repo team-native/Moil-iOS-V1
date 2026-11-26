@@ -52,6 +52,9 @@ struct AuthFlowView: View {
                 .modifier(MoilJoinLinkPresenter())
         }
         }
+        // 화면이 툭 바뀌지 않도록 인증 단계 사이를 짧게 겹쳐 전환합니다.
+        .transition(.opacity)
+        .animation(MoilMotion.page, value: route)
         .task { await restoreSession() }
     }
 
@@ -219,17 +222,36 @@ private struct LoginView: View {
         email.contains("@") && password.count >= 8
     }
 
+    /// 같은 오류를 두 칸에 두 번 쓰지 않도록, 이메일 칸은 테두리만 표시하고 문구는 비밀번호 칸 아래 한 번만 보여줍니다.
     private var emailState: MoilFieldState {
-        credentialError == nil ? .neutral : .failure("이메일을 다시 확인해주세요")
+        credentialError == nil ? .neutral : .highlighted
     }
 
     private var passwordState: MoilFieldState {
-        (credentialError ?? socialLoginError).map(MoilFieldState.failure) ?? .neutral
+        credentialError.map(MoilFieldState.failure) ?? .neutral
     }
 
+    @State private var shakeCount: CGFloat = 0
+
     private func clearErrors() {
+        guard credentialError != nil || socialLoginError != nil else { return }
         credentialError = nil
         socialLoginError = nil
+    }
+
+    private func submit() {
+        guard canSubmit, !isSubmitting else { return }
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        Task {
+            isSubmitting = true
+            socialLoginError = nil
+            let error = await onLogin(email, password)
+            isSubmitting = false
+            guard let error else { return }
+            credentialError = error
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            withAnimation(.linear(duration: 0.4)) { shakeCount += 1 }
+        }
     }
 
     var body: some View {
@@ -246,10 +268,7 @@ private struct LoginView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             VStack(spacing: 6) {
-                                Image("MoilMascot")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 75, height: 74)
+                                MoilMascotImage(width: 75, height: 74)
                                 Text("모일")
                                     .font(MoilTypography.bold(22))
                                     .foregroundStyle(MoilColor.textPrimary)
@@ -260,14 +279,18 @@ private struct LoginView: View {
                             .padding(.bottom, 36)
 
                             VStack(spacing: 12) {
-                                MoilValidatedField(state: emailState) {
-                                    AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
-                                        .onChange(of: email) { _, _ in clearErrors() }
+                                VStack(spacing: 12) {
+                                    MoilValidatedField(state: emailState, failureDelay: .zero) {
+                                        AuthTextField(title: "이메일", text: $email, contentType: .emailAddress)
+                                            .onChange(of: email) { _, _ in clearErrors() }
+                                    }
+                                    MoilValidatedField(state: passwordState, failureDelay: .zero) {
+                                        AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
+                                            .onChange(of: password) { _, _ in clearErrors() }
+                                            .onSubmit(submit)
+                                    }
                                 }
-                                MoilValidatedField(state: passwordState) {
-                                    AuthTextField(title: "비밀번호", text: $password, isSecure: true, contentType: .password)
-                                        .onChange(of: password) { _, _ in clearErrors() }
-                                }
+                                .modifier(MoilShakeEffect(animatableData: shakeCount))
                                 HStack {
                                     Spacer()
                                     Button("비밀번호를 잊으셨나요?", action: onPasswordHelp)
@@ -285,31 +308,23 @@ private struct LoginView: View {
                                 }
                             }
                             .padding(.top, 44)
+
+                            MoilInlineError(message: socialLoginError)
+                                .padding(.top, socialLoginError == nil ? 0 : 16)
+                                .animation(MoilMotion.standard, value: socialLoginError)
                         }
                         .frame(maxWidth: .infinity, minHeight: proxy.size.height, alignment: .center)
                     }
                     .scrollBounceBehavior(.basedOnSize)
                     .scrollIndicators(.hidden)
+                    // 스크롤 영역 폭이 입력칸 폭과 같아 그림자 좌우가 잘려 보였습니다.
+                    .scrollClipDisabled()
                     // 스크롤 영역이 화면 대부분을 덮으므로, 스크롤로도 키보드를 내릴 수 있게 합니다.
                     .scrollDismissesKeyboard(.immediately)
                 }
 
                 VStack(spacing: 14) {
-                        Button("로그인") {
-                            Task {
-                                isSubmitting = true
-                                socialLoginError = nil
-                                credentialError = await onLogin(email, password)
-                                isSubmitting = false
-                            }
-                        }
-                            .font(MoilTypography.bold(16))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(canSubmit ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .disabled(!canSubmit)
+                        MoilPrimaryButton(title: "로그인", isEnabled: canSubmit, isLoading: isSubmitting, action: submit)
 
                         Button {
                             showingSignUp = true
@@ -370,21 +385,22 @@ private struct SignUpInfoView: View {
 
                     MoilValidatedField(label: "이메일", state: emailState) {
                         AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+                            .onChange(of: email) { _, _ in serverError = nil }
                     }
                     .padding(.top, 18)
                 }
 
                 Spacer()
 
+                MoilInlineError(message: serverError)
+                    .padding(.bottom, serverError == nil ? 0 : 12)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: "다음", isEnabled: canProceed, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onNext(name, email)
                         isSubmitting = false
                     }
-                }
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
                 }
 
                 Button(action: onBack) {
@@ -415,23 +431,22 @@ private struct PasswordResetEmailView: View {
         ZStack {
             MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) { Image(systemName: "chevron.left").foregroundStyle(MoilColor.textPrimary) }
-                    Text("비밀번호 재설정").font(MoilTypography.bold(26))
-                }
-                .safeAreaPadding(.top, 16)
-                Text("가입한 이메일 주소로 인증번호를 보낼게요.")
-                    .font(MoilTypography.regular(14)).foregroundStyle(MoilColor.textSecondary).padding(.top, 12)
-                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress).padding(.top, 24)
-                if let serverError { Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8) }
+                MoilSheetHeader(
+                    title: "비밀번호 재설정",
+                    subtitle: "가입한 이메일 주소로 인증번호를 보낼게요.",
+                    leading: .back(action: onBack),
+                    addsHorizontalPadding: false
+                )
+                AuthTextField(title: "moil@example", text: $email, contentType: .emailAddress)
+                    .onChange(of: email) { _, _ in serverError = nil }
+                    .padding(.top, 4)
                 Spacer()
-                Button("인증번호 받기") {
+                MoilInlineError(message: serverError)
+                    .padding(.bottom, serverError == nil ? 0 : 12)
+                    .animation(MoilMotion.standard, value: serverError)
+                MoilPrimaryButton(title: "인증번호 받기", isEnabled: email.contains("@"), isLoading: isSubmitting) {
                     Task { isSubmitting = true; serverError = await onNext(email); isSubmitting = false }
                 }
-                .font(MoilTypography.bold(16)).foregroundStyle(.white)
-                .frame(maxWidth: .infinity).frame(height: 54)
-                .background(email.contains("@") ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                .clipShape(RoundedRectangle(cornerRadius: 14)).disabled(!email.contains("@") || isSubmitting)
                 .safeAreaPadding(.bottom, 12)
             }
             .padding(.horizontal, 24).frame(maxWidth: 402)
@@ -454,8 +469,8 @@ private struct EmailVerificationView: View {
     private var isComplete: Bool { code.count == 6 }
 
     private var codeState: MoilFieldState {
-        guard !code.isEmpty else { return .neutral }
-        return isComplete ? .success("인증번호가 확인되었어요") : .failure("인증번호 6자리를 모두 입력해주세요")
+        // 입력하는 동안 빨간 문구가 깜빡이지 않도록, 6자리를 다 채웠을 때만 표시합니다.
+        isComplete ? .success("6자리를 모두 입력했어요") : .neutral
     }
 
     /// 입력 중인 칸과 완료 상태를 테두리로 구분합니다.
@@ -469,21 +484,12 @@ private struct EmailVerificationView: View {
         ZStack {
             MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                    Text("이메일 인증")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
-                .safeAreaPadding(.top, 16)
-                Text("\(email)로 전송된 인증번호 6자리를 입력해주세요")
-                    .font(MoilTypography.regular(14))
-                    .foregroundStyle(MoilColor.textSecondary)
-                    .padding(.top, 12)
+                MoilSheetHeader(
+                    title: "이메일 인증",
+                    subtitle: "\(email)로 전송된 인증번호 6자리를 입력해주세요",
+                    leading: .back(action: onBack),
+                    addsHorizontalPadding: false
+                )
 
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
@@ -492,16 +498,15 @@ private struct EmailVerificationView: View {
                                 .font(MoilTypography.bold(19))
                             if index == code.count && isEditingCode {
                                 RoundedRectangle(cornerRadius: 1)
-                                    .fill(Color.white)
+                                    .fill(MoilColor.textPrimary)
                                     .frame(width: 2, height: 24)
                                     .opacity(isCaretVisible ? 1 : 0.28)
                                     .accessibilityHidden(true)
                             }
                         }
                             .frame(width: 52, height: 52)
-                            .background(MoilColor.fieldBackground)
+                            .moilFieldSurface(cornerRadius: 12)
                             .overlay { RoundedRectangle(cornerRadius: 12).stroke(codeBoxBorder(at: index), lineWidth: 1) }
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
                 .contentShape(Rectangle())
@@ -520,6 +525,7 @@ private struct EmailVerificationView: View {
                 .onChange(of: code) { _, value in
                     code = String(value.filter(\.isNumber).prefix(6))
                     isEditingCode = code.count < 6
+                    serverError = nil
                 }
                 .onChange(of: isCodeFieldFocused) { _, isFocused in
                     // 빈 곳을 눌러 키보드를 내리면 깜빡이는 커서도 함께 숨깁니다.
@@ -532,19 +538,23 @@ private struct EmailVerificationView: View {
                         isCaretVisible = false
                     }
                 }
-                .padding(.top, 16)
+                .padding(.top, 4)
 
-                if let message = codeState.message {
-                    HStack(spacing: 6) {
-                        if codeState.isSuccess {
+                ZStack(alignment: .leading) {
+                    if let message = codeState.message {
+                        HStack(spacing: 6) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 13, weight: .semibold))
+                            Text(message).font(MoilTypography.semibold(12))
                         }
-                        Text(message).font(MoilTypography.bold(12))
+                        .foregroundStyle(codeState.tint)
+                        .transition(.opacity)
                     }
-                    .foregroundStyle(codeState.tint)
-                    .padding(.top, 10)
                 }
+                // 문구 자리를 미리 잡아 두어, 나타날 때 아래 버튼이 밀리지 않게 합니다.
+                .frame(height: 18, alignment: .leading)
+                .padding(.top, 10)
+                .animation(MoilMotion.standard, value: codeState)
 
                 Button("인증번호 재전송") { resendMessage = "인증번호를 다시 전송했어요" }
                     .font(MoilTypography.semibold(13))
@@ -560,6 +570,9 @@ private struct EmailVerificationView: View {
                 }
 
                 Spacer()
+                MoilInlineError(message: serverError)
+                    .padding(.bottom, serverError == nil ? 0 : 12)
+                    .animation(MoilMotion.standard, value: serverError)
                 MoilPrimaryButton(title: "다음", isEnabled: isComplete, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
@@ -568,9 +581,6 @@ private struct EmailVerificationView: View {
                     }
                 }
                     .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)
@@ -604,52 +614,34 @@ private struct PasswordSetupView: View {
 
     private var confirmationState: MoilFieldState {
         guard !confirmation.isEmpty else { return .neutral }
-        return passwordsMatch ? .success("비밀번호가 일치해요") : .failure("비밀번호가 올바르지 않아요")
+        return passwordsMatch ? .success("비밀번호가 일치해요") : .failure("비밀번호가 일치하지 않아요")
     }
 
     var body: some View {
         ZStack {
             MoilColor.background.ignoresSafeArea().moilDismissKeyboardOnTap()
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 10) {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(MoilColor.textPrimary)
-                    }
-                    Text("비밀번호 설정")
-                        .font(MoilTypography.bold(26))
-                        .foregroundStyle(MoilColor.textPrimary)
-                }
-                .safeAreaPadding(.top, 16)
+                MoilSheetHeader(title: "비밀번호 설정", leading: .back(action: onBack), addsHorizontalPadding: false)
                 MoilValidatedField(label: "비밀번호", state: passwordState) {
                     AuthTextField(title: "비밀번호 입력", text: $password, isSecure: true, contentType: .newPassword)
                 }
-                .padding(.top, 20)
 
                 MoilValidatedField(label: "비밀번호 확인", state: confirmationState) {
                     AuthTextField(title: "비밀번호 재입력", text: $confirmation, isSecure: true, contentType: .newPassword)
                 }
                 .padding(.top, 22)
                 Spacer()
-                Button(actionTitle) {
+                MoilInlineError(message: serverError)
+                    .padding(.bottom, serverError == nil ? 0 : 12)
+                    .animation(MoilMotion.standard, value: serverError)
+                MoilPrimaryButton(title: actionTitle, isEnabled: passwordIsValid && passwordsMatch, isLoading: isSubmitting) {
                     Task {
                         isSubmitting = true
                         serverError = await onComplete(password, confirmation)
                         isSubmitting = false
                     }
                 }
-                    .font(MoilTypography.bold(16))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(passwordIsValid && passwordsMatch ? MoilColor.primary : MoilColor.primary.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .disabled(!(passwordIsValid && passwordsMatch))
                     .safeAreaPadding(.bottom, 12)
-                if let serverError {
-                    Text(serverError).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error).padding(.top, 8)
-                }
             }
             .padding(.horizontal, 24)
             .frame(maxWidth: 402)

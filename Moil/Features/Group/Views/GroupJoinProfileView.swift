@@ -7,100 +7,72 @@ struct GroupJoinProfileView: View {
     @EnvironmentObject private var sessionStore: MoilSessionStore
     let onComplete: () -> Void
     @State private var nickname = ""
-    @State private var selectedColorId = "GREEN"
     @State private var isJoining = false
     @State private var errorMessage: String?
-    @State private var profileImagePickerItem: PhotosPickerItem?
-    @State private var profileImagePreview: Image?
-    @State private var uploadedImagePath: String?
-    @State private var isUploadingImage = false
-    @State private var didApplyDefaultProfile = false
-    /// 기본 프로필 색이 사진에서 뽑힌 색이라 선택 스와치에 없으면 맨 앞에 추가합니다.
-    private var colorIds: [String] {
-        guard !MoilAvatarColor.selectableIds.contains(selectedColorId) else { return MoilAvatarColor.selectableIds }
-        return [selectedColorId] + MoilAvatarColor.selectableIds
-    }
+    @StateObject private var draft = MoilProfileDraft()
     /// fullScreenCover로 뜬 화면은 루트(MoilApp)의 preferredColorScheme를 항상 물려받지 않을 수 있어,
     /// 여기서도 같은 설정값을 직접 적용합니다.
     @AppStorage("moilDarkMode") private var isDarkMode = false
     init(onComplete: @escaping () -> Void = {}) { self.onComplete = onComplete }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Button(action: dismiss.callAsFunction) {
-                    Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(MoilColor.textPrimary).frame(width: 32, height: 32)
-                }
-                Text("프로필 설정").font(MoilTypography.bold(26))
-            }
-            .safeAreaPadding(.top, 16)
-            HStack(spacing: 10) { AvatarStack(); VStack(alignment: .leading, spacing: 4) { Text(groupStore.pendingInviteGroupName).font(MoilTypography.bold(14)); Text("구성원 \(groupStore.pendingInviteMemberCount)명").font(MoilTypography.regular(11)).foregroundStyle(MoilColor.textSecondary) } }
-                .padding(13).background(MoilColor.surface).clipShape(RoundedRectangle(cornerRadius: 14)).padding(.top, 22)
-            Text("이 그룹에서 사용할 이름").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            TextField("닉네임 입력", text: $nickname).moilField()
-                .onChange(of: nickname) { _, value in
-                    if value.count > 10 { nickname = String(value.prefix(10)) }
-                }
-            if !nickname.isEmpty && !isValidNickname {
-                Text("닉네임은 1자 이상 10자 이하로 입력해주세요.")
-                    .font(MoilTypography.regular(12))
-                    .foregroundStyle(MoilColor.error)
-                    .padding(.top, 6)
-            }
-            Text("이미 사용 중인 프로필").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 16).padding(.bottom, 10)
-            HStack(spacing: 14) { ForEach([MoilAvatarColor.blue, MoilAvatarColor.red, MoilAvatarColor.green, MoilAvatarColor.orange], id: \.self) { color in MoilAvatar(color: color, size: 34).opacity(0.35) } }
-            Text("내 프로필 색 선택").font(MoilTypography.semibold(12)).foregroundStyle(MoilColor.textTertiary).padding(.top, 18).padding(.bottom, 10)
-            if uploadedImagePath == nil {
-                ProfileColorSwatchGrid(colorIds: colorIds, selectedId: selectedColorId, swatchSize: 40, onSelect: selectColor) {
-                    profileImagePicker
-                }
-            } else {
-                HStack(spacing: 14) {
-                    profileImagePicker
-                    Button("색상으로 변경") { selectColor(selectedColorId) }
-                        .font(MoilTypography.regular(12))
-                        .foregroundStyle(MoilColor.textSecondary)
-                }
-            }
-            if uploadedImagePath == nil {
-                Text("사진을 선택하면 사진에서 뽑은 색이 내 프로필 색이 돼요.")
-                    .font(MoilTypography.regular(12))
-                    .foregroundStyle(MoilColor.textSecondary)
-                    .padding(.top, 8)
-            }
-            Spacer()
-            Button("참여하기") {
-                guard let inviteCode = groupStore.pendingInviteCode else { return }
-                Task {
-                    isJoining = true
-                    defer { isJoining = false }
-                    do {
-                        try await groupStore.join(
-                            inviteCode: inviteCode,
-                            nickname: trimmedNickname,
-                            colorId: uploadedImagePath == nil ? selectedColorId : nil,
-                            imagePath: uploadedImagePath,
-                            using: sessionStore.service()
-                        )
-                        onComplete()
-                    } catch {
-                        errorMessage = error.localizedDescription
+        VStack(spacing: 0) {
+            MoilSheetHeader(title: "프로필 설정", leading: .back(action: dismiss.callAsFunction))
+                .safeAreaPadding(.top, 8)
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 12) {
+                        AvatarStack()
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(groupStore.pendingInviteGroupName).font(MoilTypography.bold(15))
+                            Text("구성원 \(groupStore.pendingInviteMemberCount)명")
+                                .font(MoilTypography.regular(12))
+                                .foregroundStyle(MoilColor.textSecondary)
+                        }
+                        Spacer(minLength: 0)
                     }
+                    .padding(16)
+                    .background(MoilColor.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    Text("이 그룹에서 사용할 이름")
+                        .font(MoilTypography.semibold(12))
+                        .foregroundStyle(MoilColor.textTertiary)
+                        .padding(.top, 28)
+                        .padding(.bottom, 10)
+                    MoilValidatedField(state: nicknameState) {
+                        TextField("닉네임 입력", text: $nickname).moilField()
+                    }
+                    .onChange(of: nickname) { _, value in
+                        if value.count > 10 { nickname = String(value.prefix(10)) }
+                    }
+
+                    Text("내 프로필")
+                        .font(MoilTypography.semibold(12))
+                        .foregroundStyle(MoilColor.textTertiary)
+                        .padding(.top, 32)
+                        .padding(.bottom, 16)
+                    ProfilePickerSection(draft: draft)
                 }
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
+                .padding(.bottom, 24)
             }
-                .disabled(!isValidNickname || isJoining)
-                .font(MoilTypography.bold(16)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 54)
-                .background(!isValidNickname || isJoining ? MoilColor.primary.opacity(0.45) : MoilColor.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14)).safeAreaPadding(.bottom, 12)
+            .scrollDismissesKeyboard(.interactively)
+
+            MoilPrimaryButton(title: "참여하기", isEnabled: canJoin, isLoading: isJoining, action: join)
+                .padding(.horizontal, MoilSheetHeader.horizontalPadding)
+                .padding(.bottom, 12)
         }
-        .padding(.horizontal, 24)
         .background(MoilColor.background.ignoresSafeArea())
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .task { await applyDefaultProfile() }
-        .onChange(of: profileImagePickerItem) { _, item in
+        .onChange(of: draft.pickerItem) { _, item in
             guard let item else { return }
-            uploadProfileImage(item)
+            Task {
+                do { try await draft.upload(item, using: sessionStore.service()) }
+                catch { errorMessage = error.userFacingMessage }
+            }
         }
         .alert("그룹 참여 실패", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("확인", role: .cancel) { errorMessage = nil }
@@ -117,76 +89,45 @@ struct GroupJoinProfileView: View {
         (1...10).contains(trimmedNickname.count)
     }
 
-    private var profileImagePicker: some View {
-        PhotosPicker(selection: $profileImagePickerItem, matching: .images) {
-            ZStack {
-                if let profileImagePreview {
-                    profileImagePreview
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(MoilColor.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .overlay { Circle().stroke(MoilColor.textTertiary, style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
-                }
-                if isUploadingImage {
-                    Circle().fill(.black.opacity(0.35)).frame(width: 36, height: 36)
-                    ProgressView().tint(.white)
-                }
-            }
-            .overlay { Circle().stroke(MoilColor.textPrimary, lineWidth: uploadedImagePath != nil ? 2 : 0).padding(-5) }
-        }
-        .disabled(isUploadingImage)
-        .accessibilityLabel("프로필 사진 추가")
+    private var canJoin: Bool { isValidNickname && !isJoining && !draft.isUploading }
+
+    private var nicknameState: MoilFieldState {
+        guard !nickname.isEmpty, !isValidNickname else { return .neutral }
+        return .failure("닉네임은 1자 이상 10자 이하로 입력해주세요.")
     }
 
-    /// 계정 기본 프로필을 이 그룹 프로필의 초기값으로 채웁니다. 사용자가 이미 고른 값은 덮어쓰지 않습니다.
+    private func join() {
+        guard let inviteCode = groupStore.pendingInviteCode else { return }
+        Task {
+            isJoining = true
+            defer { isJoining = false }
+            do {
+                try await groupStore.join(
+                    inviteCode: inviteCode,
+                    nickname: trimmedNickname,
+                    colorId: draft.requestColorId,
+                    imagePath: draft.requestImagePath,
+                    using: sessionStore.service()
+                )
+                onComplete()
+            } catch {
+                errorMessage = error.userFacingMessage
+            }
+        }
+    }
+
+    /// 계정 기본 프로필(사진 포함)과 이름을 이 그룹 프로필의 초기값으로 채웁니다. 사용자가 이미 고른 값은 덮어쓰지 않습니다.
     private func applyDefaultProfile() async {
         await sessionStore.loadAccountProfile()
-        guard !didApplyDefaultProfile, let profile = sessionStore.accountProfile else { return }
-        didApplyDefaultProfile = true
-        if uploadedImagePath == nil, let colorId = profile.defaultColorId?.uppercased(), !colorId.isEmpty {
-            selectedColorId = colorId
-        }
-            let name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if nickname.isEmpty, !name.isEmpty {
-                nickname = String(name.prefix(10))
-            }
-    }
-
-    private func selectColor(_ id: String) {
-        selectedColorId = id
-        uploadedImagePath = nil
-        profileImagePreview = nil
-        profileImagePickerItem = nil
-    }
-
-    private func uploadProfileImage(_ item: PhotosPickerItem) {
-        Task {
-            isUploadingImage = true
-            defer { isUploadingImage = false }
-            do {
-                guard let data = try await item.loadTransferable(type: Data.self), let uiImage = UIImage(data: data) else {
-                    errorMessage = "이미지를 불러오지 못했어요."
-                    return
-                }
-                profileImagePreview = Image(uiImage: uiImage)
-                guard let jpegData = MoilProfileImageEncoder.jpegData(from: uiImage) else {
-                    errorMessage = "이미지를 처리하지 못했어요."
-                    return
-                }
-                uploadedImagePath = try await sessionStore.service().uploadProfileImage(data: jpegData, filename: "profile.jpg", mimeType: "image/jpeg")
-            } catch {
-                profileImagePreview = nil
-                errorMessage = error.localizedDescription
-            }
+        guard let profile = sessionStore.accountProfile else { return }
+        draft.prefill(colorId: profile.defaultColorId, imagePath: profile.defaultImagePath)
+        let name = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if nickname.isEmpty, !name.isEmpty {
+            nickname = String(name.prefix(10))
         }
     }
 }
+
 private struct AvatarStack: View {
     var body: some View {
         HStack(spacing: -8) {

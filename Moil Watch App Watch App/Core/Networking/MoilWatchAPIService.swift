@@ -12,12 +12,14 @@ struct MoilWatchAPIService {
         client = MoilAPIClient(tokenProvider: tokenProvider, tokenRefresher: tokenRefresher)
     }
 
-    func refreshToken(_ refreshToken: String) async throws -> MoilTokenResponse {
+    /// 서버는 만료된 access token(Authorization 헤더)과 refresh token을 짝으로 확인합니다.
+    func refreshToken(_ refreshToken: String, accessToken: String?) async throws -> MoilTokenResponse {
         try await client.request(
             "auth/refresh",
             method: "POST",
             body: RefreshTokenRequest(refreshToken: refreshToken),
-            requiresAuthentication: false
+            requiresAuthentication: false,
+            bearerToken: accessToken
         )
     }
 
@@ -117,10 +119,12 @@ struct MoilRemoteMember: Decodable, Identifiable {
     let id: String
     let nickname: String
     let colorId: String?
+    /// 사진 프로필이면 서버 사진 경로(`/images/...`)입니다.
+    let imagePath: String?
     let isMe: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case id, userId, memberId, nickname, name, userName, colorId, profileColor, isMe
+        case id, userId, memberId, nickname, name, userName, colorId, profileColor, imagePath, isMe
     }
 
     init(from decoder: Decoder) throws {
@@ -128,6 +132,7 @@ struct MoilRemoteMember: Decodable, Identifiable {
         id = try container.string(for: [.id, .userId, .memberId])
         nickname = (try? container.string(for: [.nickname, .name, .userName])) ?? "나"
         colorId = try? container.string(for: [.colorId, .profileColor])
+        imagePath = (try? container.decode(String.self, forKey: .imagePath)).flatMap { $0.isEmpty ? nil : $0 }
         isMe = (try? container.decode(Bool.self, forKey: .isMe)) ?? false
     }
 }

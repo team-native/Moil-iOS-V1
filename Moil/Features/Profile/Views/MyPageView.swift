@@ -45,7 +45,7 @@ struct MyPageView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // 헤더는 계정 기본 프로필, 아래 섹션은 선택된 그룹에서 쓰는 참여 프로필입니다.
                 HStack(spacing: 14) {
-                    MoilAvatar(color: MoilAvatarColor.color(for: sessionStore.accountProfile?.defaultColorId), size: 56)
+                    MoilAvatar(colorId: sessionStore.accountProfile?.defaultColorId, imagePath: sessionStore.accountProfile?.defaultImagePath, size: 56)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(sessionStore.accountProfile?.name ?? "나").font(MoilTypography.bold(21))
                         Text("기본 프로필").font(MoilTypography.regular(12)).foregroundStyle(MoilColor.textTertiary)
@@ -69,7 +69,7 @@ struct MyPageView: View {
                     GroupSection(title: "\(groupName)에서 쓰는 프로필") {
                         Button { profileEditTarget = .group(groupId) } label: {
                             HStack(spacing: 10) {
-                                MoilAvatar(color: MoilAvatarColor.color(for: myMemberInSelectedGroup?.colorId), size: 28)
+                                MoilAvatar(colorId: myMemberInSelectedGroup?.colorId, imagePath: myMemberInSelectedGroup?.imagePath, size: 28)
                                 Text(myMemberInSelectedGroup?.nickname ?? "나")
                                     .font(MoilTypography.semibold(15))
                                     .foregroundStyle(MoilColor.textPrimary)
@@ -139,13 +139,15 @@ struct MyPageView: View {
                 EditMemberProfileView(
                     target: .account,
                     currentNickname: sessionStore.accountProfile?.name ?? "",
-                    currentColorId: sessionStore.accountProfile?.defaultColorId
+                    currentColorId: sessionStore.accountProfile?.defaultColorId,
+                    currentImagePath: sessionStore.accountProfile?.defaultImagePath
                 )
             case .group(let groupId):
                 EditMemberProfileView(
                     target: .group(groupId),
                     currentNickname: myMemberInSelectedGroup?.nickname ?? "",
-                    currentColorId: myMemberInSelectedGroup?.colorId
+                    currentColorId: myMemberInSelectedGroup?.colorId,
+                    currentImagePath: myMemberInSelectedGroup?.imagePath
                 )
             }
         }
@@ -271,18 +273,18 @@ private struct PasswordChangeView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
+                    MoilSheetHeader(
+                        title: "비밀번호 변경",
+                        subtitle: "현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다.",
+                        leading: .back(action: dismiss.callAsFunction),
+                        addsHorizontalPadding: false
+                    )
                     SecureField("현재 비밀번호", text: $origin).accountField()
                     SecureField("새 비밀번호", text: $newPassword).accountField()
                     SecureField("새 비밀번호 확인", text: $confirmation).accountField()
-                    if let message {
-                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
-                    }
+                    MoilInlineError(message: message)
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
@@ -293,8 +295,7 @@ private struct PasswordChangeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("비밀번호 변경")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func changePassword() async {
@@ -302,7 +303,7 @@ private struct PasswordChangeView: View {
             try await sessionStore.service().changePassword(origin: origin, newPassword: newPassword, confirmation: confirmation)
             origin = ""; newPassword = ""; confirmation = ""
             dismiss()
-        } catch { message = "비밀번호를 변경하지 못했어요." }
+        } catch { message = error.userFacingMessage }
     }
 }
 
@@ -318,21 +319,21 @@ private struct AccountDeletionView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("탈퇴하면 계정에 접근할 수 없어요.")
-                        .font(MoilTypography.regular(13))
-                        .foregroundStyle(MoilColor.textSecondary)
+                    MoilSheetHeader(
+                        title: "회원 탈퇴",
+                        subtitle: "탈퇴하면 계정에 접근할 수 없어요.",
+                        leading: .back(action: dismiss.callAsFunction),
+                        addsHorizontalPadding: false
+                    )
                     TextField("이메일", text: $email).accountField()
                     SecureField("비밀번호", text: $password).accountField()
                     Toggle("그룹 데이터 유지", isOn: $leftData)
                         .font(MoilTypography.regular(15))
                         .tint(MoilColor.primary)
                         .padding(.vertical, 2)
-                    if let message {
-                        Text(message).font(MoilTypography.regular(12)).foregroundStyle(MoilColor.error)
-                    }
+                    MoilInlineError(message: message)
                 }
                 .padding(.horizontal, MoilTabScreenMetrics.horizontalPadding)
-                .safeAreaPadding(.top, 12)
                 .padding(.bottom, 32)
         }
         .safeAreaInset(edge: .bottom) {
@@ -350,19 +351,13 @@ private struct AccountDeletionView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(MoilColor.background.ignoresSafeArea())
-        .navigationTitle("회원 탈퇴")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
 private extension View {
     func accountField() -> some View {
         moilField()
-            // 배경과 구분이 잘 안 돼 입력칸이 흐릿하게 보였어서 옅은 외곽선을 더해줍니다.
-            .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(MoilColor.textPrimary.opacity(0.16), lineWidth: 1)
-            }
     }
 
     func accountButton(enabled: Bool, color: Color = MoilColor.primary) -> some View {

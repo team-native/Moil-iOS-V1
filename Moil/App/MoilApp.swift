@@ -67,8 +67,15 @@ struct MoilApp: App {
                 .onChange(of: groupStore.selectedGroupId) { _, _ in syncWatch() }
                 .onChange(of: isDarkMode) { _, _ in syncWatch() }
                 .onAppear {
-                    MoilWatchConnectivityManager.shared.onActivated = { syncWatch() }
-                    MoilWatchConnectivityManager.shared.activate()
+                    let watch = MoilWatchConnectivityManager.shared
+                    watch.onActivated = { syncWatch() }
+                    watch.onTokensFromWatch = { tokens in sessionStore.adopt(tokens) }
+                    watch.sessionProvider = {
+                        // 서버는 아직 유효한 세션이면 같은 토큰을, 만료됐으면 새 토큰을 돌려줍니다.
+                        if sessionStore.hasStoredSession { _ = await sessionStore.refreshSession() }
+                        return (sessionStore.accessToken, sessionStore.refreshToken)
+                    }
+                    watch.activate()
                 }
         }
     }

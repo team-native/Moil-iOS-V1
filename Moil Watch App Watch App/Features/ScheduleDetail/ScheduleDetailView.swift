@@ -25,12 +25,12 @@ struct ScheduleDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 9) {
                 Text("\(event.owner.name) 일정")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(WatchColor.onAccent)
-                    .padding(.horizontal, 7)
+                    .padding(.horizontal, 9)
                     .padding(.vertical, 4)
                     .background(event.owner.color)
-                    .clipShape(RoundedRectangle(cornerRadius: 9))
+                    .clipShape(Capsule())
 
                 Text(event.title)
                     .font(.system(size: 20, weight: .bold))
@@ -49,13 +49,13 @@ struct ScheduleDetailView: View {
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(event.dateLabel)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(WatchColor.textPrimary)
             Text(event.timeLocationLabel)
-                .font(.system(size: 10))
+                .font(.system(size: 13))
                 .foregroundStyle(WatchColor.textSecondary)
             Text(event.attendeeCountLabel)
-                .font(.system(size: 10))
+                .font(.system(size: 13))
                 .foregroundStyle(WatchColor.textSecondary)
         }
         .padding(.horizontal, 10)
@@ -73,15 +73,10 @@ struct ScheduleDetailView: View {
         CrownSafeHorizontalScroll {
             HStack(spacing: 6) {
                 ForEach(event.attendees) { attendee in
-                    Text(attendee.initial)
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(WatchColor.onAccent)
-                        .frame(width: 26, height: 26)
-                        .background(attendee.color)
-                        .clipShape(RoundedRectangle(cornerRadius: 13))
+                    WatchAvatar(member: attendee, size: 26)
                 }
                 Text("\(attendingCount)명 참석")
-                    .font(.system(size: 10))
+                    .font(.system(size: 13))
                     .foregroundStyle(WatchColor.textSecondary)
             }
         }
@@ -93,12 +88,12 @@ struct ScheduleDetailView: View {
             toggleAttendance()
         } label: {
             Text(isAttending ? "취소하기" : "참석하기")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(isAttending ? WatchColor.textPrimary : WatchColor.onAccent)
                 .frame(maxWidth: .infinity)
-                .frame(height: 36)
+                .frame(height: 44)
                 .background(isAttending ? WatchColor.surface : event.owner.color)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }

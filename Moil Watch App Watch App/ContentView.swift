@@ -51,7 +51,7 @@ struct ContentView: View {
             moilMascot(size: 44)
             Text("아이폰의 Moil 앱에서\n로그인하면 자동으로 연결돼요")
                 .multilineTextAlignment(.center)
-                .font(.system(size: 12))
+                .font(.system(size: 14))
                 .foregroundStyle(WatchColor.textSecondary)
         }
         .padding()
@@ -81,11 +81,20 @@ struct ContentView: View {
                 Group {
                     if isLoading && remoteEvents.isEmpty && members.isEmpty {
                         moilMascot(size: 36, pulsing: true)
+                    } else if sessionStore.needsPhoneSession {
+                        WatchMessageView(
+                            systemImage: "iphone",
+                            message: "로그인이 만료됐어요.\n아이폰에서 Moil을 열면 다시 연결돼요.",
+                            actionTitle: "다시 시도",
+                            action: { Task { await load() } }
+                        )
                     } else if let errorMessage {
-                        Text(errorMessage)
-                            .font(.system(size: 11))
-                            .foregroundStyle(WatchColor.textSecondary)
-                            .padding()
+                        WatchMessageView(
+                            systemImage: "wifi.exclamationmark",
+                            message: errorMessage,
+                            actionTitle: "다시 시도",
+                            action: { Task { await load() } }
+                        )
                     } else {
                         TodayView(
                             groupName: groupName,
@@ -321,6 +330,8 @@ private struct MoilMascotView: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
+            // 라이트모드 흰 배경에서 흰 마스코트 윤곽이 보이도록 옅은 그림자를 줍니다.
+            .shadow(color: .black.opacity(WatchColor.isDarkMode ? 0 : 0.18), radius: 4, x: 0, y: 1)
             .opacity(pulsing && isPulsing ? 0.55 : 1)
             .onAppear {
                 guard pulsing else { return }
