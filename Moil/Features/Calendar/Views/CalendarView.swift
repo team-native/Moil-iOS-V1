@@ -291,6 +291,7 @@ struct CalendarView: View {
             DayScheduleSheet(
                 day: scheduleDraftDay,
                 dateTitle: scheduleDraftDateTitle,
+                isToday: calendar.isDateInToday(scheduleDraftDate),
                 events: eventsByDay(for: scheduleDraftMonth)[scheduleDraftDay] ?? [],
                 avatarColors: avatarColors(for:),
                 onAdd: {
@@ -1029,6 +1030,8 @@ private enum KoreanHoliday {
 private struct DayScheduleSheet: View {
     let day: Int
     let dateTitle: String
+    /// 고른 날짜가 오늘일 때만 '오늘' 표시를 붙입니다(전에는 어느 날짜든 항상 붙었습니다).
+    let isToday: Bool
     let events: [CalendarEvent]
     let avatarColors: (CalendarEvent) -> [Color]
     let onAdd: () -> Void
@@ -1036,28 +1039,25 @@ private struct DayScheduleSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(dateTitle)
-                        .font(MoilTypography.bold(18))
-                    Text("• 오늘")
+            // 다른 팝업과 같은 피라미드 배치: 날짜는 위 가운데, 추가 버튼은 아래 줄 오른쪽입니다.
+            MoilSheetHeader(
+                title: dateTitle,
+                subtitle: isToday ? "오늘" : nil,
+                trailing: .add(action: onAdd)
+            )
+
+            if events.isEmpty {
+                VStack(spacing: 8) {
+                    Text("등록된 일정이 없어요")
+                        .font(MoilTypography.semibold(16))
+                        .foregroundStyle(MoilColor.textPrimary)
+                    Text("오른쪽 위 + 버튼으로 일정을 추가해보세요")
                         .font(MoilTypography.regular(13))
                         .foregroundStyle(MoilColor.textSecondary)
                 }
-                Spacer()
-                // 원 배경이 있으면 버튼만 혼자 커 보여, 플러스 기호만 남기고 누르는 영역은 그대로 둡니다.
-                Button(action: onAdd) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 20, weight: .regular))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .foregroundStyle(MoilColor.textPrimary)
-                .accessibilityLabel("일정 추가")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, MoilSheetMetrics.headerTopPadding)
-            .padding(.bottom, 12)
 
             // 한 줄 높이가 커서 일정이 몇 개만 넘어도 고정 높이 시트 밖으로 잘렸습니다.
             // 목록만 스크롤되게 해 날짜 제목과 추가 버튼은 위에 고정합니다.
@@ -1342,11 +1342,6 @@ private struct ScheduleComposerView: View {
 }
 
 /// 캘린더 팝업 머리 영역 여백입니다. 끌기 표시줄과 취소/완료 줄, 그리고 첫 입력칸 사이를 띄웁니다.
-private enum MoilSheetMetrics {
-    static let headerTopPadding: CGFloat = 28
-    static let headerBottomPadding: CGFloat = 28
-}
-
 private enum ComposerMode {
     case form
     case date
@@ -1683,6 +1678,7 @@ private struct EventEditorView: View {
     @State private var attendingCount: Int
     @State private var isSubmittingAttendance = false
     @State private var attendeeColors: [Color] = []
+    @State private var isConfirmingDelete = false
 
     init(
         event: CalendarEvent,
@@ -1745,8 +1741,12 @@ private struct EventEditorView: View {
                 Button(action: dismiss.callAsFunction) {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(MoilPressableStyle())
                 .foregroundStyle(MoilColor.textSecondary)
+                .accessibilityLabel("닫기")
             }
             .padding(.bottom, 18)
 
@@ -1813,10 +1813,19 @@ private struct EventEditorView: View {
                 .disabled(isEditing && trimmedTitle.isEmpty)
                 .frame(maxWidth: .infinity).frame(height: 48)
                 .background(MoilColor.textPrimary.opacity(0.07)).clipShape(RoundedRectangle(cornerRadius: 12))
-                Button("삭제", role: .destructive) { onDelete(); dismiss() }
+                .buttonStyle(MoilPressableStyle(scale: 0.98))
+                // 한 번 잘못 눌러도 일정이 바로 지워지지 않도록 한 번 더 묻습니다.
+                Button("삭제", role: .destructive) { isConfirmingDelete = true }
                     .frame(maxWidth: .infinity).frame(height: 48)
                     .background(MoilColor.error.opacity(0.25)).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .buttonStyle(MoilPressableStyle(scale: 0.98))
             }
+        }
+        .confirmationDialog("이 일정을 삭제할까요?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("삭제", role: .destructive) { onDelete(); dismiss() }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("삭제한 일정은 되돌릴 수 없어요.")
         }
         .foregroundStyle(MoilColor.textPrimary)
         .padding(24)

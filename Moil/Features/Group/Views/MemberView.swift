@@ -513,12 +513,8 @@ private struct PermissionEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("멤버 권한 설정")
-                .font(MoilTypography.bold(17))
-                .padding(.horizontal, 20)
-                // 드래그 인디케이터와 제목이 붙어 보이지 않도록 위쪽 여백을 넉넉히 둡니다.
-                .padding(.top, 28)
-                .padding(.bottom, 8)
+            // 다른 팝업과 같은 머리(가운데 제목)를 씁니다.
+            MoilSheetHeader(title: "멤버 권한 설정")
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(members) { member in
@@ -561,6 +557,7 @@ private struct PermissionEditorView: View {
                 .font(MoilTypography.bold(14)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
                 .background(MoilColor.primary).clipShape(RoundedRectangle(cornerRadius: 12))
+                .buttonStyle(MoilPressableStyle(scale: 0.98))
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, 12)

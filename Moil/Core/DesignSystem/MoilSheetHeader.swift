@@ -146,6 +146,10 @@ struct MoilSheetHeaderAction {
         Self(kind: .icon("chevron.left", label: "뒤로"), handler: action)
     }
 
+    static func add(_ label: String = "일정 추가", action: @escaping () -> Void) -> Self {
+        Self(kind: .icon("plus", label: label), handler: action)
+    }
+
     static func close(action: @escaping () -> Void) -> Self {
         Self(kind: .icon("xmark", label: "닫기"), handler: action)
     }
